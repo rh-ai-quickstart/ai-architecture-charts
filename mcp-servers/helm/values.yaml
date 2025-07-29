@@ -1,5 +1,16 @@
-mcp-servers:
-  mcp-weather:
-    deploy: false
-    imageRepository: quay.io/ecosystem-appeng/mcp-weather
-    uri: http://mcp-weather:8000/sse
+# MCP Weather Server Configuration
+mcp-weather:
+  enabled: true
+  # Weather-specific configuration
+  image:
+    repository: quay.io/ecosystem-appeng/mcp-weather
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8000
+
+# MCP DBStore Server Configuration  
+mcp-dbstore:
+  enabled: true
+  # DBStore-specific configuration will be passed through to the sub-chart
+  # The sub-chart's default values will be used unless overridden here

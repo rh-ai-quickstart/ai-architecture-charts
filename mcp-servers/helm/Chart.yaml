@@ -1,6 +1,27 @@
 apiVersion: v2
 name: mcp-servers
-description: A Helm chart for Kubernetes
+description: A Helm chart for managing multiple MCP servers
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+keywords:
+  - mcp
+  - model-context-protocol
+  - umbrella
+home: https://github.com/yourusername/ai-architecture-charts
+sources:
+  - https://github.com/yourusername/ai-architecture-charts/tree/main/mcp-servers
+maintainers:
+  - name: AI Architecture Charts Team
+    email: team@example.com
+annotations:
+  category: AI/ML Tools
+dependencies:
+  - name: mcp-weather
+    version: "0.1.0"
+    condition: mcp-weather.enabled
+    repository: "file://../mcp-weather"
+  - name: mcp-dbstore
+    version: "0.1.0" 
+    condition: mcp-dbstore.enabled
+    repository: "file://../mcp-dbstore"

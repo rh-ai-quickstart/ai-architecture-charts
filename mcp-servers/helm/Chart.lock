@@ -1,0 +1,9 @@
+dependencies:
+- name: mcp-weather
+  repository: file://../mcp-weather
+  version: 0.1.0
+- name: mcp-dbstore
+  repository: file://../mcp-dbstore
+  version: 0.1.0
+digest: sha256:ddba198aecccc2d4972795100a19af152d46d68d42aa72dc904038ab90074d99
+generated: "2025-07-29T11:50:16.828173-04:00"

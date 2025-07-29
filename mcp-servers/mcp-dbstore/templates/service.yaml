@@ -1,0 +1,47 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mcp-dbstore.fullname" . }}-postgresql
+  labels:
+    {{- include "mcp-dbstore.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.postgresql.service.type }}
+  ports:
+    - port: {{ .Values.postgresql.service.port }}
+      targetPort: tcp-postgresql
+      protocol: TCP
+      name: tcp-postgresql
+  selector:
+    {{- include "mcp-dbstore.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+---
+{{- end }}
+{{- if .Values.mcpServer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mcp-dbstore.fullname" . }}-mcp-server
+  labels:
+    {{- include "mcp-dbstore.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+  {{- with .Values.mcpServer.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.mcpServer.service.type }}
+  ports:
+    - port: {{ .Values.mcpServer.service.port }}
+      targetPort: {{ .Values.mcpServer.service.targetPort }}
+      protocol: TCP
+      name: mcp-server
+  selector:
+    {{- include "mcp-dbstore.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+{{- end }} 

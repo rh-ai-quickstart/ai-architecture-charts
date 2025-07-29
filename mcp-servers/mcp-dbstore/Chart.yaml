@@ -1,0 +1,21 @@
+apiVersion: v2
+name: mcp-dbstore
+description: A Helm chart for deploying MCP DBStore server with PostgreSQL database
+type: application
+version: 0.1.0
+appVersion: "0.0.1"
+keywords:
+  - mcp
+  - model-context-protocol
+  - database
+  - fastmcp
+  - llama-stack
+home: https://github.com/yourusername/ai-virtual-assistant
+sources:
+  - https://github.com/yourusername/ai-virtual-assistant/tree/main/mcpservers/mcp_dbstore
+maintainers:
+  - name: AI Virtual Assistant Team
+    email: team@example.com
+annotations:
+  category: AI/ML Tools
+dependencies: [] 

@@ -1,0 +1,107 @@
+1. Get the MCP DBStore server connection details:
+
+{{- if .Values.mcpServer.enabled }}
+  MCP Server Service: {{ include "mcp-dbstore.fullname" . }}-mcp-server
+  Port: {{ .Values.mcpServer.service.port }}
+  
+  To connect to the MCP server from within the cluster:
+  
+    Service Name: {{ include "mcp-dbstore.fullname" . }}-mcp-server.{{ .Release.Namespace }}.svc.cluster.local
+    Port: {{ .Values.mcpServer.service.port }}
+    Protocol: {{ .Values.mcpServer.env.MCP_SERVER_TRANSPORT | default "sse" }}
+
+{{- if eq .Values.mcpServer.service.type "ClusterIP" }}
+  To access the MCP server from outside the cluster:
+  
+    kubectl port-forward svc/{{ include "mcp-dbstore.fullname" . }}-mcp-server {{ .Values.mcpServer.service.port }}:{{ .Values.mcpServer.service.port }} -n {{ .Release.Namespace }}
+    
+  Then connect to: http://localhost:{{ .Values.mcpServer.service.port }}
+{{- end }}
+
+{{- end }}
+
+{{- if .Values.postgresql.enabled }}
+
+2. Database connection details:
+
+  PostgreSQL Service: {{ include "mcp-dbstore.fullname" . }}-postgresql
+  Port: {{ .Values.postgresql.service.port }}
+  Database: {{ .Values.postgresql.auth.database }}
+  Username: {{ .Values.postgresql.auth.username }}
+
+  To connect to PostgreSQL from within the cluster:
+  
+    Host: {{ include "mcp-dbstore.fullname" . }}-postgresql.{{ .Release.Namespace }}.svc.cluster.local
+    Port: {{ .Values.postgresql.service.port }}
+    Database: {{ .Values.postgresql.auth.database }}
+    
+  To access PostgreSQL from outside the cluster:
+  
+    kubectl port-forward svc/{{ include "mcp-dbstore.fullname" . }}-postgresql 5432:5432 -n {{ .Release.Namespace }}
+    
+  Get the database password:
+  
+    kubectl get secret {{ include "mcp-dbstore.fullname" . }}-postgresql -o jsonpath="{.data.password}" -n {{ .Release.Namespace }} | base64 --decode
+
+{{- end }}
+
+3. MCP Inspector Usage:
+
+  To inspect the MCP server tools using mcp-inspector:
+  
+    # Install mcp-inspector
+    pip install mcp-inspector
+    
+    # Connect to your MCP server (after port-forwarding)
+    mcp-inspector http://localhost:{{ .Values.mcpServer.service.port }}
+    
+  Available tools in this MCP server:
+    - get_products: Retrieve paginated product list
+    - get_product_by_id: Get specific product details
+    - get_product_by_name: Find product by exact name
+    - search_products: Search products by query
+    - add_product: Create new product
+    - remove_product: Delete product by ID
+    - order_product: Place product order
+
+4. Llama Stack Integration:
+
+  To register this MCP server with Llama Stack:
+  
+    # Register the MCP server
+    llamastack mcp-server register \
+      --name {{ include "mcp-dbstore.fullname" . }} \
+      --url http://{{ include "mcp-dbstore.fullname" . }}-mcp-server.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcpServer.service.port }} \
+      --description "Product inventory management MCP server"
+    
+    # Verify registration
+    llamastack mcp-server list
+    
+    # Tools will be auto-discovered and available as a toolgroup
+
+5. Monitoring and Logs:
+
+  Check MCP server logs:
+    kubectl logs -f deployment/{{ include "mcp-dbstore.fullname" . }}-mcp-server -n {{ .Release.Namespace }}
+  
+  Check PostgreSQL logs:
+    kubectl logs -f deployment/{{ include "mcp-dbstore.fullname" . }}-postgresql -n {{ .Release.Namespace }}
+  
+  Check pod status:
+    kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }}
+
+6. Sample Data:
+
+{{- if .Values.postgresql.initdb.enabled }}
+  The database has been initialized with sample product data:
+  - 10 sample products with various categories
+  - Products include: Super Widget, Mega Gadget, Quantum Sprocket, etc.
+  - Test the tools by querying for these products
+{{- else }}
+  To populate the database with sample data, enable postgresql.initdb.enabled in values.yaml
+{{- end }}
+
+For more information:
+  Helm Chart: {{ .Chart.Name }} v{{ .Chart.Version }}
+  App Version: {{ .Chart.AppVersion }}
+  Documentation: https://github.com/yourusername/ai-virtual-assistant/tree/main/mcpservers/mcp_dbstore 

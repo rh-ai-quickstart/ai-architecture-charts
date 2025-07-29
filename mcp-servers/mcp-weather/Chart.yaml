@@ -1,0 +1,18 @@
+apiVersion: v2
+name: mcp-weather
+description: A Helm chart for the MCP Weather Server
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - mcp
+  - model-context-protocol
+  - weather
+home: https://github.com/yourusername/ai-architecture-charts
+sources:
+  - https://github.com/yourusername/ai-architecture-charts/tree/main/mcp-servers/weather
+maintainers:
+  - name: AI Architecture Charts Team
+    email: team@example.com
+annotations:
+  category: AI/ML Tools 
