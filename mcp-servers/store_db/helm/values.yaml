@@ -1,0 +1,205 @@
+# Default values for mcp-dbstore.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# MCP DBStore Server Configuration
+mcpServer:
+  enabled: true
+  image:
+    registry: quay.io
+    repository: ecosystem-appeng/mcp_dbstore
+    tag: "1.1.0"
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 1
+  
+  service:
+    type: ClusterIP
+    port: 8002
+    targetPort: 8002
+    annotations: {}
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  
+  # Environment variables for MCP server
+  env:
+    MCP_SERVER_PORT: "8002"
+    MCP_SERVER_HOST: "0.0.0.0"
+    MCP_SERVER_TRANSPORT: "sse"
+  
+  # Pod Security Context - Empty for OpenShift compatibility
+  podSecurityContext: {}
+  
+  # Container Security Context - Minimal for OpenShift compatibility
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: false
+
+# PostgreSQL Database Configuration
+postgresql:
+  enabled: true
+  
+  image:
+    registry: docker.io
+    repository: postgres
+    tag: "15-alpine"
+    pullPolicy: IfNotPresent
+  
+  # Database configuration
+  auth:
+    enablePostgresUser: true
+    postgresPassword: "mcppassword"
+    username: "mcpuser"
+    password: "mcppassword"
+    database: "store_db"
+  
+  service:
+    type: ClusterIP
+    port: 5432
+  
+  # Persistence configuration
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 2Gi
+    annotations: {}
+  
+  # Resource configuration
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  # Security context - Empty for OpenShift compatibility
+  podSecurityContext: {}
+  
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: false
+  
+  # PostgreSQL configuration
+  postgresqlConfiguration:
+    max_connections: 100
+    shared_buffers: 128MB
+    effective_cache_size: 256MB
+  
+  # Init container for database seeding
+  initdb:
+    enabled: true
+    scripts:
+      populate-db.sql: |
+        -- Create the products table first
+        CREATE TABLE IF NOT EXISTS products (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          description TEXT,
+          inventory INTEGER NOT NULL DEFAULT 0,
+          price DECIMAL(10, 2) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        -- Sample data for the products table
+        INSERT INTO products (name, description, inventory, price) VALUES
+        ('Super Widget', 'A high-quality widget with advanced features and a sleek design.', 100, 29.99),
+        ('Mega Gadget', 'The latest gadget that everyone is talking about. Packed with power.', 50, 79.50),
+        ('Awesome Gizmo', 'A versatile gizmo for all your daily needs. Simple and effective.', 200, 12.75),
+        ('Hyper Doodad', 'Experience the next level of doodads with this hyper-efficient model.', 75, 45.00),
+        ('Ultra Thingamajig', 'The ultimate thingamajig, built for performance and durability.', 120, 99.99),
+        ('Quantum Sprocket', 'A revolutionary sprocket utilizing quantum technology for unparalleled precision.', 30, 199.00),
+        ('Stealth Frob', 'A discreet frob that gets the job done without drawing attention.', 150, 22.50),
+        ('Cosmic Ratchet', 'A ratchet powerful enough to tighten bolts across galaxies. (Metaphorically)', 60, 65.20),
+        ('Zenith Component', 'The pinnacle of component design, offering superior integration.', 90, 33.80),
+        ('Nova Fastener', 'A new-age fastener that promises a secure hold every time.', 250, 5.95);
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# Network Policy
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []
+
+# Monitoring
+monitoring:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+
+# Ingress configuration (if external access needed)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: mcp-dbstore.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# OpenShift Route configuration (for external access)
+route:
+  enabled: true
+  host: ""  # Leave empty for auto-generated host
+  annotations: {}
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# Additional labels and annotations
+commonLabels: {}
+commonAnnotations: {}
+
+# Pod annotations
+podAnnotations: {}
+
+# Node selector for both components
+nodeSelector: {}
+
+# Tolerations for both components
+tolerations: []
+
+# Affinity rules for both components
+affinity: {} 

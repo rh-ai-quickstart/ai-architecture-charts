@@ -1,0 +1,107 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mcp-dbstore.fullname" . }}-mcp-server
+  labels:
+    {{- include "mcp-dbstore.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.mcpServer.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mcp-dbstore.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mcp-server
+  template:
+    metadata:
+      labels:
+        {{- include "mcp-dbstore.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mcp-server
+        {{- with .Values.commonLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "mcp-dbstore.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.mcpServer.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: wait-for-db
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ include "mcp-dbstore.fullname" . }}-postgresql -p 5432 -U ${POSTGRES_USER}; do
+                echo "Waiting for PostgreSQL to be ready..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mcp-dbstore.fullname" . }}-postgresql
+                  key: username
+      containers:
+        - name: mcp-server
+          securityContext:
+            {{- toYaml .Values.mcpServer.securityContext | nindent 12 }}
+          image: "{{ .Values.mcpServer.image.registry }}/{{ .Values.mcpServer.image.repository }}:{{ .Values.mcpServer.image.tag }}"
+          imagePullPolicy: {{ .Values.mcpServer.image.pullPolicy }}
+          ports:
+            - name: mcp-server
+              containerPort: {{ .Values.mcpServer.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mcp-dbstore.fullname" . }}-mcp-server
+                  key: database-url
+            {{- range $key, $value := .Values.mcpServer.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          livenessProbe:
+            tcpSocket:
+              port: mcp-server
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          readinessProbe:
+            tcpSocket:
+              port: mcp-server
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+          resources:
+            {{- toYaml .Values.mcpServer.resources | nindent 12 }}
+      {{- with .Values.mcpServer.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.mcpServer.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.mcpServer.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }} 
