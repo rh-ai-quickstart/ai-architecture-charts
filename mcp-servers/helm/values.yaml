@@ -3,3 +3,10 @@ mcp-servers:
     deploy: false
     imageRepository: quay.io/ecosystem-appeng/mcp-weather
     uri: http://mcp-weather:8000/sse
+  
+  store-inventory:
+    deploy: false
+    imageRepository: quay.io/ecosystem-appeng/mcp-store-inventory
+    uri: http://store-inventory:8003/sse
+    apiUrl: http://store-inventory-api:8002
+    servicePort: 8003

@@ -26,10 +26,10 @@ jobs:
             file: mcp-servers/weather/Containerfile
             context: mcp-servers/weather/src
             chart: mcp-servers/helm/Chart.yaml
-          - name: mcp-dbstore
-            file: mcp-servers/store_db/Containerfile
-            context: mcp-servers/store_db/src
-            chart: mcp-servers/store_db/helm/Chart.yaml
+          - name: mcp-store-inventory
+            file: mcp-servers/store-inventory/Containerfile
+            context: mcp-servers/store-inventory/src
+            chart: mcp-servers/store-inventory/helm/Chart.yaml
 
     steps:
       - name: Checkout
@@ -88,13 +88,7 @@ jobs:
             fi
           done
 
-      - name: Package additional charts in mcp-servers folder
-        run: |
-          for chart in mcp-servers/*/; do
-            if [ -f "$chart/helm/Chart.yaml" ]; then
-              helm package "$chart/helm" -d gh-pages
-            fi
-          done
+
 
       - name: Generate Helm index
         run: |

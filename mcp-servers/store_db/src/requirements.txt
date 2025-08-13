@@ -1,7 +1,0 @@
-# Dependencies for MCP Store Server (Direct DB)
-fastapi
-uvicorn
-sqlalchemy
-asyncpg
-pydantic
-mcp[cli]
