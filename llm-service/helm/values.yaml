@@ -79,11 +79,6 @@ models:
   llama-3-2-3b-instruct-fp16:
     id: llama3.2:3b-instruct-fp16
     enabled: true
-    metadata:
-      provider: ollama
-      size: "3B"
-      precision: "fp16"
-      description: "Llama 3.2 3B model with fp16 precision for runtime compatibility"
     args:
       - --enable-auto-tool-choice
       - --chat-template
