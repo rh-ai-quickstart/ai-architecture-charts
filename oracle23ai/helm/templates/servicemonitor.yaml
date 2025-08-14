@@ -1,0 +1,21 @@
+{{/*
+ServiceMonitor for Oracle 23ai metrics collection
+Requires Prometheus Operator and oracle_exporter sidecar
+*/}}
+{{- if and .Values.monitoring.enabled .Values.monitoring.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "oracle23ai.fullname" . }}
+  labels:
+    {{- include "oracle23ai.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "oracle23ai.selectorLabels" . | nindent 6 }}
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scheme: http
+{{- end }}

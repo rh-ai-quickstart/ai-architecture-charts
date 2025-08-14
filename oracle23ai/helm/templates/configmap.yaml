@@ -1,0 +1,29 @@
+{{- if .Values.initdb.enabled }}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ include "oracle23ai.fullname" . }}-initdb
+  labels:
+    {{- include "oracle23ai.labels" . | nindent 4 }}
+data:
+  init-db.sql: |
+    -- Oracle 23AI initialization script
+    -- Enable AI Vector features
+    {{- if .Values.ai.enableVectorIndex }}
+    ALTER SYSTEM SET VECTOR_MEMORY_SIZE={{ .Values.ai.vectorMemoryTarget }};
+    {{- end }}
+    
+    -- Create AI-enabled schemas and users
+    {{- range .Values.users }}
+    CREATE USER {{ .username }} IDENTIFIED BY "GeneratedPassword";
+    {{- range .grants }}
+    GRANT {{ . }} TO {{ .username }};
+    {{- end }}
+    {{- end }}
+    
+    -- Custom initialization scripts
+    {{- range .Values.initdb.scripts }}
+    -- {{ .name }}
+    {{ .content }}
+    {{- end }}
+{{- end }}

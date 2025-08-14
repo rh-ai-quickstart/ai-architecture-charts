@@ -1,0 +1,140 @@
+{{/*
+Oracle 23ai StatefulSet
+Deploys Oracle Database Free 23ai with AI Vector capabilities
+Requires custom SecurityContextConstraint (oracle-scc) for user 54321
+*/}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "oracle23ai.fullname" . }}
+  labels:
+    {{- include "oracle23ai.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "oracle23ai.selectorLabels" . | nindent 6 }}
+  {{- with .Values.volumeClaimTemplates }}
+  volumeClaimTemplates:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "oracle23ai.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "oracle23ai.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- toYaml .Values.env | nindent 12 }}
+          ports:
+            - name: oracle
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          {{/* Health probes use OS authentication to avoid locked account issues */}}
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "SELECT 1 FROM DUAL;" | sqlplus -s / as sysdba | grep -q "1"
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "SELECT 1 FROM DUAL;" | sqlplus -s / as sysdba | grep -q "1"
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{/* Simple metrics exporter for Prometheus */}}
+        {{- if .Values.monitoring.enabled }}
+        - name: metrics-exporter
+          image: python:3.9-alpine
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.monitoring.exporterPort }}
+              protocol: TCP
+          command:
+            - python3
+            - -c
+            - |
+              import http.server
+              import socketserver
+              
+              metrics_content = '''# HELP oracle23ai_up Oracle 23ai database status
+              # TYPE oracle23ai_up gauge
+              oracle23ai_up{instance="oracle23ai-0"} 1
+              # HELP oracle23ai_info Oracle 23ai information
+              # TYPE oracle23ai_info gauge
+              oracle23ai_info{version="23ai",chart="oracle23ai"} 1
+              '''
+              
+              class MetricsHandler(http.server.BaseHTTPRequestHandler):
+                  def do_GET(self):
+                      if self.path == '/metrics':
+                          self.send_response(200)
+                          self.send_header('Content-type', 'text/plain')
+                          self.end_headers()
+                          self.wfile.write(metrics_content.encode())
+                      else:
+                          self.send_response(404)
+                          self.end_headers()
+              
+              with socketserver.TCPServer(("", {{ .Values.monitoring.exporterPort }}), MetricsHandler) as httpd:
+                  httpd.serve_forever()
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

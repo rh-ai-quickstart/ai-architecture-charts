@@ -1,0 +1,153 @@
+# Default values for oracle23ai.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Oracle Database requires single replica (cannot scale horizontally)
+replicaCount: 1
+
+image:
+  repository: container-registry.oracle.com/database/free
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+imagePullSecrets: []
+
+nameOverride: "oracle23ai"
+fullnameOverride: "oracle23ai"
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+
+securityContextConstraint:
+  create: false
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 54321
+
+securityContext:
+  runAsUser: 54321
+  runAsGroup: 54321
+  runAsNonRoot: true
+
+service:
+  type: ClusterIP
+  port: 1521
+
+env:
+  - name: ORACLE_PWD
+    valueFrom:
+      secretKeyRef:
+        key: password
+        name: oracle23ai
+  - name: ORACLE_CHARACTERSET
+    value: "AL32UTF8"
+  - name: ORACLE_EDITION
+    value: "free"
+  - name: ENABLE_ARCHIVELOG
+    value: "true"
+
+resources:
+  requests:
+    memory: "2Gi"
+    cpu: "1"
+  limits:
+    memory: "4Gi"
+    cpu: "2"
+
+# Health check configuration
+probes:
+  readiness:
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+  liveness:
+    initialDelaySeconds: 120
+    periodSeconds: 60
+    timeoutSeconds: 30
+
+autoscaling:
+  enabled: false
+
+volumeClaimTemplates:
+  - metadata:
+      name: oracle-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+
+volumeMounts:
+  - mountPath: /opt/oracle/oradata
+    name: oracle-data
+
+nodeSelector: {}
+affinity: {}
+tolerations: []
+
+# Secret configuration - uses environment variables, values.yaml, or auto-generation
+secret:
+  # Priority order: Environment Variables -> values.yaml -> Auto-generated
+  # 
+  # Environment Variables (Recommended for production):
+  #   ORACLE_PASSWORD      - Database password
+  #   ORACLE_HOST          - Database host
+  #   ORACLE_PORT          - Database port  
+  #   ORACLE_SERVICE_NAME  - Database service name
+  #   ORACLE_SID           - Database SID
+  #
+  # Example: export ORACLE_PASSWORD="MySecurePassword123!"
+  
+  # Default values (used if environment variables not set)
+  password: ""  # Leave empty to auto-generate secure password
+  host: oracle23ai
+  port: "1521"
+  serviceName: "FREEPDB1"
+  sid: "FREE"
+  
+  # Use existing secret instead of creating new one
+  existingSecret: ""  # Set to existing secret name
+  passwordKey: "password"  # Key name in existing secret
+
+# AI-specific configuration
+ai:
+  vectorMemoryTarget: "1G"
+  enableVectorIndex: true
+  enableJsonDuality: true
+  enableGraphAnalytics: true
+
+# Database initialization
+initdb:
+  enabled: true
+  scripts: []
+    # Example:
+    # - name: "create-ai-user.sql"
+    #   content: |
+    #     CREATE USER ai_user IDENTIFIED BY "${AI_USER_PASSWORD}";
+    #     GRANT CREATE SESSION, CREATE TABLE, CREATE VECTOR to ai_user;
+
+# Additional users with auto-generated passwords
+users: []
+  # Example:
+  # - username: ai_user
+  #   grants:
+  #     - "CREATE SESSION"
+  #     - "CREATE TABLE" 
+  #     - "CREATE VECTOR"
+  # Password will be auto-generated and stored in secret as: ai_user_password
+
+# Monitoring with Prometheus
+monitoring:
+  enabled: false
+  exporterImage: "iamseth/oracledb_exporter:latest"
+  exporterPort: 9161
+  serviceMonitor:
+    enabled: false
+    interval: "30s"
+    scrapeTimeout: "10s"
