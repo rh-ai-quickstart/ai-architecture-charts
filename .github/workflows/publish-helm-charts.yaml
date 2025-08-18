@@ -26,10 +26,10 @@ jobs:
             file: mcp-servers/weather/Containerfile
             context: mcp-servers/weather/src
             chart: mcp-servers/helm/Chart.yaml
-          - name: mcp-store-inventory
-            file: mcp-servers/store-inventory/Containerfile
-            context: mcp-servers/store-inventory/src
-            chart: mcp-servers/store-inventory/helm/Chart.yaml
+          - name: mcp-store-db
+            file: mcp-servers/store-db/Containerfile
+            context: mcp-servers/store-db
+            chart: mcp-servers/store-db/helm/Chart.yaml
 
     steps:
       - name: Checkout

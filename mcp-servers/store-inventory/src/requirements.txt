@@ -1,5 +1,0 @@
-# Dependencies for MCP Store Inventory Server
-httpx>=0.25.0
-pydantic>=2.0.0
-fastmcp>=2.0.0
-starlette>=0.40.0

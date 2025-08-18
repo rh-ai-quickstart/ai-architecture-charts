@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for local development
+  postgresql:
+    image: postgres:15-alpine
+    container_name: mcp-dbstore-postgresql
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: store_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./populate_db.sql:/docker-entrypoint-initdb.d/populate_db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d store_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mcp-network
+
+  # MCP DBStore server
+  mcp-dbstore:
+    build: .
+    container_name: mcp-dbstore
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://myuser:mypassword@postgresql:5432/store_db
+      DB_POOL_SIZE: 10
+      DB_MAX_OVERFLOW: 20
+      DB_POOL_TIMEOUT: 30
+      DB_POOL_RECYCLE: 3600
+      DB_HEALTH_CHECK_INTERVAL: 30
+      DB_HEALTH_CHECK_TIMEOUT: 5
+      DB_MAX_RETRY_ATTEMPTS: 5
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mcp-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  mcp-network:
+    driver: bridge
+

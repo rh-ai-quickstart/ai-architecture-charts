@@ -1,0 +1,53 @@
+# Multi-stage build to reduce final image size
+FROM python:3.12-slim AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --user -r /tmp/requirements.txt
+
+# Final stage
+FROM python:3.12-slim
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    curl \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python packages from builder stage
+COPY --from=builder /root/.local /root/.local
+
+# Copy application code
+COPY . .
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash mcpuser
+RUN chown -R mcpuser:mcpuser /app
+
+# Copy Python packages to user directory and set PATH
+RUN cp -r /root/.local /home/mcpuser/.local && \
+    chown -R mcpuser:mcpuser /home/mcpuser/.local
+
+USER mcpuser
+
+# Make sure scripts in .local are usable
+ENV PATH=/home/mcpuser/.local/bin:$PATH
+
+# Expose port
+EXPOSE 8002
+
+# Health check - based on MCP server status, not database status
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8002/health || exit 1
+
+# Run the MCP server
+CMD ["python", "store.py"]
