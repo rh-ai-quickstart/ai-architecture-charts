@@ -1,0 +1,107 @@
+replicaCount: 1
+
+image:
+  repository: quay.io/ecosystem-appeng/mcp-store-db
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false  # MCP server needs to write temporary files
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8002
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: mcp-store-db.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Database configuration - external PostgreSQL instance
+database:
+  # Default to pgvector instance coordinates
+  host: "pgvector"
+  port: "5432"
+  user: "postgres"
+  password: "store_password"
+  database: "store_db"  # New database for store-db MCP server
+  sslMode: "prefer"
+  
+# Environment variables
+env:
+  # Database connection - can be overridden by environment variables
+  DATABASE_HOST: "{{ .Values.database.host }}"
+  DATABASE_PORT: "{{ .Values.database.port }}"
+  DATABASE_USER: "{{ .Values.database.user }}"
+  DATABASE_PASSWORD: "{{ .Values.database.password }}"
+  DATABASE_NAME: "{{ .Values.database.database }}"
+  DATABASE_SSL_MODE: "{{ .Values.database.sslMode }}"
+
+  
+  # Database connection pool configuration
+  DB_POOL_SIZE: "10"
+  DB_MAX_OVERFLOW: "20"
+  DB_POOL_TIMEOUT: "30"
+  DB_POOL_RECYCLE: "3600"
+  
+  # Health check configuration
+  DB_HEALTH_CHECK_INTERVAL: "30"
+  DB_HEALTH_CHECK_TIMEOUT: "5"
+  DB_MAX_RETRY_ATTEMPTS: "5"
+
+# Health check configuration - based on MCP server status, not database status
+healthCheck:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Database initialization note
+# Note: The database specified in database.database must exist in the PostgreSQL instance
+# The MCP server will create tables and populate initial data on first connection

@@ -3,3 +3,23 @@ mcp-servers:
     deploy: false
     imageRepository: quay.io/ecosystem-appeng/mcp-weather
     uri: http://mcp-weather:8000/sse
+  
+  store-db:
+    deploy: false
+    imageRepository: quay.io/ecosystem-appeng/mcp-store-db
+    uri: http://store-db:8002/sse
+    servicePort: 8002
+    database:
+      host: pgvector
+      port: "5432"
+      user: postgres
+      password: rag_password
+      database: store_db
+      sslMode: prefer
+    env:
+      DATABASE_HOST: pgvector
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: store_password
+      DATABASE_NAME: store_db
+      DATABASE_SSL_MODE: prefer
