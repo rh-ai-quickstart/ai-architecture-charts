@@ -251,3 +251,263 @@ def store_documents(llamastack_base_url: str, input_dir: dsl.InputPath(), auth_u
     except Exception as e:
         print("Embedding insert failed:", e)
         raise Exception(f"Failed to insert documents into vector DB: {e}")
+
+@dsl.component(base_image=BASE_IMAGE)
+def generate_provenance(input_dir: dsl.InputPath()):
+    import base64
+    import datetime
+    import gzip
+    import hashlib
+    import json
+    import llama_stack_client
+    import io
+    import os
+    import requests
+    import subprocess
+
+    from kubernetes import client, config, stream
+    from pathlib import Path
+
+    # Connect to the cluster
+    config.load_incluster_config()
+
+    def get_predicate_skeleton() -> dict:
+        return {
+            "buildType": "kubeflow.org/v1/Notebook",
+            "buildDefinition": {
+                "buildType": "kubeflow.org/v1/Notebook",
+                "externalParameters": {},
+                "internalParameters": {
+                    "environment": {
+                        "embedding_model": os.getenv('EMBEDDING_MODEL'),
+                        "llama_stack_client": f"{llama_stack_client.__version__}",
+                    },
+                },
+                "resolvedDependencies": [],
+            },
+            "runDetails": {
+                "metadata": {
+                    "finishedOn": f"{datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}",
+                },
+            },
+        }
+
+    def get_db_sha() -> str:
+        secret_name="pgvector" # Needs to be hardcoded for the moment
+
+        with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
+            namespace = f.read().strip()
+        secret = client.CoreV1Api().read_namespaced_secret(secret_name, namespace)
+        container = base64.b64decode(secret.data["host"]).decode("utf-8")
+        db_name=base64.b64decode(secret.data["dbname"]).decode("utf-8")
+        db_username = base64.b64decode(secret.data["user"]).decode("utf-8")
+        pod = f"{container}-0"
+
+        command = [
+            "/bin/bash",
+            "-c",
+            f"pg_dump -U {db_username} -d {db_name} | sha512sum -",
+        ]
+        # Exec into the container
+        resp = stream.stream(
+            client.CoreV1Api().connect_get_namespaced_pod_exec,
+            namespace=namespace,
+            name=pod,
+            container=container,
+            command=command,
+            stderr=True,
+            stdin=True,
+            stdout=True,
+            tty=True,
+        )
+        sha = resp.split()[0]
+        return sha
+
+    def get_sources_sha():
+        chunk_size = 2**20
+        files=[p for p in Path(input_dir).iterdir() if p.is_file()]
+        for file in files:
+            shasum = hashlib.sha512()
+            with file.open("rb") as f:
+                for chunk in iter(lambda: f.read(chunk_size), b""):
+                    shasum.update(chunk)
+            yield (
+                file.as_uri(),
+                shasum.hexdigest(),
+            )
+
+    def get_cosign() -> str:
+        # Get URL from which to download the binary
+        route = client.CustomObjectsApi().list_namespaced_custom_object(
+            group="route.openshift.io",
+            version="v1",
+            namespace="trusted-artifact-signer",
+            plural="routes",
+            label_selector="app.kubernetes.io/component=client-server"
+        )
+        host = route["items"][0]["spec"]["host"]
+        url = f"https://{host}/clients/linux/cosign-amd64.gz"
+
+        # Download the binary archive
+        response = requests.get(url)
+        response.raise_for_status()
+
+        # Decompress the archive
+        with gzip.GzipFile(fileobj=io.BytesIO(response.content)) as f:
+            decompressed = f.read()
+
+        # Write the binary to disk and make it executable
+        bin_path = "/tmp/cosign"
+        with open(bin_path, "wb") as f:
+            f.write(decompressed)
+        os.chmod(bin_path, 0o755)
+
+
+        # Get TUF URL
+        route = client.CustomObjectsApi().list_namespaced_custom_object(
+            group="route.openshift.io",
+            version="v1",
+            namespace="trusted-artifact-signer",
+            plural="routes",
+            label_selector="app.kubernetes.io/component=tuf"
+        )
+        tuf_url=f"https://{route["items"][0]["spec"]["host"]}"
+        root_path=f"{tuf_url}/root.json"
+
+        # Workaroud for broken TAS
+        tuf_url="https://tuf-repo-cdn.sigstage.dev"
+        response = requests.get("https://raw.githubusercontent.com/sigstore/root-signing-staging/main/metadata/root_history/1.root.json")
+        response.raise_for_status()
+        root_path="/tmp/tuf-root.json"
+        with open(root_path, "wb") as f:
+            f.write(response.content)
+
+        run_cosign([
+            bin_path,
+            "initialize",
+            f"--mirror={tuf_url}",
+            f"--root={root_path}",
+        ])
+
+        return bin_path
+
+    def get_rekor() -> str:
+        route = client.CustomObjectsApi().list_namespaced_custom_object(
+            group="route.openshift.io",
+            version="v1",
+            namespace="trusted-artifact-signer",
+            plural="routes",
+            label_selector="app.kubernetes.io/component=rekor-server"
+        )
+        host = route["items"][0]["spec"]["host"]
+        return f"https://{host}"
+
+    def get_signing_key() -> str:
+        secret = client.CoreV1Api().read_namespaced_secret("signing-secrets", "openshift-pipelines")
+        key = base64.b64decode(secret.data["cosign.key"]).decode("utf-8")
+        password = base64.b64decode(secret.data["cosign.password"]).decode("utf-8")
+        return (key, password)
+    
+    def run_cosign(command: list):
+        cosign_key, cosign_password = get_signing_key()
+
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            env={
+                "COSIGN_KEY": cosign_key,
+                "COSIGN_PASSWORD": cosign_password,
+                "HOME": "/tmp",
+            },
+            text=True
+        )
+        if result.returncode != 0:
+            print("Output:")
+            print(result.stdout)
+            print("Error:")
+            print(result.stderr)
+            raise RuntimeError("cosign command failed")
+
+        return result.stdout
+
+    def cosign(predicate: str, blob: str) -> str:
+        bin_path = get_cosign()
+        rekor_url = get_rekor()
+        # Workaround for TAS storage issue
+        rekor_url = "https://rekor.sigstage.dev"
+
+        predicate_path = "/tmp/predicate.json"
+        with open(predicate_path, "w") as f:
+            f.write(predicate)
+
+        print()
+        print("Attesting blob")
+        blob_path = "/tmp/db.sha512sum"
+        blob_data=f"att:{blob}"
+        with open(blob_path, "w") as f:
+            f.write(blob_data)
+        run_cosign([
+            bin_path,
+            "attest-blob",
+            blob_path,
+            "--key=env://COSIGN_KEY",
+            "--predicate="+predicate_path,
+            "--rekor-entry-type=intoto",
+            "--rekor-url="+rekor_url,
+            "--type=slsaprovenance1",
+            "-y",
+        ])
+        shasum = hashlib.sha256()
+        shasum.update(blob_data.encode())
+        att_sha = shasum.hexdigest()
+
+        print()
+        print("Signing blob")
+        blob_path = "/tmp/db.sha512sum"
+        blob_data=f"sig:{blob}"
+        with open(blob_path, "w") as f:
+            f.write(blob_data)
+        run_cosign([
+            bin_path,
+            "sign-blob",
+            blob_path,
+            "--key=env://COSIGN_KEY",
+            "--rekor-url="+rekor_url,
+            "-y",
+        ])
+        shasum = hashlib.sha256()
+        shasum.update(blob_data.encode())
+        sig_sha = shasum.hexdigest()
+
+        return (att_sha, sig_sha)
+
+    predicate = get_predicate_skeleton()
+
+    # Add subject
+    db_sha = get_db_sha()
+
+    # Add sources
+    for source, sha in get_sources_sha():
+        dependency = {
+            "uri": source,
+            "digest": {
+                "sha512": sha,                
+            },
+        }
+        predicate["buildDefinition"]["resolvedDependencies"].append(dependency)
+
+    # Sign
+    predicate_str = json.dumps(predicate, indent=2)
+    print("\n\n")
+    print("Predicate:")
+    print(predicate_str)
+    print("\n\n")
+    print()
+
+    att_sha, sig_sha = cosign(predicate_str, db_sha)
+    print("\n\n")
+    print(f"DB sha: '{db_sha}'")
+    print(f"Attestation Hash: 'sha256:{att_sha}'")
+    print(f"Signing Hash: 'sha256:{sig_sha}'")
+
+    print("\n\n")

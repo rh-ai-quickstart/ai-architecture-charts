@@ -23,3 +23,52 @@ roleRef:
   kind: Role
   name: secret-writer
   apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: read-signing-secrets
+  namespace: openshift-pipelines
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["signing-secrets"]
+    verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-signing-secrets-binding
+  namespace: openshift-pipelines
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-runner-dspa
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: read-signing-secrets
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-routes
+  namespace: trusted-artifact-signer
+rules:
+  - apiGroups: ["route.openshift.io"]
+    resources: ["routes"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-routes-binding
+  namespace: trusted-artifact-signer
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-runner-dspa
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: access-routes
+  apiGroup: rbac.authorization.k8s.io
