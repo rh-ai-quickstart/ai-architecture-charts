@@ -1,0 +1,65 @@
+# TPC-DS Data Loader Chart
+# This chart loads TPC-DS data into an existing Oracle database
+
+nameOverride: "oracle23ai"
+fullnameOverride: "oracle23ai"
+
+# Service Account configuration
+serviceAccount:
+  create: false  # Use default service account for jobs
+  name: ""
+
+# Database connection configuration
+database:
+  # These should reference the existing Oracle database
+  host: oracle23ai
+  port: "1521"
+  serviceName: "FREEPDB1"
+  
+  # Secret containing database credentials (created by DB chart)
+  existingSecret: "oracle23ai"
+  passwordKey: "password"
+
+# TPC-DS Configuration
+tpcds:
+  username: "SYSTEM"  # Use SYSTEM user that we know works
+  password: ""  # Will use Oracle system password from secret
+  schemaName: "SYSTEM"  # Use SYSTEM schema
+  scaleFactor: 1
+  parallel: 2
+
+# TPC-DS Job runs without post-install hooks (no timing issues)
+job:
+  enabled: true
+  # Remove post-install hook annotations for manual triggering
+  annotations: {}
+  
+  # Job timeout and retry configuration
+  activeDeadlineSeconds: 3600  # 1 hour
+  backoffLimit: 2
+  
+  # Resource configuration
+  resources:
+    initContainers:
+      waitForOracle:
+        requests:
+          memory: "32Mi"
+          cpu: "50m"
+        limits:
+          memory: "64Mi"
+          cpu: "100m"
+      createUser:
+        requests:
+          memory: "128Mi"
+          cpu: "100m"
+        limits:
+          memory: "256Mi"
+          cpu: "200m"
+    
+    tpcdsPopulate:
+      requests:
+        memory: "1Gi"
+        cpu: "1"
+      limits:
+        memory: "2Gi"
+        cpu: "2"

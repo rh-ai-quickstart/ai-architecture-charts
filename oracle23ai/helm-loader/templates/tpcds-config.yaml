@@ -1,0 +1,19 @@
+{{/*
+TPC-DS Configuration ConfigMap
+*/}}
+{{- if .Values.job.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "oracle23ai.fullname" . }}-tpcds-config
+  labels:
+    {{- include "oracle23ai.labels" . | nindent 4 }}
+data:
+  database.host: {{ .Values.database.host | quote }}
+  database.port: {{ .Values.database.port | toString | quote }}
+  database.service_name: {{ .Values.database.serviceName | quote }}
+  database.username: {{ .Values.tpcds.username | quote }}
+  schema_name: {{ .Values.tpcds.schemaName | quote }}
+  scale_factor: {{ .Values.tpcds.scaleFactor | toString | quote }}
+  parallel_workers: {{ .Values.tpcds.parallel | toString | quote }}
+{{- end }}

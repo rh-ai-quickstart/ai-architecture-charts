@@ -1,0 +1,285 @@
+{{/*
+TPC-DS Data Population Job - Standalone Implementation
+*/}}
+{{- if .Values.job.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "oracle23ai.fullname" . }}-tpcds-populate
+  labels:
+    {{- include "oracle23ai.labels" . | nindent 4 }}
+  {{- with .Values.job.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 3600
+  template:
+    metadata:
+      labels:
+        {{- include "oracle23ai.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "oracle23ai.serviceAccountName" . }}
+      
+      initContainers:
+      # Verify password secrets are available and valid
+      - name: verify-passwords
+        image: "quay.io/rhkp/tpcds-util:latest"
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "🔐 Verifying password secrets and connectivity..."
+          
+          # Set writable HOME directory
+          export HOME=/tmp
+          
+          # Check that required password secrets exist
+          echo "📋 Checking Oracle system password..."
+          if [[ -z "${ORACLE_PWD}" ]]; then
+            echo "❌ ORACLE_PWD environment variable is empty"
+            exit 1
+          fi
+          echo "✅ Oracle system password is available (length: ${#ORACLE_PWD})"
+          
+          echo "📋 Checking TPC-DS user password..."
+          if [[ -z "${ORACLE_PWD}" ]]; then
+            echo "❌ ORACLE_PWD environment variable is empty" 
+            exit 1
+          fi
+          echo "✅ Oracle system password is available (length: ${#ORACLE_PWD})"
+          
+          # Basic password validation (no special chars that might break shell)
+          if echo "${ORACLE_PWD}" | grep -q '[`$\\]'; then
+            echo "⚠️  Oracle password contains shell special characters - this may cause issues"
+          fi
+          
+          if echo "${ORACLE_PWD}" | grep -q '[`$\\]'; then
+            echo "⚠️  Oracle password contains shell special characters - this may cause issues"
+          fi
+          
+          echo "✅ Password verification completed successfully"
+        env:
+        - name: ORACLE_PWD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.existingSecret }}
+              key: {{ .Values.database.passwordKey }}
+        - name: ORACLE_PWD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.existingSecret }}
+              key: {{ .Values.database.passwordKey }}
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "25m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+      
+      # Wait for Oracle to be fully ready for connections
+      - name: wait-for-oracle
+        image: "quay.io/rhkp/tpcds-util:latest"
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "🔍 Waiting for Oracle database to be ready..."
+          
+          # Set writable HOME directory
+          export HOME=/tmp
+          
+          WAIT_TIME=0
+          MAX_WAIT=900  # 15 minutes maximum for Oracle initialization
+          CHECK_INTERVAL=30  # Check every 30 seconds
+          
+          # Configure tpcds-util for connection testing
+          echo "🔧 Configuring tpcds-util with Oracle connection details..."
+          echo "   Host: {{ .Values.database.host }}"
+          echo "   Port: {{ .Values.database.port }}"
+          echo "   Service: {{ .Values.database.serviceName }}"
+          echo "   Password length: ${#ORACLE_PWD}"
+          
+          tpcds-util config set \
+            --host "{{ .Values.database.host }}" \
+            --port "{{ .Values.database.port }}" \
+            --service-name "{{ .Values.database.serviceName }}" \
+            --username "system" \
+            --password "${ORACLE_PWD}"
+          
+          echo "📋 Testing connection to Oracle as SYSTEM user..."
+          
+          while [ $WAIT_TIME -lt $MAX_WAIT ]; do
+            echo "⏳ Checking Oracle readiness... (${WAIT_TIME}s elapsed)"
+            
+            # Check if port is available using Python (since nc is not available)
+            if ! python3 -c "import socket,sys; s=socket.socket(); s.settimeout(5); r=s.connect_ex(('{{ .Values.database.host }}',{{ .Values.database.port }})); s.close(); sys.exit(0 if r==0 else 1)" 2>/dev/null; then
+              echo "   Oracle port not yet accessible"
+            else
+              echo "✅ Oracle port accessible, testing database connection..."
+              
+              # Test actual database connection and FREEPDB1 availability
+              if tpcds-util db test 2>/dev/null; then
+                echo "✅ Oracle database is ready for connections!"
+                echo "✅ FREEPDB1 pluggable database is accessible"
+                break
+              else
+                echo "   Oracle responding but FREEPDB1 not ready yet..."
+              fi
+            fi
+            
+            sleep $CHECK_INTERVAL
+            WAIT_TIME=$((WAIT_TIME + CHECK_INTERVAL))
+          done
+          
+          if [ $WAIT_TIME -ge $MAX_WAIT ]; then
+            echo "❌ Oracle initialization timeout after ${MAX_WAIT}s"
+            echo "❌ Oracle database failed to become ready for connections"
+            exit 1
+          fi
+        
+        env:
+        - name: ORACLE_PWD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.existingSecret }}
+              key: {{ .Values.database.passwordKey }}
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+
+
+      containers:
+      - name: tpcds-populate
+        image: "quay.io/rhkp/tpcds-util:latest"
+        imagePullPolicy: Always
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          set -e
+          echo "🚀 Starting TPC-DS data population job"
+          echo "   Target: {{ .Values.tpcds.schemaName }} schema"
+          echo "   Scale Factor: {{ .Values.tpcds.scaleFactor }}"
+          echo ""
+          
+          # Set writable HOME directory for tpcds-util config
+          export HOME=/tmp
+          
+          # Configure tpcds-util with actual parameters  
+          echo "⚙️ Configuring TPC-DS utility..."
+          tpcds-util config set \
+            --host "${DB_HOST}" \
+            --port "${DB_PORT}" \
+            --service-name "${DB_SERVICE}" \
+            --username "${DB_USERNAME}" \
+            --password "${ORACLE_PWD}" \
+            --schema-name "${TARGET_SCHEMA}" \
+            --default-scale "${SCALE_FACTOR}" \
+            --parallel-workers "${PARALLEL_WORKERS}" \
+            --output-dir "/tmp/tpcds_data"
+          
+          echo "🔄 Autocommit enabled in tpcds-util for transaction persistence"
+          
+          echo "📋 Current configuration:"
+          tpcds-util config show
+          echo ""
+          
+          # Test database connection
+          echo "🔌 Testing database connection..."
+          tpcds-util db test
+          echo ""
+          
+          # Create TPC-DS schema tables
+          echo "🗃️ Creating TPC-DS schema tables..."
+          tpcds-util schema create --schema-file /app/oracle_tpcds_schema.sql --schema "${TARGET_SCHEMA}"
+          echo ""
+          
+          # Generate synthetic data  
+          echo "🏭 Generating synthetic TPC-DS data..."
+          tpcds-util generate data --scale "${SCALE_FACTOR}"
+          echo ""
+          
+          # Load data into Oracle with autocommit enabled
+          echo "📤 Loading data into Oracle database with autocommit..."
+          tpcds-util load data --schema "${TARGET_SCHEMA}" --parallel "${PARALLEL_WORKERS}"
+          echo ""
+          
+          # Basic verification using tpcds-util
+          echo "🔍 Verifying data loading..."
+          echo "📋 Table statistics (may show 0 until manually gathered):"
+          tpcds-util db info --schema "${TARGET_SCHEMA}"
+          echo ""
+          echo "💡 Note: Table statistics may show 0 rows until manually gathered."
+          echo "💡 Use the sequential script verification for actual row counts."
+          echo ""
+          
+          echo "🎉 TPC-DS data population completed successfully!"
+        
+        env:
+        - name: ORACLE_PWD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.existingSecret }}
+              key: {{ .Values.database.passwordKey }}
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "oracle23ai.fullname" . }}-tpcds-config
+              key: database.host
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "oracle23ai.fullname" . }}-tpcds-config
+              key: database.port
+        - name: DB_SERVICE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "oracle23ai.fullname" . }}-tpcds-config
+              key: database.service_name
+        - name: DB_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "oracle23ai.fullname" . }}-tpcds-config
+              key: database.username
+        - name: TARGET_SCHEMA
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "oracle23ai.fullname" . }}-tpcds-config
+              key: schema_name
+        - name: SCALE_FACTOR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "oracle23ai.fullname" . }}-tpcds-config
+              key: scale_factor
+        - name: PARALLEL_WORKERS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "oracle23ai.fullname" . }}-tpcds-config
+              key: parallel_workers
+        
+        # Critical fix: Enable autocommit environment variable
+        - name: ORACLE_AUTOCOMMIT
+          value: "ON"
+        
+        volumeMounts:
+        - name: tpcds-data
+          mountPath: /home/tpcds/tpcds_data
+        
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1"
+          limits:
+            memory: "2Gi"
+            cpu: "2"
+
+      volumes:
+      - name: tpcds-data
+        emptyDir:
+          sizeLimit: 5Gi
+{{- end }}

@@ -3,6 +3,7 @@ Oracle 23ai StatefulSet
 Deploys Oracle Database Free 23ai with AI Vector capabilities
 Requires custom SecurityContextConstraint (oracle-scc) for user 54321
 */}}
+{{- if .Values.installDB }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -138,3 +139,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}

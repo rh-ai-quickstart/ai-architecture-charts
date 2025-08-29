@@ -1,0 +1,30 @@
+{{/*
+RBAC for TPC-DS job to exec into Oracle pod
+*/}}
+{{- if and .Values.installDB .Values.loadData }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "oracle23ai.fullname" . }}-tpcds-role
+  labels:
+    {{- include "oracle23ai.labels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/exec", "pods/log"]
+  verbs: ["get", "list", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "oracle23ai.fullname" . }}-tpcds-rolebinding
+  labels:
+    {{- include "oracle23ai.labels" . | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "oracle23ai.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ include "oracle23ai.fullname" . }}-tpcds-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

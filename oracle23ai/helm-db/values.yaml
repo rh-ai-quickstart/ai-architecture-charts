@@ -22,7 +22,7 @@ serviceAccount:
   annotations: {}
 
 securityContextConstraint:
-  create: false
+  create: true
 
 podAnnotations: {}
 podLabels: {}
@@ -141,6 +141,9 @@ users: []
   #     - "CREATE TABLE" 
   #     - "CREATE VECTOR"
   # Password will be auto-generated and stored in secret as: ai_user_password
+
+# Installation Control - DB Chart only installs Oracle
+installDB: true      # Controls Oracle database installation
 
 # Monitoring with Prometheus
 monitoring:

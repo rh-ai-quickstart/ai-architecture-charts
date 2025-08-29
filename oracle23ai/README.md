@@ -10,6 +10,37 @@ Oracle Database Free 23ai deployment for OpenShift/Kubernetes with AI Vector fea
 
 ## Quick Deploy
 
+### Automated Installation (Recommended)
+
+```bash
+# Deploy Oracle 23ai with TPC-DS data loading
+./install.sh
+
+# Deploy to custom namespace
+NAMESPACE=my-oracle ./install.sh
+
+# Deploy with custom password
+ORACLE_PASSWORD="MySecurePass123!" ./install.sh
+```
+
+### Complete Cleanup
+
+```bash
+# Remove everything (default: deletes oracle23ai namespace)
+./uninstall.sh
+
+# Keep namespace, remove only helm releases
+./uninstall.sh --keep-namespace
+
+# Clean up custom namespace
+./uninstall.sh -n my-oracle
+```
+
+### Manual Installation (Advanced)
+
+<details>
+<summary>Click to expand manual steps</summary>
+
 ```bash
 # Example: Deploy to ai-database namespace
 export NAMESPACE=ai-database
@@ -38,8 +69,8 @@ seLinuxContext:
 volumes: [configMap, downwardAPI, emptyDir, persistentVolumeClaim, projected, secret]
 EOF
 
-# 2. Deploy chart (creates ServiceAccount)
-helm install oracle23ai ./helm/ -n $NAMESPACE --create-namespace
+# 2. Deploy Oracle database (creates ServiceAccount)
+helm install oracle23ai ./helm-db/ -n $NAMESPACE --create-namespace
 
 # 3. Add SCC to service account (after ServiceAccount exists)
 oc adm policy add-scc-to-user oracle-scc -z oracle23ai -n $NAMESPACE
@@ -48,10 +79,32 @@ oc adm policy add-scc-to-user oracle-scc -z oracle23ai -n $NAMESPACE
 oc get pods -l app.kubernetes.io/name=oracle23ai -n $NAMESPACE -w
 ```
 
+</details>
+
+## What Gets Installed
+
+The automated installation deploys:
+
+1. **Oracle 23ai Database**: Full Oracle Database Free 23ai with AI Vector support
+2. **TPC-DS Data Loading**: Automated loading of TPC-DS benchmark data for testing
+3. **Monitoring**: Optional Prometheus metrics and ServiceMonitor
+4. **Security**: Custom SecurityContextConstraint for Oracle user requirements
+
+### Installation Process
+
+1. **Database Deployment**: Oracle 23ai pod with persistent storage
+2. **Readiness Verification**: Waits for database to be fully initialized  
+3. **Data Loader Setup**: TPC-DS utilities configured with database credentials
+4. **System Verification**: Validates database connectivity and user access
+5. **Data Loading**: Populates database with TPC-DS benchmark tables
+6. **Final Verification**: Confirms data was loaded successfully
+
 ## Configuration
 
-### Required Environment Variables
-- `ORACLE_PWD` - Database password (auto-generated if not set)
+### Environment Variables
+- `NAMESPACE` - Kubernetes namespace (default: oracle23ai)
+- `ORACLE_PASSWORD` - Database password (auto-generated if not set)
+- `DB_READY_TIMEOUT` - Database readiness timeout in seconds (default: 900)
 
 ### Default Settings
 - **Host**: `oracle23ai`
@@ -220,6 +273,28 @@ If Grafana is available in your cluster, you can create custom dashboards with p
 - Alert thresholds
 
 ## Troubleshooting
+
+### Installation Issues
+
+```bash
+# Check install script logs for detailed error information
+./install.sh
+
+# Skip specific steps if needed
+INSTALL_DB=false ./install.sh              # Skip database installation
+WAIT_FOR_DB=false ./install.sh             # Skip readiness check  
+VERIFY_SYSTEM_ACCESS=false ./install.sh    # Skip system verification
+ENABLE_JOB=false ./install.sh              # Skip data loading
+```
+
+### Complete Cleanup and Retry
+
+```bash
+# Remove everything and start fresh
+./uninstall.sh
+sleep 60
+./install.sh
+```
 
 ### Pod fails to start
 ```bash
