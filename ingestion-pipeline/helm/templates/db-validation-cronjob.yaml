@@ -1,0 +1,143 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: validate-embeddings
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          containers:
+            - name: validate-embeddings
+              image: "image-registry.openshift-image-registry.svc:5000/openshift/tools:latest"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Running script at $(date)"
+                  set -o errexit
+                  set -o nounset
+                  set -o pipefail
+
+                  # Get DB sha
+                  DB_SHA="$(
+                    oc exec "pods/$DB_HOST-0" -- bash -c \
+                    "pg_dump -U $DB_USER -d $DB_NAME | sha512sum - | cut -d' ' -f1"
+                  )"
+                  echo "DB_SHA: $DB_SHA"
+                  echo
+
+                  mkdir -p "/tmp/bin"
+                  PATH="$PATH:/tmp/bin"
+
+                  # Get tas binaries
+                  CLI_URL="https://$(oc get routes -n trusted-artifact-signer -l "app.kubernetes.io/component=client-server" -o jsonpath="{.items[0].spec.host}")"
+                  for BIN in cosign rekor-cli; do
+                    curl "$CLI_URL/clients/linux/$BIN-amd64.gz" \
+                      --output /tmp/bin/$BIN.gz \
+                      --silent
+                    gunzip /tmp/bin/$BIN.gz
+                    chmod +x /tmp/bin/$BIN
+                  done
+
+                  # Get yq
+                  wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+                    -O /tmp/bin/yq \
+                    --quiet
+                  chmod +x /tmp/bin/yq
+
+                  echo "# Cosign initialize"
+                  TUF_URL="https://$(oc get routes -n trusted-artifact-signer -l "app.kubernetes.io/component=tuf" -o jsonpath="{.items[0].spec.host}")"
+                  TUF_ROOT="$TUF_URL/root.json"
+                  export HOME="/tmp"
+                  # Workaround for TAS
+                  TUF_URL="https://tuf-repo-cdn.sigstage.dev"
+                  TUF_ROOT="/tmp/tuf-root.json"
+                  curl https://raw.githubusercontent.com/sigstore/root-signing-staging/main/metadata/root_history/1.root.json \
+                    --fail \
+                    --output "$TUF_ROOT" \
+                    --silent
+                  # End of workaround
+                  cosign initialize \
+                    --mirror="$TUF_URL" \
+                    --root="$TUF_ROOT"
+                  echo
+
+                  # Get rekor URL
+                  REKOR_URL="https://$(oc get routes -n trusted-artifact-signer -l "app.kubernetes.io/name=rekor-server" -o jsonpath="{.items[0].spec.host}")"
+                  # Workaround for TAS storage issue
+                  REKOR_URL="https://rekor.sigstage.dev"
+
+                  get_record() {
+                    ENTRIES="$(rekor-cli search --rekor_server="$REKOR_URL" --sha "$1" 2>/dev/null | wc -l)"
+                    if [ "$ENTRIES" == "0" ]; then
+                      echo "[ERROR] Unknown database SHA."
+                      exit 1
+                    fi
+
+                    UUID="$(rekor-cli search --rekor_server="$REKOR_URL" --sha="$1" 2>/dev/null | head -1)"
+                    RECORD="$(rekor-cli get --rekor_server="$REKOR_URL" --uuid="$UUID")"
+                  }
+
+                  echo "# Attestation"
+                  ATTESTATION_PATH="/tmp/attestation.json"
+                  BLOB="/tmp/blob.att"
+                  echo -n "att:$DB_SHA" >"$BLOB"
+                  echo "blob: $(cat "$BLOB")"
+                  ARTIFACT_SHA="$(sha256sum "$BLOB" | cut -d' ' -f1)"
+                  get_record "$ARTIFACT_SHA"
+                  ATT_SIG="$(echo "$RECORD" | yq --prettyPrint ".Body.IntotoObj.publicKey")"
+                  K8S_SIG="$(oc get secret -n openshift-pipelines signing-secrets -o jsonpath="{.data.cosign\.pub}")"
+                  if [ "$ATT_SIG" != "$K8S_SIG" ]; then
+                    echo "[ERROR] Invalid public key for the attestation" >&2
+                    exit 1
+                  fi
+                  echo "public key: valid"
+                  echo "$RECORD" | yq --prettyPrint ".Attestation" > "$ATTESTATION_PATH"
+                  echo "sha: $ARTIFACT_SHA"
+                  cat "$ATTESTATION_PATH"
+                  echo
+
+                  echo "# Signature"
+                  SIGNATURE_PATH="/tmp/signature.json"
+                  BLOB="/tmp/blob.sig"
+                  echo -n "sig:$DB_SHA" >"$BLOB"
+                  echo "blob: $(cat "$BLOB")"
+                  ARTIFACT_SHA="$(sha256sum "$BLOB" | cut -d' ' -f1)"
+                  get_record "$ARTIFACT_SHA"
+                  echo "$RECORD" | yq ".Body.HashedRekordObj.signature.content" > "$SIGNATURE_PATH"
+                  echo "sha: $ARTIFACT_SHA"
+                  cat "$SIGNATURE_PATH"
+                  cosign verify-blob "$BLOB" \
+                    --key=k8s://openshift-pipelines/signing-secrets \
+                    --rekor-url="$REKOR_URL" \
+                    --signature "$SIGNATURE_PATH"
+                  echo
+
+                  # Apply policy
+                  echo "No policy to apply"
+                  echo
+
+                  echo "Done."
+              env:
+                - name: DB_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: pgvector
+                      key: host
+                - name: DB_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: pgvector
+                      key: dbname
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: pgvector
+                      key: user
+          restartPolicy: Never
+          serviceAccountName: pipeline-runner-dspa
