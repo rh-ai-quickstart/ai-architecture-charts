@@ -1,6 +1,6 @@
 # LLM Service Helm Chart
 
-This Helm chart deploys a comprehensive LLM (Large Language Model) serving infrastructure using vLLM runtime with support for any models compatible with vLLM, GPU/CPU deployment modes, and OpenShift AI integration.
+This Helm chart deploys a comprehensive LLM (Large Language Model) serving infrastructure using vLLM runtime with support for any models compatible with vLLM, GPU/HPU/CPU deployment modes, and OpenShift AI integration.
 
 ## Overview
 
@@ -10,13 +10,13 @@ The llm-service chart creates:
 - ConfigMap for chat templates
 - Secret management for HuggingFace tokens
 - Support for multiple model configurations
-- GPU and CPU deployment modes
+- GPU, HPU (Intel Gaudi), and CPU deployment modes
 
 ## Prerequisites
 
 - OpenShift cluster with OpenShift AI/KServe installed
 - Helm 3.x
-- GPU nodes (recommended for optimal performance)
+- GPU or HPU (Intel Gaudi) nodes (recommended for optimal performance)
 - HuggingFace account and token for model access
 - Sufficient storage for model downloads
 
@@ -27,6 +27,8 @@ The llm-service chart creates:
 ```bash
 helm install llm-service ./helm
 ```
+
+Note: The default device in `values.yaml` is `gpu`. Set `--set device=hpu` or `--set device=cpu` as needed.
 
 ### Installation with GPU Support
 
@@ -44,6 +46,14 @@ helm install llm-service ./helm \
   --set servingRuntime.cpuImage="quay.io/ecosystem-appeng/vllm:cpu-v0.9.2"
 ```
 
+### Installation with HPU (Intel Gaudi) Support
+
+```bash
+helm install llm-service ./helm \
+  --set device=hpu \
+  --set models.llama-3-2-3b-instruct.enabled=true
+```
+
 ### Installation with Custom Models
 
 ```bash
@@ -59,12 +69,13 @@ helm install llm-service ./helm \
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `device` | Deployment mode (gpu/cpu) | `gpu` |
+| `device` | Deployment mode (gpu/hpu/cpu) | `gpu` |
 | `rawDeploymentMode` | Use raw deployment instead of KServe | `true` |
 | `servingRuntime.name` | Name of the serving runtime | `vllm-serving-runtime` |
 | `servingRuntime.knativeTimeout` | Knative timeout for inference | `60m` |
 | `servingRuntime.gpuImage` | GPU container image | `quay.io/ecosystem-appeng/vllm:openai-v0.9.2` |
 | `servingRuntime.cpuImage` | CPU container image | `quay.io/ecosystem-appeng/vllm:cpu-v0.9.2` |
+| `servingRuntime.hpuImage` | HPU (Intel Gaudi) container image | `quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container` |
 | `secret.enabled` | Enable HuggingFace secret creation | `true` |
 | `secret.hf_token` | HuggingFace access token | `""` |
 
@@ -94,9 +105,8 @@ models:
   llama-3-1-8b-instruct:
     id: meta-llama/Llama-3.1-8B-Instruct
     enabled: true
-    resources:
-      limits:
-        nvidia.com/gpu: "1"
+    # Optional: explicitly set accelerator count (default is 1)
+    accelerators: "1"
     args:
       - --max-model-len
       - "14336"
@@ -110,9 +120,24 @@ models:
     id: meta-llama/Llama-3.3-70B-Instruct
     enabled: true
     storageSize: 150Gi
-    resources:
-      limits:
-        nvidia.com/gpu: "4"
+    # Number of accelerators to request (GPU or HPU based on selected device)
+    accelerators: "4"
+    args:
+      - --tensor-parallel-size
+      - "4"
+      - --gpu-memory-utilization
+      - "0.95"
+```
+
+#### Example: Llama 3.3 70B Instruct with FP8 Quantization (GPU Only)
+```yaml
+models:
+  llama-3-3-70b-instruct-quantization-fp8:
+    id: meta-llama/Llama-3.3-70B-Instruct
+    enabled: true
+    incompatibleDevices: ["hpu"]  # Device compatibility - quantized model doesn't work with HPU
+    storageSize: 150Gi
+    accelerators: "4"
     args:
       - --tensor-parallel-size
       - "4"
@@ -130,8 +155,7 @@ servingRuntime:
   knativeTimeout: 60m
   gpuImage: quay.io/ecosystem-appeng/vllm:openai-v0.9.2
   cpuImage: quay.io/ecosystem-appeng/vllm:cpu-v0.9.2
-  recommendedAccelerators:
-    - nvidia.com/gpu
+  hpuImage: quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container
   env:
     - name: HOME
       value: /vllm
@@ -153,6 +177,7 @@ servingRuntime:
   knativeTimeout: 90m
   gpuImage: quay.io/ecosystem-appeng/vllm:openai-v0.9.2
   cpuImage: quay.io/ecosystem-appeng/vllm:cpu-v0.9.2
+  hpuImage: quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container
 
 secret:
   enabled: true
@@ -169,7 +194,7 @@ models:
       - --tool-call-parser
       - llama3_json
       - --max-model-len
-      - "30544"
+      - "14336"
   
   llama-guard-3-8b:
     id: meta-llama/Llama-Guard-3-8B
@@ -180,6 +205,7 @@ models:
   
   qwen-2-5-vl-3b-instruct:
     id: Qwen/Qwen2.5-VL-3B-Instruct
+    incompatibleDevices: ["hpu"]
     enabled: true
     args:
       - --max-model-len
@@ -333,7 +359,12 @@ resources:
   limits:
     memory: "16Gi"
     cpu: "4000m"
-    nvidia.com/gpu: "1"
+```
+
+Also set the accelerator count on the model when using GPU/HPU devices:
+
+```yaml
+accelerators: "1"
 ```
 
 #### Medium Models (8B parameters)
@@ -345,7 +376,12 @@ resources:
   limits:
     memory: "32Gi"
     cpu: "8000m"
-    nvidia.com/gpu: "1"
+```
+
+And specify accelerators count if needed (defaults to "1"):
+
+```yaml
+accelerators: "1"
 ```
 
 #### Large Models (70B parameters)
@@ -357,21 +393,44 @@ resources:
   limits:
     memory: "128Gi"
     cpu: "16000m"
-    nvidia.com/gpu: "4"
 ```
 
-### GPU Configuration
-
-For optimal GPU performance:
+Set the accelerator count accordingly for multi-device parallelism:
 
 ```yaml
-tolerations:
-  - key: nvidia.com/gpu
-    effect: NoSchedule
-    operator: Exists
+accelerators: "4"
+```
 
-nodeSelector:
-  nvidia.com/gpu.present: "true"
+### Device Configuration (Tolerations)
+
+Default tolerations are applied based on the selected device via `deviceConfigs`. You can override per model if needed.
+
+```yaml
+deviceConfigs:
+  gpu:
+    tolerations:
+      - key: nvidia.com/gpu
+        effect: NoSchedule
+        operator: Exists
+  hpu:
+    tolerations:
+      - key: habana.ai/gaudi
+        effect: NoSchedule
+        operator: Exists
+```
+
+Note: Node selectors are not explicitly configurable in this chart; scheduling to GPU/HPU nodes is driven by resource requests and tolerations.
+
+### Device Compatibility
+
+You can explicitly restrict models from running on specific devices using `incompatibleDevices`. For example, some quantized or vision models do not support HPU:
+
+```yaml
+models:
+  qwen-2-5-vl-3b-instruct:
+    id: Qwen/Qwen2.5-VL-3B-Instruct
+    incompatibleDevices: ["hpu"]
+    enabled: true
 ```
 
 ## Security Considerations
@@ -403,10 +462,14 @@ helm install llm-service ./helm \
 models:
   llama-3-2-3b-instruct:
     enabled: true
-    replicas: 3  # Scale model instances
+    minReplicas: 1
+    maxReplicas: 3
     resources:
+      # CPU/Memory shown here; accelerator resources are injected automatically based on device
       limits:
-        nvidia.com/gpu: "1"
+        memory: "16Gi"
+        cpu: "4000m"
+    accelerators: "1"
 ```
 
 ### A/B Testing
