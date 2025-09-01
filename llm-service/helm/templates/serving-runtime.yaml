@@ -5,8 +5,8 @@ metadata:
   name: {{ .Values.servingRuntime.name }}
   annotations:
     openshift.io/display-name: {{ .Values.servingRuntime.name }}
-    {{- with .Values.servingRuntime.recommendedAccelerators }}
-    opendatahub.io/recommended-accelerators: '{{ . | toJson }}'
+    {{- if and (hasKey .Values.deviceConfigs .Values.device) (index .Values.deviceConfigs .Values.device).recommendedAccelerators }}
+    opendatahub.io/recommended-accelerators: '{{ (index .Values.deviceConfigs .Values.device).recommendedAccelerators | toJson }}'
     {{- end }}
     opendatahub.io/apiProtocol: REST
     opendatahub.io/template-display-name: vLLM ServingRuntime for KServe
@@ -34,6 +34,8 @@ spec:
     {{- end }}
     {{- if eq .Values.device "gpu" }}
     image: {{ .Values.servingRuntime.gpuImage }}
+    {{- else if eq .Values.device "hpu" }}
+    image: {{ .Values.servingRuntime.hpuImage }}
     {{- else }}
     image: {{ .Values.servingRuntime.cpuImage }}
     {{- end }}
