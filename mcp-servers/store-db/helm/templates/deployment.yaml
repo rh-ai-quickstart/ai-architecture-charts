@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mcp-store-db.fullname" . }}
+labels:
+  {{- include "mcp-store-db.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "mcp-store-db.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "mcp-store-db.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "mcp-store-db.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8002
+              protocol: TCP
+          env:
+            # Database connection parameters
+            - name: DATABASE_HOST
+              value: {{ .Values.database.host | quote }}
+            - name: DATABASE_PORT
+              value: {{ .Values.database.port | quote }}
+            - name: DATABASE_USER
+              value: {{ .Values.database.user | quote }}
+            - name: DATABASE_PASSWORD
+              value: {{ .Values.database.password | quote }}
+            - name: DATABASE_NAME
+              value: {{ .Values.database.database | quote }}
+            - name: DATABASE_SSL_MODE
+              value: {{ .Values.database.sslMode | quote }}
+            
+            # Database connection pool configuration
+            - name: DB_POOL_SIZE
+              value: {{ .Values.env.DB_POOL_SIZE | quote }}
+            - name: DB_MAX_OVERFLOW
+              value: {{ .Values.env.DB_MAX_OVERFLOW | quote }}
+            - name: DB_POOL_TIMEOUT
+              value: {{ .Values.env.DB_POOL_TIMEOUT | quote }}
+            - name: DB_POOL_RECYCLE
+              value: {{ .Values.env.DB_POOL_RECYCLE | quote }}
+            
+            # Health check configuration
+            - name: DB_HEALTH_CHECK_INTERVAL
+              value: {{ .Values.env.DB_HEALTH_CHECK_INTERVAL | quote }}
+            - name: DB_HEALTH_CHECK_TIMEOUT
+              value: {{ .Values.env.DB_HEALTH_CHECK_TIMEOUT | quote }}
+            - name: DB_MAX_RETRY_ATTEMPTS
+              value: {{ .Values.env.DB_MAX_RETRY_ATTEMPTS | quote }}
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
