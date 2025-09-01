@@ -2,6 +2,12 @@
 {{- $models := include "llm-service.mergeModels" . | fromJson }}
 {{- range $key, $model := $models }}
 {{- if and $model.enabled (not $model.url) }}
+{{- /* Device compatibility validation */ -}}
+{{- if $model.incompatibleDevices }}
+  {{- if has $root.Values.device $model.incompatibleDevices }}
+    {{- fail (printf "ERROR: Model '%s' is not compatible with device '%s'. This model is incompatible with: %s. Please use a different device or model." $key $root.Values.device ($model.incompatibleDevices | join ", ")) }}
+  {{- end }}
+{{- end }}
 ---
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
@@ -26,21 +32,62 @@ spec:
       modelFormat:
         name: vLLM
       name: ""
-      resources:
       {{- if hasKey $model "resources" }}
-      {{- toYaml $model.resources | nindent 8 }}
-      {{- else }}
-      {{- if eq $root.Values.device "gpu" }}
+      resources:
+        {{- if or (eq $root.Values.device "gpu") (eq $root.Values.device "hpu") }}
+          {{- $deviceConfig := index $root.Values.deviceConfigs $root.Values.device }}
+          {{- $acceleratorType := $deviceConfig.acceleratorType }}
+          {{- $acceleratorCount := $model.accelerators | default "1" }}
+          {{- $customResources := $model.resources | deepCopy }}
+          {{- if $acceleratorType }}
+            {{- if not (hasKey $customResources.limits $acceleratorType) }}
+              {{- $_ := set $customResources.limits $acceleratorType $acceleratorCount }}
+            {{- end }}
+            {{- if not (hasKey $customResources.requests $acceleratorType) }}
+              {{- $_ := set $customResources.requests $acceleratorType $acceleratorCount }}
+            {{- end }}
+          {{- end }}
+          {{- toYaml $customResources | nindent 8 }}
+        {{- else }}
+          {{- toYaml $model.resources | nindent 8 }}
+        {{- end }}
+      {{- else if or (eq $root.Values.device "gpu") (eq $root.Values.device "hpu") }}
+      resources:
+      {{- $deviceConfig := index $root.Values.deviceConfigs $root.Values.device }}
+      {{- $acceleratorType := $deviceConfig.acceleratorType }}
+      {{- $acceleratorCount := $model.accelerators | default "1" }}
         limits:
           cpu: "2"
           memory: 8Gi
-          nvidia.com/gpu: "1"
+          {{- if $acceleratorType }}
+          {{ $acceleratorType }}: {{ $acceleratorCount | quote }}
+          {{- end }}
+          {{- if $model.storageSize }}
+          ephemeral-storage: {{ $model.storageSize | default "50Gi" }}
+          {{- end }}
         requests:
           cpu: "1"
           memory: 4Gi
-          nvidia.com/gpu: "1"
+          {{- if $acceleratorType }}
+          {{ $acceleratorType }}: {{ $acceleratorCount | quote }}
+          {{- end }}
+          {{- if $model.storageSize }}
           ephemeral-storage: {{ $model.storageSize | default "50Gi" }}
-      {{- end }}
+          {{- end }}
+      {{- else }}
+      resources:
+        limits:
+          cpu: "2"
+          memory: 8Gi
+          {{- if $model.storageSize }}
+          ephemeral-storage: {{ $model.storageSize | default "50Gi" }}
+          {{- end }}
+        requests:
+          cpu: "1"
+          memory: 4Gi
+          {{- if $model.storageSize }}
+          ephemeral-storage: {{ $model.storageSize | default "50Gi" }}
+          {{- end }}
       {{- end }}
       runtime: {{ $root.Values.servingRuntime.name }}
       args:
@@ -55,13 +102,15 @@ spec:
       env:
         {{- toYaml . | nindent 6 }}
       {{- end }}
-    tolerations:
+    {{- $tolerations := list }}
     {{- if hasKey $model "tolerations" }}
-    {{- toYaml $model.tolerations | nindent 4 }}
-    {{- else }}
-    - key: nvidia.com/gpu
-      effect: NoSchedule
-      operator: Exists
+      {{- $tolerations = $model.tolerations }}
+    {{- else if hasKey $root.Values.deviceConfigs $root.Values.device }}
+      {{- $tolerations = (index $root.Values.deviceConfigs $root.Values.device).tolerations }}
+    {{- end }}
+    {{- if $tolerations }}
+    tolerations:
+    {{- toYaml $tolerations | nindent 4 }}
     {{- end }}
 {{- end }}
 {{- end }}
