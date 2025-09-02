@@ -25,8 +25,12 @@ spec:
 
                   # Get DB sha
                   DB_SHA="$(
-                    oc exec "pods/$DB_HOST-0" -- bash -c \
-                    "pg_dump -U $DB_USER -d $DB_NAME | sha512sum - | cut -d' ' -f1"
+                    oc exec "pods/$DB_HOST-0" -- bash -c "
+                      pg_dump -U $DB_USER -d $DB_NAME \
+                        | grep -v -E '^\\\\(un)?restrict ' \
+                        | sha512sum - \
+                        | cut -d' ' -f1
+                    "
                   )"
                   echo "DB_SHA: $DB_SHA"
                   echo
@@ -73,8 +77,7 @@ spec:
                   REKOR_URL="https://rekor.sigstage.dev"
 
                   get_record() {
-                    ENTRIES="$(rekor-cli search --rekor_server="$REKOR_URL" --sha "$1" 2>/dev/null | wc -l)"
-                    if [ "$ENTRIES" == "0" ]; then
+                    if ! rekor-cli search --rekor_server="$REKOR_URL" --sha "$1" >/dev/null 2>&1; then
                       echo "[ERROR] Unknown database SHA."
                       exit 1
                     fi

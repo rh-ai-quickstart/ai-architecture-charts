@@ -306,7 +306,7 @@ def generate_provenance(input_dir: dsl.InputPath()):
         command = [
             "/bin/bash",
             "-c",
-            f"pg_dump -U {db_username} -d {db_name} | sha512sum -",
+            f"pg_dump -U {db_username} -d {db_name} | grep -v -E '^\\\\(un)?restrict ' | sha512sum -",
         ]
         # Exec into the container
         resp = stream.stream(
@@ -499,6 +499,7 @@ def generate_provenance(input_dir: dsl.InputPath()):
     # Sign
     predicate_str = json.dumps(predicate, indent=2)
     print("\n\n")
+    print(f"DB sha: '{db_sha}'")
     print("Predicate:")
     print(predicate_str)
     print("\n\n")
@@ -506,7 +507,6 @@ def generate_provenance(input_dir: dsl.InputPath()):
 
     att_sha, sig_sha = cosign(predicate_str, db_sha)
     print("\n\n")
-    print(f"DB sha: '{db_sha}'")
     print(f"Attestation Hash: 'sha256:{att_sha}'")
     print(f"Signing Hash: 'sha256:{sig_sha}'")
 
