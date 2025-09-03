@@ -1,23 +1,35 @@
+{{- $root := . }}
+{{- $models := include "llm-service.mergeModels" . | fromJson }}
+{{- $usedDevices := dict }}
+{{- range $key, $model := $models }}
+  {{- if $model.enabled }}
+    {{- $modelDevice := $model.device | default $root.Values.device }}
+    {{- $_ := set $usedDevices $modelDevice true }}
+  {{- end }}
+{{- end }}
+{{- range $device, $_ := $usedDevices }}
+{{- $deviceConfig := index $root.Values.deviceConfigs $device }}
 ---
 apiVersion: serving.kserve.io/v1alpha1
 kind: ServingRuntime
 metadata:
-  name: {{ .Values.servingRuntime.name }}
+  name: {{ $root.Values.servingRuntime.name }}-{{ $device }}
   annotations:
-    openshift.io/display-name: {{ .Values.servingRuntime.name }}
-    {{- if and (hasKey .Values.deviceConfigs .Values.device) (index .Values.deviceConfigs .Values.device).recommendedAccelerators }}
-    opendatahub.io/recommended-accelerators: '{{ (index .Values.deviceConfigs .Values.device).recommendedAccelerators | toJson }}'
+    openshift.io/display-name: {{ $root.Values.servingRuntime.name }}-{{ $device }}
+    {{- if $deviceConfig.recommendedAccelerators }}
+    opendatahub.io/recommended-accelerators: '{{ $deviceConfig.recommendedAccelerators | toJson }}'
     {{- end }}
     opendatahub.io/apiProtocol: REST
-    opendatahub.io/template-display-name: vLLM ServingRuntime for KServe
-    opendatahub.io/template-name: vllm-runtime
+    opendatahub.io/template-display-name: vLLM ServingRuntime for KServe ({{ $device | upper }})
+    opendatahub.io/template-name: vllm-runtime-{{ $device }}
   labels:
     opendatahub.io/dashboard: "true"
+    device: {{ $device }}
 spec:
   annotations:
     prometheus.io/path: /metrics
     prometheus.io/port: "8080"
-    serving.knative.dev/progress-deadline: {{ .Values.servingRuntime.knativeTimeout }}
+    serving.knative.dev/progress-deadline: {{ $root.Values.servingRuntime.knativeTimeout }}
   containers:
   - command:
     - python3
@@ -28,22 +40,22 @@ spec:
     - "8080"
     - --download-dir
     - /vllm/model
-    {{-  with .Values.servingRuntime.env }}
+    {{-  with $root.Values.servingRuntime.env }}
     env:
       {{- toYaml . | nindent 4 }}
     {{- end }}
-    {{- if eq .Values.device "gpu" }}
-    image: {{ .Values.servingRuntime.gpuImage }}
-    {{- else if eq .Values.device "hpu" }}
-    image: {{ .Values.servingRuntime.hpuImage }}
+    {{- if eq $device "gpu" }}
+    image: {{ $root.Values.servingRuntime.gpuImage }}
+    {{- else if eq $device "hpu" }}
+    image: {{ $root.Values.servingRuntime.hpuImage }}
     {{- else }}
-    image: {{ .Values.servingRuntime.cpuImage }}
+    image: {{ $root.Values.servingRuntime.cpuImage }}
     {{- end }}
     name: kserve-container
     ports:
     - containerPort: 8080
       protocol: TCP
-    {{- with .Values.servingRuntime.volumeMounts }}
+    {{- with $root.Values.servingRuntime.volumeMounts }}
     volumeMounts:
       {{- toYaml . | nindent 4 }}
     {{- end }}
@@ -51,7 +63,8 @@ spec:
   supportedModelFormats:
   - autoSelect: true
     name: vLLM
-  {{- with .Values.servingRuntime.volumes }}
+  {{- with $root.Values.servingRuntime.volumes }}
   volumes:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+{{- end }}

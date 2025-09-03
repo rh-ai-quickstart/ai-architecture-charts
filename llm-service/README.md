@@ -28,7 +28,7 @@ The llm-service chart creates:
 helm install llm-service ./helm
 ```
 
-Note: The default device in `values.yaml` is `gpu`. Set `--set device=hpu` or `--set device=cpu` as needed.
+Note: The global `device` in `values.yaml` sets the default for models that don't specify their own device. Individual models can override this with their own `device` field.
 
 ### Installation with GPU Support
 
@@ -43,7 +43,7 @@ helm install llm-service ./helm \
 ```bash
 helm install llm-service ./helm \
   --set device=cpu \
-  --set servingRuntime.cpuImage="quay.io/ecosystem-appeng/vllm:cpu-v0.9.2"
+  --set models.llama-guard-3-1b.enabled=true
 ```
 
 ### Installation with HPU (Intel Gaudi) Support
@@ -69,7 +69,7 @@ helm install llm-service ./helm \
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `device` | Deployment mode (gpu/hpu/cpu) | `gpu` |
+| `device` | Default device for models that don't specify one (gpu/hpu/cpu) | `gpu` |
 | `rawDeploymentMode` | Use raw deployment instead of KServe | `true` |
 | `servingRuntime.name` | Name of the serving runtime | `vllm-serving-runtime` |
 | `servingRuntime.knativeTimeout` | Knative timeout for inference | `60m` |
@@ -81,7 +81,34 @@ helm install llm-service ./helm \
 
 ### Model Configuration
 
-The chart supports multiple models compatible with vLLM with individual configuration:
+The chart supports multiple models compatible with vLLM with **per-model device configuration**. Each model can specify its own `device` field to run on different hardware:
+
+#### Per-Model Device Configuration
+
+Each model can specify which device type to use:
+
+```yaml
+models:
+  # Example: Small model on CPU for cost efficiency
+  llama-guard-3-1b:
+    id: meta-llama/Llama-Guard-3-1B
+    enabled: true
+    device: cpu  # Explicitly run on CPU
+
+  # Example: Medium model on GPU
+  llama-3-2-3b-instruct-gpu:
+    id: meta-llama/Llama-3.2-3B-Instruct
+    enabled: true
+    device: gpu  # Run on GPU
+    accelerators: "1"
+
+  # Example: Same model on HPU with different config
+  llama-3-2-3b-instruct-hpu:
+    id: meta-llama/Llama-3.2-3B-Instruct
+    enabled: true
+    device: hpu  # Run on Intel Gaudi HPU
+    accelerators: "2"  # Different accelerator count
+```
 
 #### Example: Llama 3.2 1B Instruct
 ```yaml
@@ -89,6 +116,7 @@ models:
   llama-3-2-1b-instruct:
     id: meta-llama/Llama-3.2-1B-Instruct
     enabled: true
+    device: hpu  # Can be gpu, hpu, or cpu - defaults to global device if not specified
     args:
       - --enable-auto-tool-choice
       - --chat-template
@@ -105,6 +133,7 @@ models:
   llama-3-1-8b-instruct:
     id: meta-llama/Llama-3.1-8B-Instruct
     enabled: true
+    device: gpu
     # Optional: explicitly set accelerator count (default is 1)
     accelerators: "1"
     args:
@@ -113,14 +142,14 @@ models:
       - --enable-auto-tool-choice
 ```
 
-#### Example: Llama 3.3 70B Instruct (Multi-GPU)
+#### Example: Llama 3.3 70B Instruct with Multi-Accelerator Setup
 ```yaml
 models:
   llama-3-3-70b-instruct:
     id: meta-llama/Llama-3.3-70B-Instruct
     enabled: true
+    device: gpu
     storageSize: 150Gi
-    # Number of accelerators to request (GPU or HPU based on selected device)
     accelerators: "4"
     args:
       - --tensor-parallel-size
@@ -135,7 +164,7 @@ models:
   llama-3-3-70b-instruct-quantization-fp8:
     id: meta-llama/Llama-3.3-70B-Instruct
     enabled: true
-    incompatibleDevices: ["hpu"]  # Device compatibility - quantized model doesn't work with HPU
+    device: gpu
     storageSize: 150Gi
     accelerators: "4"
     args:
@@ -421,15 +450,42 @@ deviceConfigs:
 
 Note: Node selectors are not explicitly configurable in this chart; scheduling to GPU/HPU nodes is driven by resource requests and tolerations.
 
-### Device Compatibility
+### Multiple ServingRuntimes
 
-You can explicitly restrict models from running on specific devices using `incompatibleDevices`. For example, some quantized or vision models do not support HPU:
+The chart automatically creates device-specific `ServingRuntime` resources based on enabled models:
+
+- `vllm-serving-runtime-gpu` - for GPU models (using `servingRuntime.gpuImage`)
+- `vllm-serving-runtime-hpu` - for HPU models (using `servingRuntime.hpuImage`)
+- `vllm-serving-runtime-cpu` - for CPU models (using `servingRuntime.cpuImage`)
+
+Only the runtimes needed for your enabled models are created.
+
+### Mixed Device Deployments
+
+You can run the same model on different devices with optimized configurations:
 
 ```yaml
 models:
-  qwen-2-5-vl-3b-instruct:
-    id: Qwen/Qwen2.5-VL-3B-Instruct
-    incompatibleDevices: ["hpu"]
+  # Cost-optimized CPU deployment
+  llama-3-2-3b-instruct-cpu:
+    id: meta-llama/Llama-3.2-3B-Instruct
+    device: cpu
+    enabled: true
+
+  # Performance-optimized GPU deployment
+  llama-3-2-3b-instruct-gpu:
+    id: meta-llama/Llama-3.2-3B-Instruct
+    device: gpu
+    enabled: true
+    accelerators: "1"
+    args:
+      - --quantization
+      - fp8  # GPU-specific optimization
+
+  # HPU deployment with different parallelism
+  llama-3-2-3b-instruct-hpu:
+    id: meta-llama/Llama-3.2-3B-Instruct
+    device: hpu
     enabled: true
 ```
 
