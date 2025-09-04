@@ -4,6 +4,7 @@ rawDeploymentMode: true
 # Device-specific configurations for tolerations and accelerators
 deviceConfigs:
   gpu:
+    image: quay.io/ecosystem-appeng/vllm:openai-v0.9.2
     tolerations:
       - key: nvidia.com/gpu
         effect: NoSchedule
@@ -12,6 +13,7 @@ deviceConfigs:
       - nvidia.com/gpu
     acceleratorType: nvidia.com/gpu
   hpu:
+    image: quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container
     tolerations:
       - key: habana.ai/gaudi
         effect: NoSchedule
@@ -20,6 +22,7 @@ deviceConfigs:
       - habana.ai/gaudi
     acceleratorType: habana.ai/gaudi
   cpu:
+    image: quay.io/ecosystem-appeng/vllm:cpu-v0.9.2
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
@@ -27,9 +30,6 @@ deviceConfigs:
 servingRuntime:
   name: vllm-serving-runtime
   knativeTimeout: 60m
-  gpuImage: quay.io/ecosystem-appeng/vllm:openai-v0.9.2
-  cpuImage: quay.io/ecosystem-appeng/vllm:cpu-v0.9.2
-  hpuImage: quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container
   env:
     - name: HOME
       value: /vllm

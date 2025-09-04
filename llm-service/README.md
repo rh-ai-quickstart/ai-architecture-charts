@@ -71,11 +71,11 @@ helm install llm-service ./helm \
 |-----------|-------------|---------|
 | `device` | Default device for models that don't specify one (gpu/hpu/cpu) | `gpu` |
 | `rawDeploymentMode` | Use raw deployment instead of KServe | `true` |
+| `deviceConfigs.gpu.image` | GPU container image | `quay.io/ecosystem-appeng/vllm:openai-v0.9.2` |
+| `deviceConfigs.cpu.image` | CPU container image | `quay.io/ecosystem-appeng/vllm:cpu-v0.9.2` |
+| `deviceConfigs.hpu.image` | HPU (Intel Gaudi) container image | `quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container` |
 | `servingRuntime.name` | Name of the serving runtime | `vllm-serving-runtime` |
 | `servingRuntime.knativeTimeout` | Knative timeout for inference | `60m` |
-| `servingRuntime.gpuImage` | GPU container image | `quay.io/ecosystem-appeng/vllm:openai-v0.9.2` |
-| `servingRuntime.cpuImage` | CPU container image | `quay.io/ecosystem-appeng/vllm:cpu-v0.9.2` |
-| `servingRuntime.hpuImage` | HPU (Intel Gaudi) container image | `quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container` |
 | `secret.enabled` | Enable HuggingFace secret creation | `true` |
 | `secret.hf_token` | HuggingFace access token | `""` |
 
@@ -179,12 +179,35 @@ models:
 ### Serving Runtime Configuration
 
 ```yaml
+# Device-specific configurations  
+deviceConfigs:
+  gpu:
+    image: quay.io/ecosystem-appeng/vllm:openai-v0.9.2
+    tolerations:
+      - key: nvidia.com/gpu
+        effect: NoSchedule
+        operator: Exists
+    recommendedAccelerators:
+      - nvidia.com/gpu
+    acceleratorType: nvidia.com/gpu
+  hpu:
+    image: quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container
+    tolerations:
+      - key: habana.ai/gaudi
+        effect: NoSchedule
+        operator: Exists
+    recommendedAccelerators:
+      - habana.ai/gaudi
+    acceleratorType: habana.ai/gaudi
+  cpu:
+    image: quay.io/ecosystem-appeng/vllm:cpu-v0.9.2
+    tolerations: []
+    recommendedAccelerators: []
+    acceleratorType: null
+
 servingRuntime:
   name: vllm-serving-runtime
   knativeTimeout: 60m
-  gpuImage: quay.io/ecosystem-appeng/vllm:openai-v0.9.2
-  cpuImage: quay.io/ecosystem-appeng/vllm:cpu-v0.9.2
-  hpuImage: quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container
   env:
     - name: HOME
       value: /vllm
@@ -201,12 +224,35 @@ servingRuntime:
 device: gpu
 rawDeploymentMode: true
 
+# Device-specific configurations
+deviceConfigs:
+  gpu:
+    image: quay.io/ecosystem-appeng/vllm:openai-v0.9.2
+    tolerations:
+      - key: nvidia.com/gpu
+        effect: NoSchedule
+        operator: Exists
+    recommendedAccelerators:
+      - nvidia.com/gpu
+    acceleratorType: nvidia.com/gpu
+  hpu:
+    image: quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container
+    tolerations:
+      - key: habana.ai/gaudi
+        effect: NoSchedule
+        operator: Exists
+    recommendedAccelerators:
+      - habana.ai/gaudi
+    acceleratorType: habana.ai/gaudi
+  cpu:
+    image: quay.io/ecosystem-appeng/vllm:cpu-v0.9.2
+    tolerations: []
+    recommendedAccelerators: []
+    acceleratorType: null
+
 servingRuntime:
   name: vllm-serving-runtime
   knativeTimeout: 90m
-  gpuImage: quay.io/ecosystem-appeng/vllm:openai-v0.9.2
-  cpuImage: quay.io/ecosystem-appeng/vllm:cpu-v0.9.2
-  hpuImage: quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container
 
 secret:
   enabled: true
@@ -454,9 +500,9 @@ Note: Node selectors are not explicitly configurable in this chart; scheduling t
 
 The chart automatically creates device-specific `ServingRuntime` resources based on enabled models:
 
-- `vllm-serving-runtime-gpu` - for GPU models (using `servingRuntime.gpuImage`)
-- `vllm-serving-runtime-hpu` - for HPU models (using `servingRuntime.hpuImage`)
-- `vllm-serving-runtime-cpu` - for CPU models (using `servingRuntime.cpuImage`)
+- `vllm-serving-runtime-gpu` - for GPU models (using `deviceConfigs.gpu.image`)
+- `vllm-serving-runtime-hpu` - for HPU models (using `deviceConfigs.hpu.image`)
+- `vllm-serving-runtime-cpu` - for CPU models (using `deviceConfigs.cpu.image`)
 
 Only the runtimes needed for your enabled models are created.
 
