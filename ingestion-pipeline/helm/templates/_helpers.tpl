@@ -61,11 +61,3 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
-
-{{- define "ingestion-pipeline.signDatabase" -}}
-{{- if and (lookup "v1" "Namespace" "" "openshift-pipelines") (lookup "v1" "Namespace" "" "trusted-artifact-signer") -}}
-true
-{{- else -}}
-false
-{{- end -}}
-{{- end -}}

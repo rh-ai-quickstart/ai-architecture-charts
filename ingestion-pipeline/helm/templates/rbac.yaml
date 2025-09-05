@@ -24,7 +24,7 @@ roleRef:
   name: secret-writer
   apiGroup: rbac.authorization.k8s.io
 
-{{- if eq (include "ingestion-pipeline.signDatabase" .) "true" }}
+{{- if .Values.enableSigning }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role

@@ -82,3 +82,6 @@ defaultPipeline:
       - "https://github.com/docling-project/docling/blob/main/tests/data/pdf/2206.01062.pdf"
 
 authUser: ""
+
+# generate provenance for the knowledge base
+enableSigning: false
