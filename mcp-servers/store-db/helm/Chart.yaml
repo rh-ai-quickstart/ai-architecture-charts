@@ -1,0 +1,17 @@
+apiVersion: v2
+name: mcp-store-db
+description: A Helm chart for MCP Store-DB Server with external database connection
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - mcp
+  - database
+  - store
+  - postgresql
+home: https://github.com/your-org/ai-virtual-agent
+sources:
+  - https://github.com/your-org/ai-virtual-agent
+maintainers:
+  - name: AI Virtual Agent Team
+    email: team@example.com
