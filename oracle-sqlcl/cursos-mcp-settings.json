@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+      "oracle-sqlcl": {
+        "url": "http://localhost:8081/sse",
+        "enabled": true
+      }
+    }
+  }

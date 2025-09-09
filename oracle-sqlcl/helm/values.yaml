@@ -1,0 +1,62 @@
+image:
+  repository: quay.io/ecosystem-appeng/oracle-sqlcl-mcp-server
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+permissionProfile:
+  name: network
+  type: builtin
+
+port: 8080
+transport: stdio
+
+serviceAccount:
+  create: true
+  name: ""
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+podSecurityContext:
+  fsGroup: 0
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+persistence:
+  data:
+    enabled: true
+    existingClaim: ""
+    size: 1Gi
+    storageClassName: ""
+    accessModes:
+      - ReadWriteOnce
+    mountPath: /sqlcl-home
+
+env:
+  ORACLE_USER: "sales"
+  ORACLE_PASSWORD: ""
+  ORACLE_CONNECTION_STRING: "jdbc:oracle:thin:@oracle23ai.arhkp-oracle-db-tpcds-loader:1521/FREEPDB1"
+  ORACLE_CONN_NAME: oracle_connection
+  JAVA_TOOL_OPTIONS: ""
+  _JAVA_OPTIONS: ""
+
+secret:
+  enabled: false
+  name: ""
+
+rbac:
+  scc:
+    enabled: false
+    name: toolhive-oracle-scc

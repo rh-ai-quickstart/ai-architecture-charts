@@ -1,0 +1,16 @@
+Oracle SQLcl MCP Server has been deployed.
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+To see the MCPServer resource:
+  kubectl get mcpserver {{ include "oracle-sqlcl-mcp.fullname" . }} -n {{ .Release.Namespace }} -o yaml
+
+If using secrets for Oracle connection, ensure values are set or the Secret exists:
+  Secret name: {{ default (printf "%s-oracle" (include "oracle-sqlcl-mcp.fullname" .)) .Values.secret.name }}
+
+Persistent storage (if enabled):
+  PVC: {{ include "oracle-sqlcl-mcp.fullname" . }}-data
+
+OpenShift SCC (optional):
+  {{- if .Values.rbac.scc.enabled }}Created: {{ .Values.rbac.scc.name }}{{ else }}Disabled (set rbac.scc.enabled=true){{ end }}
