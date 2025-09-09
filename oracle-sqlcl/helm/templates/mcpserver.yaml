@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "oracle-sqlcl-mcp.labels" . | nindent 4 }}
 spec:
-  image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
   permissionProfile:
     name: {{ .Values.permissionProfile.name }}
     type: {{ .Values.permissionProfile.type }}
@@ -22,9 +22,9 @@ spec:
             claimName: {{- if .Values.persistence.data.existingClaim }} {{ .Values.persistence.data.existingClaim }} {{- else }} {{ include "oracle-sqlcl-mcp.fullname" . }}-data {{- end }}
         {{- end }}
       containers:
-      - name: mcp
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+      - name: mcp        
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         - name: HOME
           value: {{ .Values.persistence.data.mountPath | quote }}

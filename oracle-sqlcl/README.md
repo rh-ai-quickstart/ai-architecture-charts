@@ -27,7 +27,6 @@ Client → Port-Forward → Toolhive Proxy → Oracle MCP Server → Oracle Data
 | File | Purpose |
 |------|---------|
 | `Containerfile` | Container image definition for Oracle SQLcl MCP server |
-| `dev-image-build.sh` | Script to build and push the container image |
 | `helm/` | Helm chart to deploy the MCP server on OpenShift |
 | `README.md` | This documentation |
 
@@ -49,23 +48,8 @@ Client → Port-Forward → Toolhive Proxy → Oracle MCP Server → Oracle Data
 ## 📦 **Build and Push Container Image**
 
 ```bash
-# Update dev-image-build.sh with your registry details
-vim dev-image-build.sh
-
-# Build and push the image
-./dev-image-build.sh
-```
-
-**Edit `dev-image-build.sh` to configure:**
-- `QUAY_REPO`: Your container registry URL
-- `IMAGE_NAME`: Your image name
-- `TAG`: Version tag
-
-Alternatively, you can build manually:
-
-```bash
-docker build -f Containerfile -t <your_repo>/oracle-sqlcl-mcp-server:<tag> .
-docker push <your_repo>/oracle-sqlcl-mcp-server:<tag>
+docker build -f Containerfile -t <your_repo>/oracle-sqlcl-mcp:<tag> .
+docker push <your_repo>/oracle-sqlcl-mcp:<tag>
 ```
 
 ## 🧭 **Deploy with Helm**
@@ -107,6 +91,29 @@ Examples:
   }
   ```
 
+## 🧩 **Use with Cursor IDE (MCP)**
+
+After deploying and port-forwarding the Toolhive proxy, you can connect Cursor to this MCP server.
+
+1. Ensure the proxy is reachable locally (for example, forward `8081 -> 8080` as described in the Helm NOTES). The SSE endpoint should be `http://localhost:8081/sse`.
+2. In Cursor, open Settings and edit your MCP configuration JSON. Add the following:
+
+```json
+{
+  "mcpServers": {
+    "oracle-sqlcl": {
+      "url": "http://localhost:8081/sse",
+      "enabled": true
+    }
+  }
+}
+```
+
+Notes:
+- The server key `oracle-sqlcl` is an arbitrary name you can change.
+- The `url` should match your local port-forward and the proxy SSE path.
+- Once enabled, you can use the tools directly in Cursor: `list-connections`, `connect`, and `run-sql` (see examples in the section above).
+
 ## 🔧 Runtime Behavior and Environment
 
 - The container entrypoint (`scripts/start-mcp.sh`) ensures:
@@ -115,20 +122,6 @@ Examples:
   - Profile scripts are ignored to avoid banner/interactive noise
 
 - On startup, if `ORACLE_USER`, `ORACLE_PASSWORD`, and `ORACLE_CONNECTION_STRING` are set, a saved connection is created with alias `ORACLE_CONN_NAME` (default: `oracle_connection`).
-
-### List saved connections inside the pod
-
-```bash
-sh /list-saved-connections.sh           # names only
-```
-
-If you see no connections listed, verify the env vars and check the pod logs during startup for the "Creating saved connection" message.
-
-Notes:
-- Use service-style connection strings `host:port/SERVICE_NAME` (e.g., `oracle23ai.arhkp-oracle-db-tpcds-loader:1521/FREEPDB1`).
-- If you see "not connected", call `connect` again or include `connectionName` in `run-sql`.
-
- 
 
 ## 🔍 **Troubleshooting**
 
@@ -142,7 +135,7 @@ Notes:
 | Permission denied | Ensure SCC is applied and bound correctly |
 | Thick driver warning | Expected in thin mode; `ORACLE_HOME` is unset intentionally |
 | Read-only /tmp (Jansi .lck) | Handled by `JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=/sqlcl-home/tmp` |
-| Saved connection missing | Ensure `HOME=/sqlcl-home`; use `/list-saved-connections.sh` to verify |
+| Saved connection missing | Ensure `HOME=/sqlcl-home`; check startup logs for saved connection creation |
 | Image pull errors | Check registry credentials and image name |
 
 ### **Debugging Commands**

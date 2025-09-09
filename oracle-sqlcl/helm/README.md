@@ -2,15 +2,17 @@
 
 Note: Run these commands from the repository root (ai-architecture-charts). If you run them from another directory, adjust the chart path accordingly.
 
-This chart deploys an Oracle SQLcl-based MCP server compatible with Toolhive. It assumes Toolhive and related CRDs are already installed in the cluster.
+This chart deploys an Oracle SQLcl-based MCP server compatible with Toolhive. By default, it will also install Toolhive Operator CRDs and the Toolhive Operator as chart dependencies unless disabled via values.
 
 ## Installation
 
 ```bash
 helm upgrade --install oracle-sqlcl ./oracle-sqlcl/helm -n toolhive-oracle-mcp --create-namespace \
-  --set image.repository=quay.io/ecosystem-appeng/oracle-sqlcl-mcp-server \
-  --set image.tag=1.0.0
+  --dependency-update \
+  --set image.repository=quay.io/ecosystem-appeng/oracle-sqlcl-mcp
 ```
+
+Note: `image.tag` is optional. If omitted, the chart defaults to the chart `appVersion` defined in `Chart.yaml`. To override, pass `--set image.tag=<tag>`.
 
 ### Provide Oracle connection via Secret (recommended)
 
@@ -34,13 +36,29 @@ helm upgrade --install oracle-sqlcl ./oracle-sqlcl/helm -n toolhive-oracle-mcp \
   --set serviceAccount.create=true
 ```
 
+### Dependencies
+This chart declares the following dependencies (fetched when using `--dependency-update` or after running `helm dependency build`):
+
+- `toolhive-operator-crds` (repo: `https://stacklok.github.io/toolhive`, version: `0.0.18`)
+- `toolhive-operator` (repo: `https://stacklok.github.io/toolhive`, version: `0.2.6`)
+
+You can disable either via values:
+
+```bash
+helm upgrade --install oracle-sqlcl ./oracle-sqlcl/helm -n toolhive-oracle-mcp \
+  --dependency-update \
+  --set toolhiveOperatorCrds.enabled=false \
+  --set toolhiveOperator.enabled=false
+```
+
 ## Values
-- `image.repository`, `image.tag`, `image.pullPolicy`
+- `image.repository`, `image.pullPolicy` (optional `image.tag` defaults to chart `appVersion`)
 - `permissionProfile.name`, `permissionProfile.type`
 - `serviceAccount.create`, `serviceAccount.name`
 - `persistence.data.*`
 - `env.*` (used for Secret when `secret.enabled=true`)
 - `rbac.scc.enabled`, `rbac.scc.name`
+- `toolhiveOperatorCrds.enabled`, `toolhiveOperator.enabled`
 
 ## Uninstall
 ```bash

@@ -1,6 +1,5 @@
 image:
-  repository: quay.io/ecosystem-appeng/oracle-sqlcl-mcp-server
-  tag: "1.0.0"
+  repository: quay.io/ecosystem-appeng/oracle-sqlcl-mcp
   pullPolicy: IfNotPresent
 
 permissionProfile:
@@ -60,3 +59,9 @@ rbac:
   scc:
     enabled: false
     name: toolhive-oracle-scc
+
+# Dependency toggles
+toolhiveOperatorCrds:
+  enabled: true
+toolhiveOperator:
+  enabled: true

@@ -13,3 +13,12 @@ home: https://github.com/lokeshrangineni/ai-architecture-charts
 sources:
   - https://github.com/lokeshrangineni/ai-architecture-charts
 kubeVersion: ">=1.24.0-0"
+dependencies:
+  - name: toolhive-operator-crds
+    version: 0.0.18
+    repository: https://stacklok.github.io/toolhive
+    condition: toolhiveOperatorCrds.enabled
+  - name: toolhive-operator
+    version: 0.2.6
+    repository: https://stacklok.github.io/toolhive
+    condition: toolhiveOperator.enabled
