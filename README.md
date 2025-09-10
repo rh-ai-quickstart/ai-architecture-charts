@@ -88,6 +88,14 @@ Model Context Protocol servers that provide external tools and capabilities to A
 - Custom tool development framework
 - Integration with LlamaStack agents
 
+#### [Oracle SQLcl MCP](./oracle-sqlcl/helm/README.md)
+MCP server that exposes Oracle SQLcl capabilities to AI agents via Toolhive, enabling database tooling and interactions from LlamaStack and compatible clients.
+
+**Key Features:**
+- Execute SQL/PLSQL against Oracle databases via Model Context Protocol
+- Integrates with Toolhive Operator (CRDs and operator managed as chart dependencies)
+- Orale connection managed via Kubernetes secrets and configurable service
+
 ## Quick Start
 
 ### Prerequisites
