@@ -46,7 +46,7 @@ persistence:
 env:
   ORACLE_USER: "sales"
   ORACLE_PASSWORD: ""
-  ORACLE_CONNECTION_STRING: "jdbc:oracle:thin:@oracle23ai.arhkp-oracle-db-tpcds-loader:1521/FREEPDB1"
+  ORACLE_CONNECTION_STRING: "jdbc:oracle:thin:@oracle23ai:1521/FREEPDB1"
   ORACLE_CONN_NAME: oracle_connection
   JAVA_TOOL_OPTIONS: ""
   _JAVA_OPTIONS: ""

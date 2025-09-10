@@ -9,9 +9,9 @@ keywords:
   - sqlcl
   - mcp
   - toolhive
-home: https://github.com/lokeshrangineni/ai-architecture-charts
+home: https://github.com/rh-ai-quickstart/ai-architecture-charts
 sources:
-  - https://github.com/lokeshrangineni/ai-architecture-charts
+  - https://github.com/rh-ai-quickstart/ai-architecture-charts
 kubeVersion: ">=1.24.0-0"
 dependencies:
   - name: toolhive-operator-crds
