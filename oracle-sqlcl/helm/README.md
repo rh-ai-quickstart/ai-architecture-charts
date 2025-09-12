@@ -4,12 +4,28 @@ Note: Run these commands from the repository root (ai-architecture-charts). If y
 
 This chart deploys an Oracle SQLcl-based MCP server compatible with Toolhive. By default, it will also install Toolhive Operator CRDs and the Toolhive Operator as chart dependencies unless disabled via values.
 
+**OpenShift Requirements**: This chart is designed for OpenShift and requires the `anyuid` Security Context Constraint (SCC) to be applied to the `toolhive-operator` service account for proper operation.
+
 ## Installation
+
+### For OpenShift
+
+```bash
+# 1. Install the chart
+helm upgrade --install oracle-sqlcl ./oracle-sqlcl/helm -n toolhive-oracle-mcp --create-namespace \
+  --dependency-update \
+  --set image.repository=quay.io/ecosystem-appeng/oracle-sqlcl
+
+# 2. Apply the required SCC (Security Context Constraint)
+oc adm policy add-scc-to-user anyuid -z toolhive-operator -n toolhive-oracle-mcp
+```
+
+### For other Kubernetes distributions
 
 ```bash
 helm upgrade --install oracle-sqlcl ./oracle-sqlcl/helm -n toolhive-oracle-mcp --create-namespace \
   --dependency-update \
-  --set image.repository=quay.io/ecosystem-appeng/oracle-sqlcl-mcp
+  --set image.repository=quay.io/ecosystem-appeng/oracle-sqlcl
 ```
 
 Note: `image.tag` is optional. If omitted, the chart defaults to the chart `appVersion` defined in `Chart.yaml`. To override, pass `--set image.tag=<tag>`.
@@ -39,8 +55,8 @@ helm upgrade --install oracle-sqlcl ./oracle-sqlcl/helm -n toolhive-oracle-mcp \
 ### Dependencies
 This chart declares the following dependencies (fetched when using `--dependency-update` or after running `helm dependency build`):
 
-- `toolhive-operator-crds` (repo: `https://stacklok.github.io/toolhive`, version: `0.0.18`)
-- `toolhive-operator` (repo: `https://stacklok.github.io/toolhive`, version: `0.2.6`)
+- `toolhive-operator-crds` (repo: `https://stacklok.github.io/toolhive`, version: `0.0.24`)
+- `toolhive-operator` (repo: `https://stacklok.github.io/toolhive`, version: `0.2.12`)
 
 You can disable either via values:
 
