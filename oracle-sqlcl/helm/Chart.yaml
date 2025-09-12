@@ -1,6 +1,6 @@
 apiVersion: v2
-name: oracle-sqlcl-mcp
-description: Helm chart to deploy Oracle SQLcl MCP Server with Toolhive on OpenShift
+name: oracle-sqlcl
+description: Helm chart to deploy Oracle SQLcl MCP Server with Toolhive on OpenShift (requires anyuid SCC)
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
@@ -15,10 +15,10 @@ sources:
 kubeVersion: ">=1.24.0-0"
 dependencies:
   - name: toolhive-operator-crds
-    version: 0.0.18
+    version: 0.0.24
     repository: https://stacklok.github.io/toolhive
     condition: toolhiveOperatorCrds.enabled
   - name: toolhive-operator
-    version: 0.2.6
+    version: 0.2.12
     repository: https://stacklok.github.io/toolhive
     condition: toolhiveOperator.enabled

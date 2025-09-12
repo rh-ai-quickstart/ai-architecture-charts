@@ -1,5 +1,5 @@
 image:
-  repository: quay.io/ecosystem-appeng/oracle-sqlcl-mcp
+  repository: quay.io/ecosystem-appeng/oracle-sqlcl-mcp-server
   pullPolicy: IfNotPresent
 
 permissionProfile:
@@ -60,8 +60,21 @@ rbac:
     enabled: false
     name: toolhive-oracle-scc
 
-# Dependency toggles
+# Dependency toggles - Toolhive dependencies for OpenShift
+# Note: This chart is designed for OpenShift and requires the anyuid SCC
+# to be applied to the toolhive-operator service account for proper operation
 toolhiveOperatorCrds:
   enabled: true
 toolhiveOperator:
   enabled: true
+  # OpenShift security context overrides - requires anyuid SCC
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000  # Will be overridden by anyuid SCC
+    capabilities:
+      drop:
+      - ALL
+  podSecurityContext:
+    runAsNonRoot: true
