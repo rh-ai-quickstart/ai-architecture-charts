@@ -12,24 +12,113 @@ permissions:
   id-token: write
 
 jobs:
-  build-and-push:
+  detect-changes:
     if: github.repository == 'rh-ai-quickstart/ai-architecture-charts'
     runs-on: ubuntu-latest
+    outputs:
+      build-matrix: ${{ steps.changes.outputs.build-matrix }}
+      changed-helm-components: ${{ steps.changes.outputs.changed-helm-components }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: changes
+        run: |
+          # Define the original build matrix
+          ORIGINAL_MATRIX='{
+            "include": [
+              {
+                "name": "ingestion-pipeline",
+                "file": "ingestion-pipeline/Containerfile",
+                "chart": "ingestion-pipeline/helm/Chart.yaml",
+                "context": "ingestion-pipeline/src"
+              },
+              {
+                "name": "mcp-weather",
+                "file": "mcp-servers/weather/Containerfile",
+                "context": "mcp-servers/weather/src",
+                "chart": "mcp-servers/helm/Chart.yaml"
+              },
+              {
+                "name": "oracle23ai-tpcds",
+                "file": "oracle23ai/tpcds-util/Containerfile",
+                "context": "oracle23ai/tpcds-util",
+                "chart": "oracle23ai/helm/Chart.yaml"
+              }
+            ]
+          }'
+
+          # Get changed files as JSON array (compare against main before this PR was merged)
+          CHANGED_FILES_JSON=$(git diff --name-only ${{ github.event.before }}..HEAD | jq -R -s 'split("\n") | map(select(length > 0))')
+
+          # Get all helm components dynamically
+          ALL_HELM_COMPONENTS=$(find . -maxdepth 3 -name "Chart.yaml" -path "*/helm/Chart.yaml" | cut -d'/' -f2 | sort | jq -R -s 'split("\n") | map(select(length > 0))')
+
+          echo "Changed files:"
+          echo "=============="
+          echo "$CHANGED_FILES_JSON" | jq .
+
+          echo "Original build matrix:"
+          echo "======================"
+          echo "$ORIGINAL_MATRIX" | jq .
+
+          echo "Helm components:"
+          echo "================"
+          echo "$ALL_HELM_COMPONENTS" | jq .
+
+          # Check if workflow changed and filter build matrix in one jq command
+          RESULT=$(echo "$ORIGINAL_MATRIX" | jq --argjson changed_files "$CHANGED_FILES_JSON" --argjson all_helm_components "$ALL_HELM_COMPONENTS" '
+            {
+              "build_matrix": (
+                if ($changed_files | any(test("^\\.github/workflows/"))) then
+                  .
+                else
+                  {
+                    "include": [
+                      .include[] as $item |
+                      $item |
+                      select(
+                        $changed_files | any(
+                          . == $item.file or
+                          test("^" + ($item.context) + "/")
+                        )
+                      )
+                    ]
+                  }
+                end
+              ),
+              "changed_helm_components": (
+                if ($changed_files | any(test("^\\.github/workflows/"))) then
+                  $all_helm_components | join(" ")
+                else
+                  [
+                    $changed_files[] |
+                    select(test("/helm/")) |
+                    split("/")[0]
+                  ] | unique | join(" ")
+                end
+              )
+            }
+          ')
+
+          # Debug output
+          echo "Detected changes:"
+          echo "================="
+          echo "$RESULT" | jq .
+
+          # Extract results
+          echo "build-matrix=$(echo "$RESULT" | jq -c '.build_matrix')" >> $GITHUB_OUTPUT
+          echo "changed-helm-components=$(echo "$RESULT" | jq -r '.changed_helm_components')" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    needs: detect-changes
+    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts' && needs.detect-changes.outputs.build-matrix != '{"include":[]}'
+    runs-on: ubuntu-latest
     strategy:
-      matrix:
-        include:
-          - name: ingestion-pipeline
-            file: ingestion-pipeline/Containerfile
-            chart: ingestion-pipeline/helm/Chart.yaml
-            context: ingestion-pipeline/src
-          - name: mcp-weather
-            file: mcp-servers/weather/Containerfile
-            context: mcp-servers/weather/src
-            chart: mcp-servers/helm/Chart.yaml
-          - name: oracle23ai-tpcds
-            file: oracle23ai/tpcds-util/Containerfile
-            context: oracle23ai/tpcds-util
-            chart: oracle23ai/helm/Chart.yaml
+      matrix: ${{ fromJson(needs.detect-changes.outputs.build-matrix) }}
 
     steps:
       - name: Checkout
@@ -62,7 +151,8 @@ jobs:
             IMAGE_TAG=${{ steps.version.outputs.tag }}
 
   package-helm-charts:
-    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts'
+    needs: detect-changes
+    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts' && needs.detect-changes.outputs.changed-helm-components != ''
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -82,10 +172,12 @@ jobs:
       - name: Package charts
         run: |
           mkdir -p gh-pages
-          for chart in */; do
-            if [ -f "$chart/helm/Chart.yaml" ]; then
-              helm dependency update "$chart/helm"
-              helm package "$chart/helm" -d gh-pages
+          read -ra CHANGED_COMPONENTS <<< "${{ needs.detect-changes.outputs.changed-helm-components }}"
+          for component in "${CHANGED_COMPONENTS[@]}"; do
+            if [ -f "$component/helm/Chart.yaml" ]; then
+              echo "Packaging helm chart for $component"
+              helm dependency update "$component/helm"
+              helm package "$component/helm" -d gh-pages
             fi
           done
 
