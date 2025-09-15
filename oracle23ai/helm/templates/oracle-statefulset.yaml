@@ -6,15 +6,15 @@ Replaces install.sh logic with comprehensive Kubernetes-native health checks
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "oracle23ai-unified.fullname" . }}
+  name: {{ include "oracle23ai.fullname" . }}
   labels:
-    {{- include "oracle23ai-unified.labels" . | nindent 4 }}
+    {{- include "oracle23ai.labels" . | nindent 4 }}
     app.kubernetes.io/component: database
 spec:
   replicas: {{ .Values.oracle.replicaCount }}
   selector:
     matchLabels:
-      {{- include "oracle23ai-unified.selectorLabels" . | nindent 6 }}
+      {{- include "oracle23ai.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: database
   {{- with .Values.oracle.volumeClaimTemplates }}
   volumeClaimTemplates:
@@ -27,7 +27,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "oracle23ai-unified.labels" . | nindent 8 }}
+        {{- include "oracle23ai.labels" . | nindent 8 }}
         app.kubernetes.io/component: database
         {{- with .Values.oracle.podLabels }}
         {{- toYaml . | nindent 8 }}
@@ -37,7 +37,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "oracle23ai-unified.serviceAccountName" . }}
+      serviceAccountName: {{ include "oracle23ai.serviceAccountName" . }}
       {{- with .Values.oracle.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -115,7 +115,7 @@ spec:
               oracle23ai_up{instance="oracle23ai-0"} 1
               # HELP oracle23ai_info Oracle 23ai information
               # TYPE oracle23ai_info gauge
-              oracle23ai_info{version="23ai",chart="oracle23ai-unified"} 1
+              oracle23ai_info{version="23ai",chart="oracle23ai"} 1
               '''
               
               class MetricsHandler(http.server.BaseHTTPRequestHandler):

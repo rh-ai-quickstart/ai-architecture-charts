@@ -6,9 +6,9 @@ Replaces install.sh script logic with Kubernetes-native dependency management
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "oracle23ai-unified.fullname" . }}-tpcds-populate
+  name: {{ include "oracle23ai.fullname" . }}-tpcds-populate
   labels:
-    {{- include "oracle23ai-unified.labels" . | nindent 4 }}
+    {{- include "oracle23ai.labels" . | nindent 4 }}
     app.kubernetes.io/component: data-loader
   {{- with .Values.tpcds.job.annotations }}
   annotations:
@@ -20,11 +20,11 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "oracle23ai-unified.selectorLabels" . | nindent 8 }}
+        {{- include "oracle23ai.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: data-loader
     spec:
       restartPolicy: Never
-      serviceAccountName: {{ include "oracle23ai-unified.fullname" . }}-tpcds
+      serviceAccountName: {{ include "oracle23ai.fullname" . }}-tpcds
       
       initContainers:
       {{/* 

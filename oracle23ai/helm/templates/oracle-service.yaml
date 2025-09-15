@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "oracle23ai-unified.fullname" . }}
+  name: {{ include "oracle23ai.fullname" . }}
   labels:
-    {{- include "oracle23ai-unified.labels" . | nindent 4 }}
+    {{- include "oracle23ai.labels" . | nindent 4 }}
     app.kubernetes.io/component: database
 spec:
   type: {{ .Values.oracle.service.type }}
@@ -20,6 +20,6 @@ spec:
       name: metrics
     {{- end }}
   selector:
-    {{- include "oracle23ai-unified.selectorLabels" . | nindent 4 }}
+    {{- include "oracle23ai.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: database
 {{- end }}

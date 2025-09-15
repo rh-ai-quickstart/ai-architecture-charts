@@ -1,6 +1,6 @@
 apiVersion: v2
-name: oracle23ai-unified
-description: A unified Helm chart for Oracle 23ai Database with TPC-DS data loading
+name: oracle23ai
+description: A Helm chart for Oracle 23ai Database with TPC-DS data loading
 type: application
 version: 1.0.0
 appVersion: "23ai"

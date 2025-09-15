@@ -7,17 +7,17 @@ This is required for init containers to use kubectl wait
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "oracle23ai-unified.fullname" . }}-tpcds
+  name: {{ include "oracle23ai.fullname" . }}-tpcds
   labels:
-    {{- include "oracle23ai-unified.labels" . | nindent 4 }}
+    {{- include "oracle23ai.labels" . | nindent 4 }}
     app.kubernetes.io/component: data-loader
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "oracle23ai-unified.fullname" . }}-tpcds-role
+  name: {{ include "oracle23ai.fullname" . }}-tpcds-role
   labels:
-    {{- include "oracle23ai-unified.labels" . | nindent 4 }}
+    {{- include "oracle23ai.labels" . | nindent 4 }}
     app.kubernetes.io/component: data-loader
 rules:
 - apiGroups: [""]
@@ -36,16 +36,16 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "oracle23ai-unified.fullname" . }}-tpcds-binding
+  name: {{ include "oracle23ai.fullname" . }}-tpcds-binding
   labels:
-    {{- include "oracle23ai-unified.labels" . | nindent 4 }}
+    {{- include "oracle23ai.labels" . | nindent 4 }}
     app.kubernetes.io/component: data-loader
 subjects:
 - kind: ServiceAccount
-  name: {{ include "oracle23ai-unified.fullname" . }}-tpcds
+  name: {{ include "oracle23ai.fullname" . }}-tpcds
   namespace: {{ .Release.Namespace }}
 roleRef:
   kind: Role
-  name: {{ include "oracle23ai-unified.fullname" . }}-tpcds-role
+  name: {{ include "oracle23ai.fullname" . }}-tpcds-role
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
