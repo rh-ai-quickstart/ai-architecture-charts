@@ -1,0 +1,69 @@
+{{- $root := . }}
+{{- $servers := include "mcp-servers.mergeMcpServers" . | fromJson }}
+{{- range $key, $server := $servers }}
+{{- if and $server.mcpserver $server.mcpserver.enabled }}
+{{- $serverDict := dict "root" $root "key" $key "server" $server }}
+---
+apiVersion: toolhive.stacklok.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ $key }}
+  labels:
+    {{- include "mcp-servers.labels" $serverDict | nindent 4 }}
+spec:
+  image: "{{ $server.imageRepository }}:{{ $server.imageTag | default $root.Chart.AppVersion }}"
+  permissionProfile:
+    name: {{ $server.mcpserver.permissionProfile.name | default "network" }}
+    type: {{ $server.mcpserver.permissionProfile.type | default "builtin" }}
+  podTemplateSpec:
+    metadata: {}
+    spec:
+      serviceAccountName: {{ include "mcp-servers.serviceAccountName" $serverDict }}
+      {{- with $server.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $server.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: mcp        
+        image: "{{ $server.imageRepository }}:{{ $server.imageTag | default $root.Chart.AppVersion }}"
+        imagePullPolicy: {{ $server.imagePullPolicy | default "IfNotPresent" }}
+        {{- if or $server.mcpserver.env $server.mcpserver.envSecrets }}
+        env:
+        {{- with $server.mcpserver.env }}
+        {{- range $envKey, $envValue := . }}
+        {{- if ne $envValue nil }}
+        - name: {{ $envKey }}
+          value: {{ $envValue | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- with $server.mcpserver.envSecrets }}
+        {{- range $envKey, $secretSpec := . }}
+        - name: {{ $envKey }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ $secretSpec.name }}
+              key: {{ $secretSpec.key }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- with $server.volumeMounts }}
+        volumeMounts:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $server.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $server.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+  port: {{ $server.mcpserver.port | default 8080 }}
+  transport: {{ $server.mcpserver.transport | default "stdio" }}
+{{- end }}
+{{- end }}

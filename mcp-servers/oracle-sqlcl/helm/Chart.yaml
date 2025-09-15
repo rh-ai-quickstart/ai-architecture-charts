@@ -1,0 +1,14 @@
+apiVersion: v2
+name: oracle-sqlcl-mcp
+description: Helm chart to deploy Oracle SQLcl MCP Server (Toolhive managed by parent mcp-servers chart)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - oracle
+  - sqlcl
+  - mcp
+home: https://github.com/rh-ai-quickstart/ai-architecture-charts
+sources:
+  - https://github.com/rh-ai-quickstart/ai-architecture-charts
+kubeVersion: ">=1.24.0-0"

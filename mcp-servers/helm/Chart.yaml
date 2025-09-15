@@ -1,6 +1,21 @@
 apiVersion: v2
 name: mcp-servers
-description: A Helm chart for Kubernetes
+description: A Helm chart for MCP (Model Context Protocol) servers with Toolhive operator
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+
+keywords:
+  - mcp
+  - toolhive
+  - model-context-protocol
+
+dependencies:
+  - name: toolhive-operator-crds
+    version: 0.0.18
+    repository: https://stacklok.github.io/toolhive
+    condition: toolhive.crds.enabled
+  - name: toolhive-operator
+    version: 0.2.6
+    repository: https://stacklok.github.io/toolhive
+    condition: toolhive.operator.enabled

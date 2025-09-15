@@ -1,16 +1,18 @@
-apiVersion: toolhive.stacklok.dev/v1alpha1
-kind: MCPServer
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: {{ include "oracle-sqlcl-mcp.fullname" . }}
   labels:
     {{- include "oracle-sqlcl-mcp.labels" . | nindent 4 }}
 spec:
-  image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-  permissionProfile:
-    name: {{ .Values.permissionProfile.name }}
-    type: {{ .Values.permissionProfile.type }}
-  podTemplateSpec:
-    metadata: {}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "oracle-sqlcl-mcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "oracle-sqlcl-mcp.labels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "oracle-sqlcl-mcp.serviceAccountName" . }}
       securityContext:
@@ -22,9 +24,13 @@ spec:
             claimName: {{- if .Values.persistence.data.existingClaim }} {{ .Values.persistence.data.existingClaim }} {{- else }} {{ include "oracle-sqlcl-mcp.fullname" . }}-data {{- end }}
         {{- end }}
       containers:
-      - name: mcp        
+      - name: oracle-sqlcl-mcp        
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+        ports:
+        - name: mcp
+          containerPort: {{ .Values.port }}
+          protocol: TCP
         env:
         - name: HOME
           value: {{ .Values.persistence.data.mountPath | quote }}
@@ -80,5 +86,3 @@ spec:
           {{- toYaml .Values.resources | nindent 10 }}
         securityContext:
           {{- toYaml .Values.securityContext | nindent 10 }}
-  port: {{ .Values.port }}
-  transport: {{ .Values.transport }}

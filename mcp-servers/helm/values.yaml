@@ -1,5 +1,89 @@
+# Toolhive operator configuration
+toolhive:
+  crds:
+    enabled: true
+  operator:
+    enabled: true
+
+# MCP servers configuration
 mcp-servers:
   mcp-weather:
     deploy: false
     imageRepository: quay.io/ecosystem-appeng/mcp-weather
+    imageTag: "latest"
     uri: http://mcp-weather:8000/sse
+    # MCPServer configuration for Toolhive
+    mcpserver:
+      enabled: false
+      port: 8080
+      transport: stdio
+      permissionProfile:
+        name: network
+        type: builtin
+      env:
+        TAVILY_API_KEY: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+  
+  oracle-sqlcl:
+    deploy: false
+    imageRepository: quay.io/ecosystem-appeng/oracle-sqlcl-mcp
+    imageTag: "latest"
+    uri: http://oracle-sqlcl-mcp:8080/sse
+    # MCPServer configuration for Toolhive
+    mcpserver:
+      enabled: false
+      port: 8080
+      transport: stdio
+      permissionProfile:
+        name: network
+        type: builtin
+      env:
+        ORACLE_USER: "sales"
+        ORACLE_PASSWORD: null  # Sourced from secret
+        ORACLE_CONNECTION_STRING: null  # Sourced from secret
+        ORACLE_CONN_NAME: oracle_connection
+        JAVA_TOOL_OPTIONS: "-Djava.io.tmpdir=/sqlcl-home/tmp"
+        _JAVA_OPTIONS: ""
+        HOME: "/sqlcl-home"
+      envSecrets:
+        ORACLE_PASSWORD:
+          name: oracle23ai
+          key: password
+        ORACLE_CONNECTION_STRING:
+          name: oracle23ai
+          key: jdbc-uri
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+    podSecurityContext:
+      fsGroup: 0
+      fsGroupChangePolicy: OnRootMismatch
+      seccompProfile:
+        type: RuntimeDefault
+    volumes:
+      - name: sqlcl-data
+        persistentVolumeClaim:
+          claimName: oracle-sqlcl-data
+    volumeMounts:
+      - name: sqlcl-data
+        mountPath: /sqlcl-home

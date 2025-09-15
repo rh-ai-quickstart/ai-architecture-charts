@@ -1,0 +1,87 @@
+🚀 MCP Servers with Toolhive have been deployed successfully!
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+## 📋 Deployment Status
+
+Check Toolhive Operator:
+  kubectl get deployment -l app.kubernetes.io/name=toolhive-operator -n {{ .Release.Namespace }}
+
+Check MCPServer Resources:
+  kubectl get mcpservers -n {{ .Release.Namespace }}
+
+## 🔍 Monitoring Commands
+
+# View all MCP server statuses
+kubectl get mcpservers -n {{ .Release.Namespace }} -o wide
+
+# Check specific MCP server details
+{{- if .Values.mcp-servers.mcp-weather.mcpserver.enabled }}
+kubectl describe mcpserver mcp-weather -n {{ .Release.Namespace }}
+{{- end }}
+{{- if .Values.mcp-servers.oracle-sqlcl.mcpserver.enabled }}
+kubectl describe mcpserver oracle-sqlcl -n {{ .Release.Namespace }}
+{{- end }}
+
+# View MCP server logs
+{{- if .Values.mcp-servers.mcp-weather.mcpserver.enabled }}
+kubectl logs -l toolhive-name=mcp-weather -n {{ .Release.Namespace }}
+{{- end }}
+{{- if .Values.mcp-servers.oracle-sqlcl.mcpserver.enabled }}
+kubectl logs -l toolhive-name=oracle-sqlcl -n {{ .Release.Namespace }}
+{{- end }}
+
+## 🌐 Service Endpoints
+
+{{- if .Values.mcp-servers.mcp-weather.mcpserver.enabled }}
+Weather MCP Server:
+  Service: http://mcp-mcp-weather-proxy.{{ .Release.Namespace }}.svc.cluster.local:8080
+  Health:  http://mcp-mcp-weather-proxy.{{ .Release.Namespace }}.svc.cluster.local:8080/health
+  SSE:     http://mcp-mcp-weather-proxy.{{ .Release.Namespace }}.svc.cluster.local:8080/sse
+{{- end }}
+
+{{- if .Values.mcp-servers.oracle-sqlcl.mcpserver.enabled }}
+Oracle SQLcl MCP Server:
+  Service: http://mcp-oracle-sqlcl-proxy.{{ .Release.Namespace }}.svc.cluster.local:8080
+  Health:  http://mcp-oracle-sqlcl-proxy.{{ .Release.Namespace }}.svc.cluster.local:8080/health
+  SSE:     http://mcp-oracle-sqlcl-proxy.{{ .Release.Namespace }}.svc.cluster.local:8080/sse
+{{- end }}
+
+## 🔐 Security Notes
+
+{{- if .Values.mcp-servers.oracle-sqlcl.mcpserver.enabled }}
+Oracle Credentials:
+  Credentials are securely sourced from Kubernetes secret: {{ .Values.mcp-servers.oracle-sqlcl.mcpserver.envSecrets.ORACLE_PASSWORD.name | default "oracle23ai" }}
+  Ensure this secret exists with keys: password, jdbc-uri
+{{- end }}
+
+{{- if .Values.mcp-servers.mcp-weather.mcpserver.enabled }}
+Weather API:
+  {{- if eq (.Values.mcp-servers.mcp-weather.mcpserver.env.TAVILY_API_KEY | default "") "" }}
+  ⚠️  TAVILY_API_KEY is empty. Update with your API key for weather functionality.
+  {{- else }}
+  ✅ TAVILY_API_KEY is configured.
+  {{- end }}
+{{- end }}
+
+## 🛠️ Troubleshooting
+
+If pods are not starting:
+1. Check MCPServer resource status
+2. Verify Toolhive operator is running
+3. Ensure secrets exist (for oracle-sqlcl)
+4. Check SCC permissions
+
+Debug commands:
+  kubectl logs -l app.kubernetes.io/name=toolhive-operator -n {{ .Release.Namespace }}
+  kubectl get events -n {{ .Release.Namespace }} --sort-by='.lastTimestamp'
+
+## 📚 Next Steps
+
+1. Configure API keys (if needed)
+2. Test MCP server endpoints
+3. Integrate with your AI services
+4. Monitor performance and logs
+
+For more information, see the README.md file.

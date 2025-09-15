@@ -1,5 +1,5 @@
 image:
-  repository: quay.io/ecosystem-appeng/oracle-sqlcl-mcp
+  repository: quay.io/rhkp/oracle-sqlcl-mcp
   pullPolicy: IfNotPresent
 
 permissionProfile:
@@ -21,11 +21,7 @@ resources:
     cpu: 1000m
     memory: 1Gi
 
-podSecurityContext:
-  fsGroup: 0
-  fsGroupChangePolicy: OnRootMismatch
-  seccompProfile:
-    type: RuntimeDefault
+podSecurityContext: {}
 
 securityContext:
   allowPrivilegeEscalation: false
@@ -60,8 +56,4 @@ rbac:
     enabled: false
     name: toolhive-oracle-scc
 
-# Dependency toggles
-toolhiveOperatorCrds:
-  enabled: true
-toolhiveOperator:
-  enabled: true
+# Note: Toolhive operator dependencies are now managed by the parent mcp-servers chart

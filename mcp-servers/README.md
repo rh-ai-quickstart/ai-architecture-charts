@@ -1,55 +1,88 @@
 # MCP Servers Helm Chart
 
-This Helm chart deploys MCP (Model Context Protocol) servers that provide external tools and capabilities to AI models. MCP servers enable AI agents to interact with external systems, APIs, and services.
+This Helm chart deploys MCP (Model Context Protocol) servers using the Toolhive operator that provides external tools and capabilities to AI models. MCP servers enable AI agents to interact with external systems, APIs, and services.
 
-## Overview
+## Architecture Overview
 
 The mcp-servers chart creates:
-- Deployments for various MCP server implementations
-- Services for MCP server endpoints
-- ConfigMaps for server configuration
-- Support for multiple MCP server types
-- Integration with LlamaStack and other AI services
+- **Toolhive Operator**: Centralized operator for managing MCP servers
+- **MCPServer Custom Resources**: Kubernetes-native MCP server definitions
+- **Automated Proxy Management**: Toolhive handles networking and communication
+- **Secure Credential Management**: Integration with Kubernetes secrets
+- **Support for Multiple MCP Types**: Weather services, Oracle SQLcl, and extensible architecture
+
+### Key Components
+
+1. **Toolhive Operator**: Manages the lifecycle of MCP servers
+2. **MCPServer CRDs**: Define MCP server specifications declaratively  
+3. **Oracle SQLcl MCP**: Database interaction capabilities using Oracle's SQLcl
+4. **Weather MCP**: External weather API integration
+5. **Secure Secret Management**: Credentials sourced from Kubernetes secrets
 
 ## Prerequisites
 
-- OpenShift cluster
+- OpenShift cluster (4.12+)
 - Helm 3.x
 - Access to container registries
-- Network connectivity to external APIs (if used by MCP servers)
+- Network connectivity to external APIs
+- Oracle database (for Oracle SQLcl MCP server)
 
 ## Installation
 
-### Basic Installation
+### Quick Start
 
 ```bash
-helm install mcp-servers ./helm
+# Install with default configuration (MCPServer resources enabled)
+helm install mcp-servers ./helm --namespace <your-namespace>
 ```
 
-### Installation with Weather MCP Server
+### Production Installation with Oracle Database
 
 ```bash
-helm install mcp-servers ./helm \
-  --set mcp-servers.mcp-weather.deploy=true
-```
+# Create configuration file
+cat > mcp-config.yaml << EOF
+toolhive:
+  crds:
+    enabled: true
+  operator:
+    enabled: true
 
-### Installation with Custom Namespace
+mcp-servers:
+  mcp-weather:
+    mcpserver:
+      enabled: true
+      env:
+        TAVILY_API_KEY: ""  # Provide your API key
+  
+  oracle-sqlcl:
+    mcpserver:
+      enabled: true
+      env:
+        ORACLE_USER: "sales"
+        ORACLE_PASSWORD: null  # Sourced from secret
+        ORACLE_CONNECTION_STRING: null  # Sourced from secret
+      envSecrets:
+        ORACLE_PASSWORD:
+          name: oracle23ai
+          key: password
+        ORACLE_CONNECTION_STRING:
+          name: oracle23ai
+          key: jdbc-uri
+EOF
 
-```bash
-helm install mcp-servers ./helm \
-  --namespace mcp-servers \
-  --create-namespace
+# Install with configuration
+helm install mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
 ```
 
 ## Configuration
 
-### Key Configuration Options
+### Architecture Configuration
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `mcp-servers.mcp-weather.deploy` | Deploy weather MCP server | `false` |
-| `mcp-servers.mcp-weather.imageRepository` | Weather server image repository | `quay.io/ecosystem-appeng/mcp-weather` |
-| `mcp-servers.mcp-weather.uri` | Weather server URI endpoint | `http://mcp-weather:8000/sse` |
+| `toolhive.crds.enabled` | Install Toolhive CRDs | `true` |
+| `toolhive.operator.enabled` | Deploy Toolhive operator | `true` |
+| `toolhive-operator.operator.resources` | Operator resource limits | See values.yaml |
 
 ### MCP Server Configuration
 
@@ -57,423 +90,133 @@ helm install mcp-servers ./helm \
 ```yaml
 mcp-servers:
   mcp-weather:
-    deploy: true
-    imageRepository: quay.io/ecosystem-appeng/mcp-weather
-    imageTag: latest
-    uri: http://mcp-weather:8000/sse
-    port: 8000
-    replicas: 1
-    resources:
-      requests:
-        memory: "256Mi"
-        cpu: "100m"
-      limits:
-        memory: "512Mi"
-        cpu: "200m"
-```
-
-### Complete Example values.yaml
-
-```yaml
-mcp-servers:
-  mcp-weather:
-    deploy: true
-    imageRepository: quay.io/ecosystem-appeng/mcp-weather
-    imageTag: v1.0.0
-    uri: http://mcp-weather:8000/sse
-    port: 8000
-    replicas: 2
-    
-    # Environment variables for weather API
-    env:
-      - name: WEATHER_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: weather-api-secret
-            key: api-key
-      - name: WEATHER_DEFAULT_LOCATION
-        value: "New York, NY"
-    
-    # Resource limits
-    resources:
-      requests:
-        memory: "512Mi"
-        cpu: "250m"
-      limits:
-        memory: "1Gi"
-        cpu: "500m"
-    
-    # Health check configuration
-    healthCheck:
+    mcpserver:
       enabled: true
-      path: /health
-      initialDelaySeconds: 30
-      periodSeconds: 10
-    
-    # Service configuration
-    service:
-      type: ClusterIP
-      port: 8000
-      targetPort: 8000
-
-  # Example: Additional MCP server
-  mcp-database:
-    deploy: false
-    imageRepository: quay.io/your-org/mcp-database
-    imageTag: v1.0.0
-    uri: http://mcp-database:8000/sse
-    port: 8000
+      env:
+        TAVILY_API_KEY: ""  # Required: Your Tavily API key
+      permissionProfile:
+        name: network
+        type: builtin
+      port: 8080
+      transport: stdio
+    imageRepository: quay.io/ecosystem-appeng/mcp-weather
+    imageTag: "0.1.0"
 ```
 
-## Usage
-
-### Accessing MCP Server Endpoints
-
-MCP servers expose Server-Sent Events (SSE) endpoints for real-time communication:
-
-```bash
-# Check MCP server status
-oc get pods -l app.kubernetes.io/name=mcp-servers
-
-# Get service endpoints
-oc get svc -l app.kubernetes.io/name=mcp-servers
-
-# Port forward for local testing
-oc port-forward svc/mcp-weather 8000:8000
-
-# Test MCP weather server endpoint
-curl -X GET http://localhost:8000/health
-```
-
-### SSE Endpoint Testing
-
-```bash
-# Connect to SSE endpoint
-curl -N -H "Accept: text/event-stream" \
-  http://localhost:8000/sse
-
-# Test weather query capability
-curl -X POST http://localhost:8000/tools/weather \
-  -H "Content-Type: application/json" \
-  -d '{
-    "location": "New York, NY",
-    "units": "metric"
-  }'
-```
-
-### Integration with LlamaStack
-
-Configure LlamaStack to use MCP servers:
-
-```yaml
-# In LlamaStack configuration
-mcp-servers:
-  weather-server:
-    endpoint: "http://mcp-weather:8000/sse"
-    capabilities:
-      - weather_lookup
-      - location_search
-    timeout: 30s
-```
-
-### OpenShift Routes
-
-Create routes for external access:
-
-```bash
-# Expose weather MCP server
-oc expose service mcp-weather
-oc get routes mcp-weather
-```
-
-## MCP Server Development
-
-### Creating Custom MCP Servers
-
-To add a new MCP server to the chart:
-
-1. **Add server configuration in values.yaml:**
+#### Oracle SQLcl MCP Server
 ```yaml
 mcp-servers:
-  mcp-custom:
-    deploy: true  # Set to true to enable deployment
-    imageRepository: quay.io/your-org/mcp-custom
-    imageTag: v1.0.0
-    uri: http://mcp-custom:8000/sse
-    port: 8000
+  oracle-sqlcl:
+    mcpserver:
+      enabled: true
+      env:
+        ORACLE_USER: "sales"
+        ORACLE_PASSWORD: null  # Sourced from secret
+        ORACLE_CONNECTION_STRING: null  # Sourced from secret
+        ORACLE_CONN_NAME: "oracle_connection"
+      envSecrets:
+        ORACLE_PASSWORD:
+          name: oracle23ai  # Name of your Oracle secret
+          key: password
+        ORACLE_CONNECTION_STRING:
+          name: oracle23ai
+          key: jdbc-uri
+      permissionProfile:
+        name: network
+        type: builtin
+    imageRepository: quay.io/rhkp/oracle-sqlcl-mcp
+    imageTag: "1.0.0"
+    volumes:
+      - name: sqlcl-data
+        persistentVolumeClaim:
+          claimName: oracle-sqlcl-data
+    volumeMounts:
+      - name: sqlcl-data
+        mountPath: /sqlcl-home
 ```
 
-The chart will automatically generate the deployment, service, and other resources when `deploy: true`. No additional templates are required.
+## Security
 
-### Building and Publishing Custom MCP Servers
+### Credential Management
 
-For MCP servers that require custom builds, you can place them under this package and configure them to be built and pushed to Quay.io:
+This chart implements secure credential management:
 
-1. **Create server directory structure:**
-```
-mcp-servers/
-├── your-server-name/
-│   ├── Containerfile
-│   └── src/
-│       ├── server.py
-│       └── requirements.txt
-└── helm/
-    └── values.yaml
-```
+- **No hardcoded passwords**: All sensitive data sourced from Kubernetes secrets
+- **Secret references**: Uses `envSecrets` pattern for secure credential injection
+- **Oracle integration**: Leverages Oracle database's own secret for credentials
+- **API key management**: Allows secure injection of external API keys
 
-2. **Add to GitHub workflow matrix:**
-Edit `.github/workflows/publish-helm-charts.yaml` and add your server to the build matrix:
-```yaml
-strategy:
-  matrix:
-    include:
-      - name: mcp-weather
-        file: mcp-servers/weather/Containerfile
-        context: mcp-servers/weather/src
-        chart: mcp-servers/helm/Chart.yaml
-      - name: your-server-name  # Add your server here
-        file: mcp-servers/your-server-name/Containerfile
-        context: mcp-servers/your-server-name/src
-        chart: mcp-servers/helm/Chart.yaml
-```
+### Security Context
 
-3. **Configure in values.yaml:**
-```yaml
-mcp-servers:
-  your-server-name:
-    deploy: true
-    imageRepository: quay.io/ecosystem-appeng/your-server-name
-    # imageTag will be set from chart version
-    uri: http://your-server-name:8000/sse
-    port: 8000
-```
+All containers run with restricted security contexts:
+- `allowPrivilegeEscalation: false`
+- `capabilities.drop: [ALL]`
+- Proper service account permissions
 
-The GitHub workflow will build the container image from your Containerfile and push it to `quay.io/ecosystem-appeng/your-server-name` with the version from the MCP Servers helm chart.
+## Monitoring
 
-### MCP Protocol Implementation
-
-MCP servers should implement the Model Context Protocol specification:
-
-```python
-# Example Python MCP server structure
-from mcp_server import MCPServer
-import asyncio
-
-class CustomMCPServer(MCPServer):
-    def __init__(self):
-        super().__init__()
-        self.register_tool("custom_tool", self.handle_custom_tool)
-    
-    async def handle_custom_tool(self, params):
-        # Implement tool logic
-        return {"result": "Custom tool response"}
-    
-    async def start_server(self):
-        # Start SSE endpoint
-        await self.run(host="0.0.0.0", port=8000)
-
-if __name__ == "__main__":
-    server = CustomMCPServer()
-    asyncio.run(server.start_server())
-```
-
-## Monitoring and Troubleshooting
-
-### Checking Service Health
+### Check MCP Server Status
 
 ```bash
-# Check all MCP server pods
-oc get pods -l app.kubernetes.io/name=mcp-servers
+# List all MCP servers
+kubectl get mcpservers
 
-# Check specific MCP server
-oc get pods -l app=mcp-weather
+# Check specific server status
+kubectl describe mcpserver oracle-sqlcl
 
-# Check service status
-oc get svc mcp-weather
-
-# Test health endpoint
-oc exec -it deployment/mcp-weather -- curl localhost:8000/health
+# View server logs
+kubectl logs -l toolhive-name=oracle-sqlcl
 ```
 
-### Viewing Logs
+### Health Endpoints
 
-```bash
-# View weather server logs
-oc logs -l app=mcp-weather -f
+MCP servers expose health endpoints through Toolhive proxy:
+- Health: `http://<service>:8080/health`
+- SSE: `http://<service>:8080/sse`
+- JSON-RPC: `http://<service>:8080/messages`
 
-# View all MCP server logs
-oc logs -l app.kubernetes.io/name=mcp-servers -f
-
-# Debug connection issues
-oc describe pod -l app=mcp-weather
-```
+## Troubleshooting
 
 ### Common Issues
 
-1. **Server Not Starting**:
-   - Check container image availability
-   - Verify environment variables
-   - Check resource limits
-   - Review container logs
+1. **Pod Restarts**: Check health probe timing for database connections
+2. **Secret Not Found**: Ensure Oracle secret exists before installing
+3. **Permission Denied**: Verify SCC permissions for service accounts
+4. **Image Pull Errors**: Check image tags and registry access
 
-2. **SSE Connection Issues**:
-   - Verify port configuration
-   - Check service networking
-   - Test endpoint accessibility
-   - Validate SSE implementation
-
-3. **External API Integration**:
-   - Check API key configuration
-   - Verify network connectivity
-   - Review rate limiting
-   - Validate API endpoint accessibility
-
-4. **Performance Issues**:
-   - Monitor resource usage
-   - Check connection pooling
-   - Review timeout settings
-   - Optimize response handling
-
-### Debugging Commands
+### Debug Commands
 
 ```bash
-# Check container environment
-oc exec -it deployment/mcp-weather -- env
+# Check Toolhive operator logs
+kubectl logs -l app.kubernetes.io/name=toolhive-operator
 
-# Test internal connectivity
-oc exec -it deployment/mcp-weather -- wget -O- http://localhost:8000/health
+# Check MCPServer resources
+kubectl get mcpservers -o yaml
 
-# Check network policies
-oc get networkpolicies
-
-# Inspect service endpoints
-oc describe endpoints mcp-weather
+# Verify secrets
+kubectl get secret oracle23ai -o jsonpath='{.data}' | jq 'keys'
 ```
 
-## Security Considerations
+## Migration from Legacy Deployment
 
-### API Key Management
+If migrating from standalone oracle-sqlcl deployment:
 
-```bash
-# Create secret for API keys
-oc create secret generic weather-api-secret \
-  --from-literal=api-key=your_weather_api_key
+1. Uninstall old oracle-sqlcl chart
+2. Install this unified mcp-servers chart
+3. Configure `oracle-sqlcl.mcpserver.enabled: true`
+4. Update secret references
 
-# Use in MCP server configuration
-env:
-  - name: WEATHER_API_KEY
-    valueFrom:
-      secretKeyRef:
-        name: weather-api-secret
-        key: api-key
-```
+## Contributing
 
+1. Follow existing patterns for new MCP servers
+2. Use MCPServer CRDs instead of direct Deployments  
+3. Implement secure credential management
+4. Add appropriate resource limits and security contexts
+5. Update this README with new server documentation
 
-## Integration Examples
+## Support
 
-### Weather Service Integration
-
-```yaml
-# Weather MCP server with full configuration
-mcp-servers:
-  mcp-weather:
-    deploy: true
-    imageRepository: quay.io/ecosystem-appeng/mcp-weather
-    
-    env:
-      - name: OPENWEATHER_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: openweather-secret
-            key: api-key
-      - name: DEFAULT_UNITS
-        value: "metric"
-      - name: CACHE_TTL
-        value: "300"
-    
-    capabilities:
-      - current_weather
-      - weather_forecast
-      - weather_alerts
-      - location_search
-```
-
-### Database Query Server
-
-```yaml
-mcp-servers:
-  mcp-database:
-    deploy: true
-    imageRepository: quay.io/your-org/mcp-database
-    
-    env:
-      - name: DB_CONNECTION_STRING
-        valueFrom:
-          secretKeyRef:
-            name: database-secret
-            key: connection-string
-      - name: QUERY_TIMEOUT
-        value: "30s"
-      - name: MAX_RESULTS
-        value: "1000"
-```
-
-## Upgrading
-
-```bash
-# Upgrade with new image versions
-helm upgrade mcp-servers ./helm \
-  --set mcp-servers.mcp-weather.imageTag=v2.0.0
-
-# Check rollout status
-oc rollout status deployment/mcp-weather
-```
-
-## Uninstalling
-
-```bash
-# Remove chart
-helm uninstall mcp-servers
-
-# Clean up secrets (if needed)
-oc delete secret weather-api-secret openweather-secret
-
-# Remove persistent data (if any)
-oc delete pvc -l app.kubernetes.io/name=mcp-servers
-```
-
-
-## Advanced Configuration
-
-### Custom Protocol Support
-
-```yaml
-mcp-servers:
-  mcp-custom:
-    protocol:
-      version: "2024-11-05"
-      features:
-        - server-sent-events
-        - bidirectional-streams
-        - tool-calling
-    
-    middleware:
-      - authentication
-      - rate-limiting
-      - request-logging
-```
-
-### Multi-Environment Deployment
-
-```bash
-# Development environment
-helm install mcp-servers-dev ./helm \
-  --namespace development \
-  --set mcp-servers.mcp-weather.imageTag=dev
-
-# Production environment
-helm install mcp-servers-prod ./helm \
-  --namespace production \
-  --set mcp-servers.mcp-weather.imageTag=v1.0.0 \
-  --set mcp-servers.mcp-weather.replicas=3
-```
+For issues and questions:
+- Check Toolhive operator documentation
+- Review MCPServer CRD specifications
+- Verify OpenShift security requirements
