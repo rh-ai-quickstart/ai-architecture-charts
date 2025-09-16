@@ -2,7 +2,7 @@ toolhive:
   crds:
     enabled: false  # CRDs already exist
   operator:
-    enabled: true
+    enabled: false
 
 mcp-servers:
   mcp-weather:
