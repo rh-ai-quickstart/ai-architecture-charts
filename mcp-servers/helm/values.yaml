@@ -59,7 +59,7 @@ mcp-servers:
   
   oracle-sqlcl:
     deploy: false
-    imageRepository: quay.io/ecosystem-appeng/oracle-sqlcl-mcp
+    imageRepository: quay.io/ecosystem-appeng/oracle-sqlcl
     imageTag: "latest"
     uri: http://oracle-sqlcl-mcp:8080/sse
     # MCPServer configuration for Toolhive

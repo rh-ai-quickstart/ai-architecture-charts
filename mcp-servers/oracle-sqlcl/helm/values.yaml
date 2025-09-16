@@ -1,5 +1,5 @@
 image:
-  repository: quay.io/rhkp/oracle-sqlcl-mcp
+  repository: quay.io/ecosystem-appeng/oracle-sqlcl
   pullPolicy: IfNotPresent
 
 permissionProfile:

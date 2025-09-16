@@ -41,7 +41,7 @@ mcp-servers:
         type: builtin
       port: 8080
       transport: stdio
-    imageRepository: quay.io/rhkp/oracle-sqlcl-mcp
+    imageRepository: quay.io/ecosystem-appeng/oracle-sqlcl
     imageTag: "1.0.0"
     volumes:
       - name: sqlcl-data

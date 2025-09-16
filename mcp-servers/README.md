@@ -274,7 +274,7 @@ mcp-servers:
       permissionProfile:
         name: network
         type: builtin
-    imageRepository: quay.io/rhkp/oracle-sqlcl-mcp
+    imageRepository: quay.io/ecosystem-appeng/oracle-sqlcl
     imageTag: "1.0.0"
     volumes:
       - name: sqlcl-data

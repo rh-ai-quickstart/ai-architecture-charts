@@ -1,5 +1,5 @@
 apiVersion: v2
-name: oracle-sqlcl-mcp
+name: oracle-sqlcl
 description: Helm chart to deploy Oracle SQLcl MCP Server (Toolhive managed by parent mcp-servers chart)
 type: application
 version: 0.1.0
