@@ -1,0 +1,52 @@
+toolhive:
+  crds:
+    enabled: false  # CRDs already exist
+  operator:
+    enabled: true
+
+mcp-servers:
+  mcp-weather:
+    mcpserver:
+      enabled: true
+      env:
+        TAVILY_API_KEY: ""  # Provide your API key if needed
+      permissionProfile:
+        name: network
+        type: builtin
+      port: 8080
+      transport: stdio
+    imageRepository: quay.io/ecosystem-appeng/mcp-weather
+    imageTag: "0.1.0"
+
+  oracle-sqlcl:
+    mcpserver:
+      enabled: true
+      env:
+        ORACLE_USER: "sales"
+        ORACLE_PASSWORD: null  # Sourced from secret
+        ORACLE_CONNECTION_STRING: null  # Sourced from secret
+        ORACLE_CONN_NAME: "oracle_connection"
+        JAVA_TOOL_OPTIONS: "-Djava.io.tmpdir=/sqlcl-home/tmp"
+        _JAVA_OPTIONS: ""
+        HOME: "/sqlcl-home"
+      envSecrets:
+        ORACLE_PASSWORD:
+          name: oracle23ai
+          key: password
+        ORACLE_CONNECTION_STRING:
+          name: oracle23ai
+          key: jdbc-uri
+      permissionProfile:
+        name: network
+        type: builtin
+      port: 8080
+      transport: stdio
+    imageRepository: quay.io/rhkp/oracle-sqlcl-mcp
+    imageTag: "1.0.0"
+    volumes:
+      - name: sqlcl-data
+        persistentVolumeClaim:
+          claimName: oracle-sqlcl-data
+    volumeMounts:
+      - name: sqlcl-data
+        mountPath: /sqlcl-home

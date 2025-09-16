@@ -1,9 +1,31 @@
 # Toolhive operator configuration
 toolhive:
   crds:
-    enabled: true
+    enabled: false  # Set to false to skip CRD installation if they already exist
   operator:
     enabled: true
+
+# Toolhive operator subchart configuration
+toolhive-operator:
+  operator:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    # OpenShift security context overrides - requires anyuid SCC
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 1000  # Will be overridden by anyuid SCC
+      capabilities:
+        drop:
+        - ALL
+    podSecurityContext:
+      runAsNonRoot: true
 
 # MCP servers configuration
 mcp-servers:

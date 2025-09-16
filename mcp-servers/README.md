@@ -29,6 +29,156 @@ The mcp-servers chart creates:
 
 ## Installation
 
+### Dependency Hierarchy & Installation Sequence
+
+The MCP servers deployment has the following dependency hierarchy that must be followed for proper installation:
+
+```
+1. Infrastructure Prerequisites
+   ├── OpenShift cluster (4.12+)
+   ├── Helm 3.x
+   └── Container registry access
+
+2. External Dependencies (if using Oracle SQLcl MCP)
+   └── Oracle Database
+       ├── Database instance running
+       ├── Sales schema/user created
+       └── Kubernetes secret with credentials
+
+3. Toolhive Operator
+   ├── CRDs installation
+   ├── Operator deployment
+   └── RBAC permissions
+
+4. MCP Servers
+   ├── Weather MCP (requires Tavily API key)
+   └── Oracle SQLcl MCP (requires Oracle DB + secret)
+```
+
+### Installation Sequence
+
+**Step 1: Verify Infrastructure Prerequisites**
+```bash
+# Verify OpenShift cluster access
+oc whoami
+oc get nodes
+
+# Verify Helm installation
+helm version
+```
+
+**Step 2: Deploy External Dependencies (Oracle SQLcl MCP only)**
+```bash
+# Deploy Oracle database using the Oracle DB chart
+helm install oracle-db ../oracle-db/helm --namespace <your-namespace>
+
+# Wait for Oracle database to be ready
+oc wait --for=condition=ready pod -l app=oracle23ai --timeout=600s
+
+# Verify Oracle secret was created by the database chart
+oc get secret oracle23ai
+```
+
+**Step 3: Install Toolhive Operator**
+```bash
+# Add Toolhive Helm repository
+helm repo add toolhive https://stacklok.github.io/toolhive
+helm repo update
+
+# Install Toolhive CRDs
+helm install toolhive-crds toolhive/toolhive-operator-crds --version 0.0.18
+
+# Install Toolhive operator with adequate memory resources
+helm install toolhive-operator toolhive/toolhive-operator --version 0.2.6 --namespace <your-namespace>
+
+# IMPORTANT: Increase memory limits to prevent OOMKilled errors
+oc patch deployment toolhive-operator --namespace <your-namespace> --type='json' \
+  -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value": "1Gi"},
+       {"op": "replace", "path": "/spec/template/spec/containers/0/resources/requests/memory", "value": "1Gi"}]'
+
+# Grant required SecurityContextConstraints for Toolhive operator
+oc adm policy add-scc-to-user anyuid -z toolhive-operator --namespace <your-namespace>
+
+# Verify Toolhive operator is running
+oc get pods -l app.kubernetes.io/name=toolhive-operator --namespace <your-namespace>
+```
+
+**Step 4: Enable MCP Servers and Grant Required Permissions**
+```bash
+# Create configuration file to enable both MCP servers
+cat > mcp-config.yaml << EOF
+toolhive:
+  crds:
+    enabled: false  # CRDs already exist
+  operator:
+    enabled: true
+
+mcp-servers:
+  mcp-weather:
+    mcpserver:
+      enabled: true
+      env:
+        TAVILY_API_KEY: ""  # Add your API key if needed
+      permissionProfile:
+        name: network
+        type: builtin
+
+  oracle-sqlcl:
+    mcpserver:
+      enabled: true
+      env:
+        ORACLE_USER: "sales"  # Sales schema user created by Oracle DB chart
+        ORACLE_PASSWORD: null  # Sourced from secret
+        ORACLE_CONNECTION_STRING: null  # Sourced from secret
+        ORACLE_CONN_NAME: "oracle_connection"
+      envSecrets:
+        ORACLE_PASSWORD:
+          name: oracle23ai
+          key: password
+        ORACLE_CONNECTION_STRING:
+          name: oracle23ai
+          key: jdbc-uri
+      permissionProfile:
+        name: network
+        type: builtin
+    volumes:
+      - name: sqlcl-data
+        persistentVolumeClaim:
+          claimName: oracle-sqlcl-data
+    volumeMounts:
+      - name: sqlcl-data
+        mountPath: /sqlcl-home
+EOF
+
+# Create required PVC for Oracle SQLcl MCP server
+oc apply -f - << EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: oracle-sqlcl-data
+  namespace: <your-namespace>
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: gp3-csi
+EOF
+
+# Upgrade Helm release to enable MCP servers
+helm upgrade mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
+
+# Grant SecurityContextConstraints for MCP server service accounts
+# IMPORTANT: These are required for MCP server pods to start
+oc adm policy add-scc-to-user anyuid -z mcp-weather-proxy-runner --namespace <your-namespace>
+oc adm policy add-scc-to-user anyuid -z oracle-sqlcl-proxy-runner --namespace <your-namespace>
+
+# Verify MCP servers are running
+oc get pods -l toolhive=true --namespace <your-namespace>
+oc get mcpservers --namespace <your-namespace>
+```
+
 ### Quick Start
 
 ```bash
@@ -58,7 +208,7 @@ mcp-servers:
     mcpserver:
       enabled: true
       env:
-        ORACLE_USER: "sales"
+        ORACLE_USER: "sales"  # Sales schema user created by Oracle DB chart
         ORACLE_PASSWORD: null  # Sourced from secret
         ORACLE_CONNECTION_STRING: null  # Sourced from secret
       envSecrets:
@@ -110,7 +260,7 @@ mcp-servers:
     mcpserver:
       enabled: true
       env:
-        ORACLE_USER: "sales"
+        ORACLE_USER: "sales"  # Sales schema user created by Oracle DB chart
         ORACLE_PASSWORD: null  # Sourced from secret
         ORACLE_CONNECTION_STRING: null  # Sourced from secret
         ORACLE_CONN_NAME: "oracle_connection"
@@ -181,8 +331,12 @@ MCP servers expose health endpoints through Toolhive proxy:
 
 1. **Pod Restarts**: Check health probe timing for database connections
 2. **Secret Not Found**: Ensure Oracle secret exists before installing
-3. **Permission Denied**: Verify SCC permissions for service accounts
-4. **Image Pull Errors**: Check image tags and registry access
+3. **Toolhive Operator Not Starting**: Grant anyuid SCC to toolhive-operator service account
+4. **Toolhive Operator OOMKilled**: Increase memory limits to 1Gi (default 128Mi is insufficient)
+5. **MCP Server Pods Not Starting**: Grant anyuid SCC to MCP server proxy-runner service accounts
+6. **Permission Denied**: Verify SCC permissions for service accounts
+7. **Missing PVC**: Ensure oracle-sqlcl-data PVC exists before enabling Oracle SQLcl MCP
+8. **Image Pull Errors**: Check image tags and registry access
 
 ### Debug Commands
 
@@ -195,6 +349,16 @@ kubectl get mcpservers -o yaml
 
 # Verify secrets
 kubectl get secret oracle23ai -o jsonpath='{.data}' | jq 'keys'
+
+# Check SCC permissions for service accounts
+oc get scc anyuid -o jsonpath='{.users}'
+oc describe scc anyuid | grep -A 10 Users
+
+# Verify MCP server deployments and pods
+oc get deployments -l toolhive=true
+oc get pods -l toolhive=true
+oc describe pod -l toolhive-name=mcp-weather
+oc describe pod -l toolhive-name=oracle-sqlcl
 ```
 
 ## Migration from Legacy Deployment

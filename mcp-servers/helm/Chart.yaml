@@ -15,7 +15,13 @@ dependencies:
     version: 0.0.18
     repository: https://stacklok.github.io/toolhive
     condition: toolhive.crds.enabled
+    import-values:
+      - child: global
+        parent: global
   - name: toolhive-operator
     version: 0.2.6
     repository: https://stacklok.github.io/toolhive
     condition: toolhive.operator.enabled
+    import-values:
+      - child: global
+        parent: global
