@@ -73,3 +73,6 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Helm
+**/charts/*.tgz
