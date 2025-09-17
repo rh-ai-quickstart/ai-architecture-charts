@@ -34,10 +34,11 @@ The mcp-servers chart creates:
 The MCP servers deployment has the following dependency hierarchy that must be followed for proper installation:
 
 ```
-1. Infrastructure Prerequisites
+1. Toolhive CRDs & Infrastructure Prerequisites
    ├── OpenShift cluster (4.12+)
    ├── Helm 3.x
-   └── Container registry access
+   ├── Container registry access
+   └── Toolhive CRDs installation (REQUIRED FIRST)
 
 2. External Dependencies (if using Oracle SQLcl MCP)
    └── Oracle Database
@@ -46,7 +47,6 @@ The MCP servers deployment has the following dependency hierarchy that must be f
        └── Kubernetes secret with credentials
 
 3. Toolhive Operator
-   ├── CRDs installation
    ├── Operator deployment
    └── RBAC permissions
 
@@ -57,7 +57,7 @@ The MCP servers deployment has the following dependency hierarchy that must be f
 
 ### Installation Sequence
 
-**Step 1: Verify Infrastructure Prerequisites**
+**Step 1: Install Toolhive CRDs and Verify Prerequisites**
 ```bash
 # Verify OpenShift cluster access
 oc whoami
@@ -65,15 +65,22 @@ oc get nodes
 
 # Verify Helm installation
 helm version
+
+# Add Toolhive Helm repository
+helm repo add toolhive https://stacklok.github.io/toolhive
+helm repo update
+
+# Install Toolhive CRDs (REQUIRED FIRST for MCP servers)
+helm install toolhive-crds toolhive/toolhive-operator-crds --version 0.0.18
 ```
 
 **Step 2: Deploy External Dependencies (Oracle SQLcl MCP only)**
 ```bash
-# Deploy Oracle database using the Oracle DB chart
-helm install oracle-db ../oracle-db/helm --namespace <your-namespace>
+# Deploy Oracle database using the Oracle 23ai chart
+helm install oracle-db ../oracle23ai/helm --namespace <your-namespace>
 
-# Wait for Oracle database to be ready
-oc wait --for=condition=ready pod -l app=oracle23ai --timeout=600s
+# Wait for Oracle database StatefulSet to be ready
+oc wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/oracle23ai --timeout=600s
 
 # Verify Oracle secret was created by the database chart
 oc get secret oracle23ai
@@ -81,20 +88,8 @@ oc get secret oracle23ai
 
 **Step 3: Install Toolhive Operator**
 ```bash
-# Add Toolhive Helm repository
-helm repo add toolhive https://stacklok.github.io/toolhive
-helm repo update
-
-# Install Toolhive CRDs
-helm install toolhive-crds toolhive/toolhive-operator-crds --version 0.0.18
-
-# Install Toolhive operator with adequate memory resources
+# Install Toolhive operator (memory resources configured in values.yaml)
 helm install toolhive-operator toolhive/toolhive-operator --version 0.2.6 --namespace <your-namespace>
-
-# IMPORTANT: Increase memory limits to prevent OOMKilled errors
-oc patch deployment toolhive-operator --namespace <your-namespace> --type='json' \
-  -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value": "1Gi"},
-       {"op": "replace", "path": "/spec/template/spec/containers/0/resources/requests/memory", "value": "1Gi"}]'
 
 # Grant required SecurityContextConstraints for Toolhive operator
 oc adm policy add-scc-to-user anyuid -z toolhive-operator --namespace <your-namespace>
@@ -150,23 +145,7 @@ mcp-servers:
         mountPath: /sqlcl-home
 EOF
 
-# Create required PVC for Oracle SQLcl MCP server
-oc apply -f - << EOF
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: oracle-sqlcl-data
-  namespace: <your-namespace>
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
-  storageClassName: gp3-csi
-EOF
-
-# Upgrade Helm release to enable MCP servers
+# Upgrade Helm release to enable MCP servers (PVC will be created automatically)
 helm upgrade mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
 
 # Grant SecurityContextConstraints for MCP server service accounts
@@ -309,13 +288,13 @@ All containers run with restricted security contexts:
 
 ```bash
 # List all MCP servers
-kubectl get mcpservers
+oc get mcpservers
 
 # Check specific server status
-kubectl describe mcpserver oracle-sqlcl
+oc describe mcpserver oracle-sqlcl
 
 # View server logs
-kubectl logs -l toolhive-name=oracle-sqlcl
+oc logs -l toolhive-name=oracle-sqlcl
 ```
 
 ### Health Endpoints
@@ -335,20 +314,20 @@ MCP servers expose health endpoints through Toolhive proxy:
 4. **Toolhive Operator OOMKilled**: Increase memory limits to 1Gi (default 128Mi is insufficient)
 5. **MCP Server Pods Not Starting**: Grant anyuid SCC to MCP server proxy-runner service accounts
 6. **Permission Denied**: Verify SCC permissions for service accounts
-7. **Missing PVC**: Ensure oracle-sqlcl-data PVC exists before enabling Oracle SQLcl MCP
+7. **Storage Issues**: Check PVC creation and storage class availability
 8. **Image Pull Errors**: Check image tags and registry access
 
 ### Debug Commands
 
 ```bash
 # Check Toolhive operator logs
-kubectl logs -l app.kubernetes.io/name=toolhive-operator
+oc logs -l app.kubernetes.io/name=toolhive-operator
 
 # Check MCPServer resources
-kubectl get mcpservers -o yaml
+oc get mcpservers -o yaml
 
 # Verify secrets
-kubectl get secret oracle23ai -o jsonpath='{.data}' | jq 'keys'
+oc get secret oracle23ai -o jsonpath='{.data}' | jq 'keys'
 
 # Check SCC permissions for service accounts
 oc get scc anyuid -o jsonpath='{.users}'

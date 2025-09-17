@@ -11,7 +11,7 @@ toolhive-operator:
     resources:
       requests:
         cpu: 100m
-        memory: 512Mi
+        memory: 1Gi
       limits:
         cpu: 1000m
         memory: 1Gi
@@ -102,6 +102,12 @@ mcp-servers:
       fsGroupChangePolicy: OnRootMismatch
       seccompProfile:
         type: RuntimeDefault
+    persistence:
+      enabled: true
+      claimName: oracle-sqlcl-data
+      accessMode: ReadWriteOnce
+      size: 5Gi
+      storageClassName: gp3-csi
     volumes:
       - name: sqlcl-data
         persistentVolumeClaim:
