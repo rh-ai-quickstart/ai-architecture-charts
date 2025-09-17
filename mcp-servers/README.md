@@ -76,8 +76,8 @@ helm install toolhive-crds toolhive/toolhive-operator-crds --version 0.0.18
 
 **Step 2: Deploy External Dependencies (Oracle SQLcl MCP only)**
 ```bash
-# Deploy Oracle database using the Oracle 23ai chart
-helm install oracle-db ../oracle23ai/helm --namespace <your-namespace>
+# Deploy Oracle database using the Oracle 23ai chart (using 23.5.0.0 for platform compatibility)
+helm install oracle-db ../oracle23ai/helm --namespace <your-namespace> --set oracle.image.tag=23.5.0.0
 
 # Wait for Oracle database StatefulSet to be ready
 oc wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/oracle23ai --timeout=600s
@@ -88,8 +88,8 @@ oc get secret oracle23ai
 
 **Step 3: Install Toolhive Operator**
 ```bash
-# Install Toolhive operator (memory resources configured in values.yaml)
-helm install toolhive-operator toolhive/toolhive-operator --version 0.2.6 --namespace <your-namespace>
+# Install Toolhive operator with 1Gi memory (default 128Mi is insufficient)
+helm install toolhive-operator toolhive/toolhive-operator --version 0.2.6 --namespace <your-namespace> --set operator.resources.requests.memory=1Gi --set operator.resources.limits.memory=1Gi
 
 # Grant required SecurityContextConstraints for Toolhive operator
 oc adm policy add-scc-to-user anyuid -z toolhive-operator --namespace <your-namespace>
@@ -100,53 +100,11 @@ oc get pods -l app.kubernetes.io/name=toolhive-operator --namespace <your-namesp
 
 **Step 4: Enable MCP Servers and Grant Required Permissions**
 ```bash
-# Create configuration file to enable both MCP servers
-cat > mcp-config.yaml << EOF
-toolhive:
-  crds:
-    enabled: false  # CRDs already exist
-  operator:
-    enabled: true
+# Create PVC for Oracle SQLcl MCP server
+oc apply -f pvc-sqlcl.yaml --namespace <your-namespace>
 
-mcp-servers:
-  mcp-weather:
-    mcpserver:
-      enabled: true
-      env:
-        TAVILY_API_KEY: ""  # Add your API key if needed
-      permissionProfile:
-        name: network
-        type: builtin
-
-  oracle-sqlcl:
-    mcpserver:
-      enabled: true
-      env:
-        ORACLE_USER: "sales"  # Sales schema user created by Oracle DB chart
-        ORACLE_PASSWORD: null  # Sourced from secret
-        ORACLE_CONNECTION_STRING: null  # Sourced from secret
-        ORACLE_CONN_NAME: "oracle_connection"
-      envSecrets:
-        ORACLE_PASSWORD:
-          name: oracle23ai
-          key: password
-        ORACLE_CONNECTION_STRING:
-          name: oracle23ai
-          key: jdbc-uri
-      permissionProfile:
-        name: network
-        type: builtin
-    volumes:
-      - name: sqlcl-data
-        persistentVolumeClaim:
-          claimName: oracle-sqlcl-data
-    volumeMounts:
-      - name: sqlcl-data
-        mountPath: /sqlcl-home
-EOF
-
-# Upgrade Helm release to enable MCP servers (PVC will be created automatically)
-helm upgrade mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
+# Install MCP servers using configuration file (operator already installed in Step 3)
+helm install mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
 
 # Grant SecurityContextConstraints for MCP server service accounts
 # IMPORTANT: These are required for MCP server pods to start
@@ -162,6 +120,7 @@ oc get mcpservers --namespace <your-namespace>
 
 ```bash
 # Install with default configuration (MCPServer resources enabled)
+# Note: Oracle deployment requires 23.5.0.0 tag for platform compatibility
 helm install mcp-servers ./helm --namespace <your-namespace>
 ```
 
@@ -314,8 +273,10 @@ MCP servers expose health endpoints through Toolhive proxy:
 4. **Toolhive Operator OOMKilled**: Increase memory limits to 1Gi (default 128Mi is insufficient)
 5. **MCP Server Pods Not Starting**: Grant anyuid SCC to MCP server proxy-runner service accounts
 6. **Permission Denied**: Verify SCC permissions for service accounts
-7. **Storage Issues**: Check PVC creation and storage class availability
-8. **Image Pull Errors**: Check image tags and registry access
+7. **Oracle Platform Compatibility**: Oracle :latest may have ORA-27350 platform issues - use 23.5.0.0 instead
+8. **Oracle Security Context Issues**: Oracle requires SETUID/SETGID capabilities in SCC for proper operation
+9. **Storage Issues**: Check PVC creation and storage class availability
+10. **Image Pull Errors**: Check image tags and registry access
 
 ### Debug Commands
 
@@ -338,6 +299,11 @@ oc get deployments -l toolhive=true
 oc get pods -l toolhive=true
 oc describe pod -l toolhive-name=mcp-weather
 oc describe pod -l toolhive-name=oracle-sqlcl
+
+# Oracle-specific troubleshooting
+oc logs oracle23ai-0 | grep -E "(ORA-27350|cannot set groups)"
+oc get scc oracle23ai-scc -o jsonpath='{.allowedCapabilities}'
+oc describe scc oracle23ai-scc | grep -A 5 "Required Drop Capabilities"
 ```
 
 ## Migration from Legacy Deployment

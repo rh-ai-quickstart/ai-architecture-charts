@@ -13,7 +13,9 @@ allowHostPID: false
 allowHostPorts: false
 allowPrivilegeEscalation: true
 allowPrivilegedContainer: false
-allowedCapabilities: null
+allowedCapabilities:
+  - SETUID
+  - SETGID
 defaultAddCapabilities: null
 priority: 10
 fsGroup:
@@ -25,8 +27,6 @@ readOnlyRootFilesystem: false
 requiredDropCapabilities:
   - KILL
   - MKNOD
-  - SETUID
-  - SETGID
 runAsUser:
   type: MustRunAs
   uid: 54321

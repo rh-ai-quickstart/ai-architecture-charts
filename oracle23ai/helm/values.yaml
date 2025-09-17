@@ -13,7 +13,7 @@ oracle:
   image:
     repository: container-registry.oracle.com/database/free
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "23.5.0.0"  # Using 23.5.0.0 for platform compatibility (latest has ORA-27350 issues)
 
   imagePullSecrets: []
 
