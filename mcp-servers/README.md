@@ -18,14 +18,13 @@ The mcp-servers chart creates:
 3. **Oracle SQLcl MCP**: Database interaction capabilities using Oracle's SQLcl
 4. **Weather MCP**: External weather API integration
 5. **Secure Secret Management**: Credentials sourced from Kubernetes secrets
-
 ## Included Files
 
 | File | Description |
 |------|-------------|
 | `helm/` | Helm chart for MCP servers deployment |
 | `mcp-config.yaml` | Pre-configured values file with working defaults |
-| `oracle-sqlcl/` | Oracle SQLcl MCP container source and standalone chart |
+| `oracle-sqlcl/` | Oracle SQLcl MCP container source |
 | `weather/` | Weather MCP container source code |
 | `README.md` | This documentation |
 
@@ -166,7 +165,6 @@ helm install mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
 **To customize**: Edit `mcp-config.yaml` before running `helm install`.
 
 ## Security
-
 ### Credential Management
 
 This chart implements secure credential management:

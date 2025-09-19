@@ -82,8 +82,7 @@ jobs:
                       $item |
                       select(
                         $changed_files | any(
-                          . == $item.file or
-                          test("^" + ($item.context) + "/")
+                          test("^" + ($item.chart | split("/")[0]) + "/")
                         )
                       )
                     ]
