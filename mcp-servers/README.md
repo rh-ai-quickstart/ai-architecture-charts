@@ -19,6 +19,16 @@ The mcp-servers chart creates:
 4. **Weather MCP**: External weather API integration
 5. **Secure Secret Management**: Credentials sourced from Kubernetes secrets
 
+## Included Files
+
+| File | Description |
+|------|-------------|
+| `helm/` | Helm chart for MCP servers deployment |
+| `mcp-config.yaml` | Pre-configured values file with working defaults |
+| `oracle-sqlcl/` | Oracle SQLcl MCP container source and standalone chart |
+| `weather/` | Weather MCP container source code |
+| `README.md` | This documentation |
+
 ## Prerequisites
 
 - OpenShift cluster (4.12+)
@@ -100,10 +110,8 @@ oc get pods -l app.kubernetes.io/name=toolhive-operator --namespace <your-namesp
 
 **Step 4: Enable MCP Servers and Grant Required Permissions**
 ```bash
-# Create PVC for Oracle SQLcl MCP server
-oc apply -f pvc-sqlcl.yaml --namespace <your-namespace>
-
 # Install MCP servers using configuration file (operator already installed in Step 3)
+# PVC will be created automatically by the helm chart
 helm install mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
 
 # Grant SecurityContextConstraints for MCP server service accounts
@@ -120,45 +128,18 @@ oc get mcpservers --namespace <your-namespace>
 
 ```bash
 # Install with default configuration (MCPServer resources enabled)
-# Note: Oracle deployment requires 23.5.0.0 tag for platform compatibility
+# Note: PVCs are created automatically by the helm chart
 helm install mcp-servers ./helm --namespace <your-namespace>
 ```
 
 ### Production Installation with Oracle Database
 
 ```bash
-# Create configuration file
-cat > mcp-config.yaml << EOF
-toolhive:
-  crds:
-    enabled: true
-  operator:
-    enabled: true
+# Use the provided configuration file (edit mcp-config.yaml if needed)
+# Note: mcp-config.yaml is included in this directory with working defaults
+# Update TAVILY_API_KEY if you have one for weather functionality
 
-mcp-servers:
-  mcp-weather:
-    mcpserver:
-      enabled: true
-      env:
-        TAVILY_API_KEY: ""  # Provide your API key
-  
-  oracle-sqlcl:
-    mcpserver:
-      enabled: true
-      env:
-        ORACLE_USER: "sales"  # Sales schema user created by Oracle DB chart
-        ORACLE_PASSWORD: null  # Sourced from secret
-        ORACLE_CONNECTION_STRING: null  # Sourced from secret
-      envSecrets:
-        ORACLE_PASSWORD:
-          name: oracle23ai
-          key: password
-        ORACLE_CONNECTION_STRING:
-          name: oracle23ai
-          key: jdbc-uri
-EOF
-
-# Install with configuration
+# Install with configuration (PVCs created automatically)
 helm install mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
 ```
 
@@ -172,56 +153,17 @@ helm install mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
 | `toolhive.operator.enabled` | Deploy Toolhive operator | `true` |
 | `toolhive-operator.operator.resources` | Operator resource limits | See values.yaml |
 
-### MCP Server Configuration
+### Configuration
 
-#### Weather MCP Server
-```yaml
-mcp-servers:
-  mcp-weather:
-    mcpserver:
-      enabled: true
-      env:
-        TAVILY_API_KEY: ""  # Required: Your Tavily API key
-      permissionProfile:
-        name: network
-        type: builtin
-      port: 8080
-      transport: stdio
-    imageRepository: quay.io/ecosystem-appeng/mcp-weather
-    imageTag: "0.1.0"
-```
+**All MCP server configurations are provided in `mcp-config.yaml`** with working defaults.
 
-#### Oracle SQLcl MCP Server
-```yaml
-mcp-servers:
-  oracle-sqlcl:
-    mcpserver:
-      enabled: true
-      env:
-        ORACLE_USER: "sales"  # Sales schema user created by Oracle DB chart
-        ORACLE_PASSWORD: null  # Sourced from secret
-        ORACLE_CONNECTION_STRING: null  # Sourced from secret
-        ORACLE_CONN_NAME: "oracle_connection"
-      envSecrets:
-        ORACLE_PASSWORD:
-          name: oracle23ai  # Name of your Oracle secret
-          key: password
-        ORACLE_CONNECTION_STRING:
-          name: oracle23ai
-          key: jdbc-uri
-      permissionProfile:
-        name: network
-        type: builtin
-    imageRepository: quay.io/ecosystem-appeng/oracle-sqlcl
-    imageTag: "1.0.0"
-    volumes:
-      - name: sqlcl-data
-        persistentVolumeClaim:
-          claimName: oracle-sqlcl-data
-    volumeMounts:
-      - name: sqlcl-data
-        mountPath: /sqlcl-home
-```
+**Key Configuration Notes:**
+- **Weather MCP**: Uses `imageTag: "0.1.0"` (latest tag not available)
+- **Oracle SQLcl MCP**: Requires Oracle database secret (automatically created by Oracle chart)
+- **API Keys**: Update `TAVILY_API_KEY` in mcp-config.yaml if you have one
+- **Secrets**: Oracle credentials are automatically sourced from the `oracle23ai` secret
+
+**To customize**: Edit `mcp-config.yaml` before running `helm install`.
 
 ## Security
 
