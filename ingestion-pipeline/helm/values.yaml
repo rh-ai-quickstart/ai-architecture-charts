@@ -61,7 +61,7 @@ defaultPipeline:
   name: "demo-rag-vector-db"
   # version of the knowledgebase
   version: "1.0"
-  vector_db_name: "demo-rag-vector-db-v1-0-s3"
+  vector_store_name: "demo-rag-vector-db-v1-0-s3"
 
   S3:
     access_key_id: minio_rag_user

@@ -32,7 +32,7 @@ mcp-servers:
   mcp-weather:
     deploy: false
     imageRepository: quay.io/ecosystem-appeng/mcp-weather
-    imageTag: "latest"
+    imageTag: "0.1.0"
     uri: http://mcp-weather:8000/sse
     # MCPServer configuration for Toolhive
     mcpserver:

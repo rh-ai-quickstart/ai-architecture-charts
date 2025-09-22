@@ -63,7 +63,7 @@ helm install ingestion-pipeline ./helm \
 | `defaultPipeline.embedding_model` | Embedding model to use | `all-MiniLM-L6-v2` |
 | `defaultPipeline.name` | Pipeline name | `demo-rag-vector-db` |
 | `defaultPipeline.version` | Pipeline version | `1.0` |
-| `defaultPipeline.vector_db_name` | Vector database name | `demo-rag-vector-db-v1-0-s3` |
+| `defaultPipeline.vector_store_name` | Vector store name | `demo-rag-vector-db-v1-0-s3` |
 
 ### Data Source Configuration
 
@@ -120,7 +120,7 @@ defaultPipeline:
   embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
   name: "production-rag-db"
   version: "2.0"
-  vector_db_name: "production-rag-db-v2-0"
+  vector_store_name: "production-rag-db-v2-0"
   
   S3:
     access_key_id: production_user

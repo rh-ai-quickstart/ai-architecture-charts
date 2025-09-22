@@ -8,7 +8,7 @@
     "version" $pipeline.version
     "source" $pipeline.source
     "embedding_model" $pipeline.embedding_model
-    "vector_db_name" $pipeline.vector_db_name
+    "vector_store_name" $pipeline.vector_store_name
 }}
 {{- $pipelineData := merge $base $sourceData }}
 

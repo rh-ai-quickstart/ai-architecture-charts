@@ -6,6 +6,7 @@ toolhive:
 
 mcp-servers:
   mcp-weather:
+    imageTag: "0.1.0"  # Use working image version
     mcpserver:
       enabled: true
       env:
@@ -32,10 +33,3 @@ mcp-servers:
       permissionProfile:
         name: network
         type: builtin
-    volumes:
-      - name: sqlcl-data
-        persistentVolumeClaim:
-          claimName: oracle-sqlcl-data
-    volumeMounts:
-      - name: sqlcl-data
-        mountPath: /sqlcl-home

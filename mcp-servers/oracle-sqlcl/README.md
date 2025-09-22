@@ -1,6 +1,6 @@
-# Oracle SQLcl MCP Server with Toolhive on OpenShift
+# Oracle SQLcl MCP Server Container Source
 
-This directory contains everything needed to deploy an Oracle SQLcl MCP (Model Context Protocol) server using Toolhive on OpenShift.
+This directory contains the container source code for the Oracle SQLcl MCP (Model Context Protocol) server. The actual deployment is handled by the unified MCP servers helm chart in the parent directory.
 
 ## 📋 **Overview**
 
@@ -27,8 +27,14 @@ Client → Port-Forward → Toolhive Proxy → Oracle MCP Server → Oracle Data
 | File | Purpose |
 |------|---------|
 | `Containerfile` | Container image definition for Oracle SQLcl MCP server |
-| `helm/` | Helm chart to deploy the MCP server on OpenShift |
+| `scripts/` | Container startup scripts and configuration |
 | `README.md` | This documentation |
+
+## 🚀 **Deployment**
+
+**This container is deployed via the unified MCP servers helm chart in the parent directory.**
+
+See `../README.md` for complete deployment instructions using the MCPServer approach with Toolhive operator.
 
 ## 🚀 **Prerequisites**
 
