@@ -43,6 +43,12 @@ jobs:
                 "chart": "mcp-servers/helm/Chart.yaml"
               },
               {
+                "name": "oracle-sqlcl",
+                "file": "mcp-servers/oracle-sqlcl/Containerfile",
+                "context": "mcp-servers/oracle-sqlcl",
+                "chart": "mcp-servers/helm/Chart.yaml"
+              },
+              {
                 "name": "oracle23ai-tpcds",
                 "file": "oracle23ai/tpcds-util/Containerfile",
                 "context": "oracle23ai/tpcds-util",
