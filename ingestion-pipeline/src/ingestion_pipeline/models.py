@@ -8,10 +8,10 @@ class BaseSourceModel(BaseModel):
     version: str
     source: str
     embedding_model: str
-    vector_db_name: str
+    vector_store_name: str
 
     def pipeline_name(self) -> str:
-        return self.vector_db_name
+        return self.vector_store_name
 
 
 class GitHubSource(BaseSourceModel):

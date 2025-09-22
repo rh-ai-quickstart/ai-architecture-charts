@@ -124,9 +124,9 @@ def store_documents(llamastack_base_url: str, input_dir: dsl.InputPath(), auth_u
 
     os.environ["EASYOCR_MODULE_PATH"] = "/tmp/.EasyOCR"
 
-    # Configuring the vector database
+    # Configuring the vector store
     embedding_model = os.getenv("EMBEDDING_MODEL")
-    vector_db_name = os.getenv("VECTOR_DB_NAME")
+    vector_store_name = os.getenv("VECTOR_STORE_NAME")
 
     # Setup docling components
     pipeline_options = PdfPipelineOptions()
@@ -225,32 +225,95 @@ def store_documents(llamastack_base_url: str, input_dir: dsl.InputPath(), auth_u
         base_url=llamastack_base_url,
         default_headers=headers,
     )
-    print("Registering db")
+    print("Creating vector store")
     try:
-        asyncio.run(client.vector_dbs.register(
-            vector_db_id=vector_db_name,
+        vector_store = asyncio.run(client.vector_stores.create(
+            name=vector_store_name,
             embedding_model=embedding_model,
             embedding_dimension=384,
             provider_id="pgvector",
         ))
-        print("Vector DB registered successfully")
+        vector_store_id = vector_store.id
+        print(f"Vector store created successfully with ID: {vector_store_id}")
     except Exception as e:
         error_message = str(e)
-        print(f"Failed to register vector DB: {error_message}")
-        raise Exception(f"Vector DB registration failed: {error_message}")
+        print(f"Failed to create vector store: {error_message}")
+        raise Exception(f"Vector store creation failed: {error_message}")
 
     try:
-        print(f"Inserting {total_chunks} chunks into vector database")
-        asyncio.run(client.tool_runtime.rag_tool.insert(
-            documents=llama_documents,
-            vector_db_id=vector_db_name,
-            chunk_size_in_tokens=512,
-        ))
-        print("Documents successfully inserted into the vector DB")
+        print(f"Processing {total_chunks} chunks for vector store insertion")
+        import tempfile
+        import json
+
+        # Create temporary files for each document chunk and upload them
+        uploaded_files = []
+        for i, doc in enumerate(llama_documents):
+            # Create a temporary file for each chunk
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as temp_file:
+                # Write the document content to the file
+                temp_file.write(doc.content)
+                temp_file_path = temp_file.name
+
+            try:
+                # Upload the file to the Files API
+                with open(temp_file_path, 'rb') as file_content:
+                    file_response = asyncio.run(client.files.create(
+                        file=file_content,
+                        purpose="assistants"
+                    ))
+
+                # Attach the file to the vector store
+                file_attach_response = asyncio.run(client.vector_stores.files.create(
+                    vector_store_id=vector_store_id,
+                    file_id=file_response.id,
+                    attributes=doc.metadata,
+                ))
+
+                uploaded_files.append({
+                    'file_id': file_response.id,
+                    'attach_response': file_attach_response,
+                    'source': doc.metadata.get('source', f'chunk-{i}')
+                })
+
+                print(f"Uploaded and attached file {i+1}/{total_chunks}: {doc.metadata.get('source', f'chunk-{i}')}")
+
+            finally:
+                # Clean up temporary file
+                import os
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+
+        # Wait for all files to be processed
+        print("Waiting for all files to be processed...")
+        import time
+        for file_info in uploaded_files:
+            while True:
+                status_response = asyncio.run(client.vector_stores.files.retrieve(
+                    vector_store_id=vector_store_id,
+                    file_id=file_info['file_id']
+                ))
+
+                if status_response.status == "completed":
+                    print(f"File {file_info['source']} processed successfully")
+                    break
+                elif status_response.status == "failed":
+                    print(f"Warning: File {file_info['source']} failed to process: {status_response.last_error}")
+                    break
+                elif status_response.status == "in_progress":
+                    print(f"File {file_info['source']} still processing...")
+                    time.sleep(1)
+                else:
+                    print(f"Unknown status for file {file_info['source']}: {status_response.status}")
+                    break
+
+        print(f"Successfully uploaded and processed {len(uploaded_files)} files to vector store")
 
     except Exception as e:
-        print("Embedding insert failed:", e)
-        raise Exception(f"Failed to insert documents into vector DB: {e}")
+        print("Vector store insertion failed:", e)
+        raise Exception(f"Failed to insert documents into vector store: {e}")
+
 
 @dsl.component(base_image=BASE_IMAGE)
 def generate_provenance(input_dir: dsl.InputPath()):
@@ -407,7 +470,7 @@ def generate_provenance(input_dir: dsl.InputPath()):
         key = base64.b64decode(secret.data["cosign.key"]).decode("utf-8")
         password = base64.b64decode(secret.data["cosign.password"]).decode("utf-8")
         return (key, password)
-    
+
     def run_cosign(command: list):
         cosign_key, cosign_password = get_signing_key()
 
@@ -491,7 +554,7 @@ def generate_provenance(input_dir: dsl.InputPath()):
         dependency = {
             "uri": source,
             "digest": {
-                "sha512": sha,                
+                "sha512": sha,
             },
         }
         predicate["buildDefinition"]["resolvedDependencies"].append(dependency)
