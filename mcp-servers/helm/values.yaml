@@ -1,9 +1,9 @@
 # Toolhive operator configuration
 toolhive:
   crds:
-    enabled: false  # Set to false to skip CRD installation if they already exist
+    enabled: false  # CRDs already exist
   operator:
-    enabled: true
+    enabled: false  # Operator already installed in Step 3
 
 # Toolhive operator subchart configuration
 toolhive-operator:
@@ -36,7 +36,7 @@ mcp-servers:
     uri: http://mcp-weather:8000/sse
     # MCPServer configuration for Toolhive
     mcpserver:
-      enabled: false
+      enabled: true
       port: 8080
       transport: stdio
       permissionProfile:
@@ -60,11 +60,11 @@ mcp-servers:
   oracle-sqlcl:
     deploy: false
     imageRepository: quay.io/ecosystem-appeng/oracle-sqlcl
-    imageTag: "latest"
+    imageTag: "0.1.0"
     uri: http://oracle-sqlcl-mcp:8080/sse
     # MCPServer configuration for Toolhive
     mcpserver:
-      enabled: false
+      enabled: true
       port: 8080
       transport: stdio
       permissionProfile:

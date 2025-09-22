@@ -23,7 +23,6 @@ The mcp-servers chart creates:
 | File | Description |
 |------|-------------|
 | `helm/` | Helm chart for MCP servers deployment |
-| `mcp-config.yaml` | Pre-configured values file with working defaults |
 | `oracle-sqlcl/` | Oracle SQLcl MCP container source |
 | `weather/` | Weather MCP container source code |
 | `README.md` | This documentation |
@@ -109,9 +108,9 @@ oc get pods -l app.kubernetes.io/name=toolhive-operator --namespace <your-namesp
 
 **Step 4: Enable MCP Servers and Grant Required Permissions**
 ```bash
-# Install MCP servers using configuration file (operator already installed in Step 3)
+# Install MCP servers (operator already installed in Step 3)
 # PVC will be created automatically by the helm chart
-helm install mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
+helm install mcp-servers ./helm --namespace <your-namespace>
 
 # Grant SecurityContextConstraints for MCP server service accounts
 # IMPORTANT: These are required for MCP server pods to start
@@ -134,12 +133,12 @@ helm install mcp-servers ./helm --namespace <your-namespace>
 ### Production Installation with Oracle Database
 
 ```bash
-# Use the provided configuration file (edit mcp-config.yaml if needed)
-# Note: mcp-config.yaml is included in this directory with working defaults
+# Create a custom values file for your configuration
+# See the main repository README.md for configuration examples
 # Update TAVILY_API_KEY if you have one for weather functionality
 
-# Install with configuration (PVCs created automatically)
-helm install mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
+# Install with custom configuration (PVCs created automatically)
+helm install mcp-servers ./helm --namespace <your-namespace> -f your-values.yaml
 ```
 
 ## Configuration
@@ -152,17 +151,17 @@ helm install mcp-servers ./helm --namespace <your-namespace> -f mcp-config.yaml
 | `toolhive.operator.enabled` | Deploy Toolhive operator | `true` |
 | `toolhive-operator.operator.resources` | Operator resource limits | See values.yaml |
 
-### Configuration
+### MCP Servers Configuration
 
-**All MCP server configurations are provided in `mcp-config.yaml`** with working defaults.
+**Configuration examples are provided in the main repository README.md**.
 
 **Key Configuration Notes:**
 - **Weather MCP**: Uses `imageTag: "0.1.0"` (latest tag not available)
 - **Oracle SQLcl MCP**: Requires Oracle database secret (automatically created by Oracle chart)
-- **API Keys**: Update `TAVILY_API_KEY` in mcp-config.yaml if you have one
+- **API Keys**: Update `TAVILY_API_KEY` in your values.yaml file if you have one
 - **Secrets**: Oracle credentials are automatically sourced from the `oracle23ai` secret
 
-**To customize**: Edit `mcp-config.yaml` before running `helm install`.
+**To customize**: Create your own values.yaml file and refer to the configuration examples in the main README.md.
 
 ## Security
 ### Credential Management

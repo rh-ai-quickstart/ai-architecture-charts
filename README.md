@@ -365,6 +365,44 @@ global:
     mcp-weather:
       deploy: true
 
+# MCP Servers Configuration Example
+# To enable and configure MCP servers, add the following to your values.yaml:
+mcp-servers:
+  toolhive:
+    crds:
+      enabled: false  # Set to false if CRDs already exist
+    operator:
+      enabled: false  # Set to false if operator already installed
+
+  mcp-servers:
+    mcp-weather:
+      mcpserver:
+        enabled: true
+        env:
+          TAVILY_API_KEY: ""  # Add your API key if needed
+        permissionProfile:
+          name: network
+          type: builtin
+
+    oracle-sqlcl:
+      mcpserver:
+        enabled: true
+        env:
+          ORACLE_USER: "sales"  # Sales schema user created by Oracle DB chart
+          ORACLE_PASSWORD: null  # Sourced from secret
+          ORACLE_CONNECTION_STRING: null  # Sourced from secret
+          ORACLE_CONN_NAME: "oracle_connection"
+        envSecrets:
+          ORACLE_PASSWORD:
+            name: oracle23ai
+            key: password
+          ORACLE_CONNECTION_STRING:
+            name: oracle23ai
+            key: jdbc-uri
+        permissionProfile:
+          name: network
+          type: builtin
+
 # Individual chart configurations
 pgvector:
   secret:
