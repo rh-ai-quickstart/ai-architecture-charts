@@ -44,8 +44,6 @@ env:
     value: "4096"
   - name: VLLM_API_TOKEN
     value: fake
-  - name: OTEL_ENDPOINT
-    value: http://otel-collector-collector.observability-hub.svc.cluster.local:4318/v1/traces
   - name: POSTGRES_USER
     valueFrom:
       secretKeyRef:
@@ -192,3 +190,9 @@ auth: {}
 #       actions: [read, update, delete]
 #     when: user is owner
 #     description: users can read, update and delete resources they own
+
+telemetry:
+  enabled: false
+  serviceName: llama-stack
+  sinks: console,sqlite,otel_trace
+  otlpEndpoint: http://otel-collector-collector.observability-hub.svc.cluster.local:4318

@@ -115,8 +115,12 @@ data:
       - provider_id: meta-reference
         provider_type: inline::meta-reference
         config:
-          sinks: ${env.TELEMETRY_SINKS:=console,sqlite}
+          sinks: ${.Values.telemetry.sinks:=console,sqlite}
           sqlite_db_path: ${env.SQLITE_DB_PATH:=~/.llama/distributions/starter/trace_store.db}
+          {{- if $.Values.telemetry.enabled }}
+          service_name: "${.Values.telemetry.serviceName:=\u200B}"
+          otel_exporter_otlp_endpoint: ${.Values.telemetry.otlpEndpoint:=}
+          {{- end }}    
       tool_runtime:
       - provider_id: brave-search
         provider_type: remote::brave-search
