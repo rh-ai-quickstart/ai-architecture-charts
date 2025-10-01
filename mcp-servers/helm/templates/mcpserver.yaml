@@ -44,9 +44,10 @@ spec:
       {{- with $server.volumes }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if eq $key "oracle-sqlcl" }}
+      {{- if $server.waitFor }}
       initContainers:
-      - name: wait-for-oracle
+      {{- range $waitItem := $server.waitFor }}
+      - name: wait-for-{{ $waitItem.name }}
         image: "alpine/k8s:1.28.2"
         imagePullPolicy: "IfNotPresent"
         command:
@@ -54,52 +55,55 @@ spec:
           - -c
           - |
             set -euo pipefail
-            SECRET_NAME="oracle23ai"
-            ORACLE_POD_NAME="oracle23ai-0"
-            TPCDS_JOB_PREFIX="oracle23ai-tpcds-populate"
             NAMESPACE="{{ $root.Release.Namespace }}"
-            TIMEOUT=1800
-            INTERVAL=5
-            echo "Init container: Waiting up to ${TIMEOUT}s for Oracle TPCDS populate job to complete..."
+            TIMEOUT={{ $waitItem.timeout | default 1800 }}
+            INTERVAL={{ $waitItem.interval | default 5 }}
+            echo "Init container: Waiting up to ${TIMEOUT}s for {{ $waitItem.name }}..."
             start=$(date +%s)
             while true; do
-              # Check if the secret exists (created when Oracle starts)
-              if kubectl get secret "${SECRET_NAME}" -n "${NAMESPACE}" >/dev/null 2>&1; then
-                echo "Secret ${SECRET_NAME} found. Checking Oracle pod readiness..."
-                # Check if the Oracle pod is ready
-                if kubectl get pod "${ORACLE_POD_NAME}" -n "${NAMESPACE}" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' | grep -q "True"; then
-                  echo "Oracle pod ${ORACLE_POD_NAME} is ready. Checking TPCDS populate job..."
-                  # Check if TPCDS populate job exists and is completed
-                  TPCDS_JOB=$(kubectl get pods -n "${NAMESPACE}" -l job-name="${TPCDS_JOB_PREFIX}" --field-selector=status.phase=Succeeded -o name | head -1)
-                  if [ -n "${TPCDS_JOB}" ]; then
-                    echo "TPCDS populate job completed successfully. Proceeding with MCPServer startup."
-                    exit 0
-                  else
-                    echo "Oracle ready but TPCDS populate job not completed yet..."
-                    # Show current TPCDS job status for debugging
-                    kubectl get pods -n "${NAMESPACE}" -l job-name="${TPCDS_JOB_PREFIX}" || echo "No TPCDS job pods found yet"
-                  fi
-                else
-                  echo "Secret exists but Oracle pod ${ORACLE_POD_NAME} not ready yet..."
-                fi
+              {{- if eq $waitItem.type "secret" }}
+              # Wait for secret to exist
+              if kubectl get secret "{{ $waitItem.name }}" -n "${NAMESPACE}" >/dev/null 2>&1; then
+                echo "Secret {{ $waitItem.name }} found. Proceeding with MCPServer startup."
+                exit 0
               else
-                echo "Secret ${SECRET_NAME} not yet created..."
+                echo "Secret {{ $waitItem.name }} not yet created..."
               fi
+              {{- else if eq $waitItem.type "pod" }}
+              # Wait for pod to be ready
+              if kubectl get pod "{{ $waitItem.name }}" -n "${NAMESPACE}" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' | grep -q "True"; then
+                echo "Pod {{ $waitItem.name }} is ready. Proceeding with MCPServer startup."
+                exit 0
+              else
+                echo "Pod {{ $waitItem.name }} not ready yet..."
+              fi
+              {{- else if eq $waitItem.type "job" }}
+              # Wait for job to complete
+              JOB_PODS=$(kubectl get pods -n "${NAMESPACE}" -l job-name="{{ $waitItem.name }}" --field-selector=status.phase=Succeeded -o name | head -1)
+              if [ -n "${JOB_PODS}" ]; then
+                echo "Job {{ $waitItem.name }} completed successfully. Proceeding with MCPServer startup."
+                exit 0
+              else
+                echo "Job {{ $waitItem.name }} not completed yet..."
+                kubectl get pods -n "${NAMESPACE}" -l job-name="{{ $waitItem.name }}" || echo "No job pods found yet"
+              fi
+              {{- end }}
               now=$(date +%s)
               elapsed=$(( now - start ))
               if [ $elapsed -ge $TIMEOUT ]; then
-                echo "Oracle TPCDS populate job not completed after ${TIMEOUT}s"
+                echo "{{ $waitItem.name }} not ready after ${TIMEOUT}s"
                 exit 1
               fi
               sleep ${INTERVAL}
             done
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: {{ $waitItem.resources.requests.cpu | default "100m" }}
+            memory: {{ $waitItem.resources.requests.memory | default "128Mi" }}
           limits:
-            cpu: 500m
-            memory: 512Mi
+            cpu: {{ $waitItem.resources.limits.cpu | default "500m" }}
+            memory: {{ $waitItem.resources.limits.memory | default "512Mi" }}
+      {{- end }}
       {{- end }}
       containers:
       - name: mcp
