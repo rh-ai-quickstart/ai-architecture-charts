@@ -23,3 +23,7 @@ dependencies:
     import-values:
       - child: global
         parent: global
+  - name: oracle23ai
+    version: 1.0.0
+    repository: https://github.com/rh-ai-quickstart/ai-architecture-charts
+    condition: oracle.enabled

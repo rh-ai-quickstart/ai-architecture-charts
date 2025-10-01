@@ -8,6 +8,11 @@ toolhive-operator:
       limits:
         cpu: 1000m
         memory: 1Gi
+    # Enable OIDC validation for MCP Inspector compatibility
+    env:
+      OIDC_VALIDATION_ENABLED: "true"
+      OIDC_ISSUER_URL: "https://example.com"
+      OIDC_CLIENT_ID: "mcp-inspector"
     # OpenShift security context overrides - requires anyuid SCC
     containerSecurityContext:
       allowPrivilegeEscalation: false
@@ -97,3 +102,8 @@ mcp-servers:
     volumeMounts:
       - name: sqlcl-data
         mountPath: /sqlcl-home
+
+# Oracle dependency - enables Oracle23ai chart installation
+# The init container in MCPServer handles waiting for Oracle readiness
+oracle:
+  enabled: true
