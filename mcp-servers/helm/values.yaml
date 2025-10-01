@@ -15,11 +15,6 @@ toolhive-operator:
       limits:
         cpu: 1000m
         memory: 1Gi
-    # Enable OIDC validation for MCP Inspector compatibility
-    env:
-      OIDC_VALIDATION_ENABLED: "true"
-      OIDC_ISSUER_URL: "https://example.com"
-      OIDC_CLIENT_ID: "mcp-inspector"
     # OpenShift security context overrides - requires anyuid SCC
     containerSecurityContext:
       allowPrivilegeEscalation: false
@@ -58,11 +53,13 @@ mcp-servers:
       capabilities:
         drop:
           - ALL
+    # Example: Wait for external API to be available (no waitFor needed for weather)
   
   oracle-sqlcl:
     # Oracle SQLcl MCP Server configuration
     # NOTE: Requires Oracle database and oracle23ai secret to exist
-    enabled: true  # Oracle DB is available
+    # Default: disabled. Enable with: make install ORACLE=true
+    enabled: false
     port: 8080
     transport: stdio
     image: "quay.io/ecosystem-appeng/oracle-sqlcl:0.1.0"
@@ -111,8 +108,31 @@ mcp-servers:
     volumeMounts:
       - name: sqlcl-data
         mountPath: /sqlcl-home
+    # Wait for Oracle dependencies before starting MCP server
+    waitFor:
+      - name: oracle23ai
+        type: secret
+        timeout: 300
+        interval: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+      - name: oracle23ai-tpcds-populate
+        type: job
+        timeout: 1800
+        interval: 10
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
 
 # Oracle dependency - enables Oracle23ai chart installation
-# The init container in MCPServer handles waiting for Oracle readiness
 oracle:
-  enabled: true
+  enabled: false
