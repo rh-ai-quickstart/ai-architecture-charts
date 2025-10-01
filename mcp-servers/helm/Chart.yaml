@@ -25,3 +25,7 @@ dependencies:
     import-values:
       - child: global
         parent: global
+  - name: oracle23ai
+    version: 1.0.0
+    repository: file://../../oracle23ai/helm
+    condition: oracle.enabled
