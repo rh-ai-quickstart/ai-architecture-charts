@@ -126,4 +126,4 @@ mcp-servers:
 
 # Oracle dependency - enables Oracle23ai chart installation
 oracle:
-  enabled: false
+  enabled:
