@@ -92,10 +92,7 @@ mcp-servers:
     persistence:
       enabled: true
       volumeName: sqlcl-data
+      mountPath: /sqlcl-home
       accessMode: ReadWriteOnce
       size: 5Gi
       storageClassName: gp3-csi
-    # Volume mounts for persistent storage
-    volumeMounts:
-      - name: sqlcl-data
-        mountPath: /sqlcl-home
