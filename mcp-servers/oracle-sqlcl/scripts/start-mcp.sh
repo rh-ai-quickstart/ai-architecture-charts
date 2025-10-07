@@ -32,10 +32,26 @@ cd /sqlcl-home || true
 if [ -n "$ORACLE_USER" ] && [ -n "$ORACLE_PASSWORD" ] && [ -n "$ORACLE_CONNECTION_STRING" ]; then
   CONNECTION_ALIAS=${ORACLE_CONN_NAME:-oracle_connection}
   echo "Creating saved connection: $CONNECTION_ALIAS"
-  echo "connect -savepwd -save $CONNECTION_ALIAS ${ORACLE_USER}/${ORACLE_PASSWORD}@${ORACLE_CONNECTION_STRING}" | /opt/oracle/sqlcl/bin/sql /NOLOG || true
+  
+  # Extract the actual connection string from JDBC URL format
+  # ORACLE_CONNECTION_STRING format: jdbc:oracle:thin:@host:port/service
+  # We need to extract: host:port/service
+  CONNECTION_HOST_PORT_SERVICE=$(echo "$ORACLE_CONNECTION_STRING" | sed 's/jdbc:oracle:thin:@//')
+  echo "Extracted connection string: $CONNECTION_HOST_PORT_SERVICE"
+  
+  # Create connection command without echoing password
+  CONNECT_CMD="connect -savepwd -save $CONNECTION_ALIAS ${ORACLE_USER}/${ORACLE_PASSWORD}@${CONNECTION_HOST_PORT_SERVICE}"
+  echo "Creating connection: $CONNECTION_ALIAS for user: ${ORACLE_USER}@${CONNECTION_HOST_PORT_SERVICE}"
+  echo "$CONNECT_CMD" | /opt/oracle/sqlcl/bin/sql /NOLOG || true
+  
+  # Verify the saved connection was created successfully
+  echo "Verifying saved connection..."
+  echo "connmgr show $CONNECTION_ALIAS" | /opt/oracle/sqlcl/bin/sql /NOLOG || true
 else
   echo "Skipping saved connection creation; missing ORACLE_USER/ORACLE_PASSWORD/ORACLE_CONNECTION_STRING environment variables"
 fi
 
 # Start SQLcl MCP 
+# The MCP server will use the saved connection 'oracle_connection' 
+# with: connect -name oracle_connection
 exec /opt/oracle/sqlcl/bin/sql -mcp
