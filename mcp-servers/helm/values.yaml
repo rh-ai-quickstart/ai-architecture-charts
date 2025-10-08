@@ -58,7 +58,7 @@ mcp-servers:
       name: network
       type: builtin
     env:
-      ORACLE_USER: "sales"
+      ORACLE_USER: "SYSTEM"
       ORACLE_PASSWORD: null  # Sourced from secret
       ORACLE_CONNECTION_STRING: null  # Sourced from secret
       ORACLE_CONN_NAME: oracle_connection
@@ -126,4 +126,4 @@ mcp-servers:
 
 # Oracle dependency - enables Oracle23ai chart installation
 oracle:
-  enabled:
+  enabled: true

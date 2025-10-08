@@ -54,4 +54,4 @@ fi
 # Start SQLcl MCP 
 # The MCP server will use the saved connection 'oracle_connection' 
 # with: connect -name oracle_connection
-exec /opt/oracle/sqlcl/bin/sql -mcp
+exec /opt/oracle/sqlcl/bin/sql -mcp -verbose

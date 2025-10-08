@@ -152,6 +152,7 @@ providers:
         responses_store:
           type: sqlite
           db_path: ${env.SQLITE_STORE_DIR:=~/.llama/distributions/starter}/responses_store.db
+        max_infer_iters: 30
 
 auth: {}
 # auth:
