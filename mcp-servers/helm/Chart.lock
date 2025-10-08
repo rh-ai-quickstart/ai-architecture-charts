@@ -5,5 +5,8 @@ dependencies:
 - name: toolhive-operator
   repository: https://stacklok.github.io/toolhive
   version: 0.2.19
-digest: sha256:6ccb11cc20c8abff43662130b4ea23c919143bb476c548849e979f1be3ae9a06
-generated: "2025-09-25T16:45:11.810815-04:00"
+- name: oracle23ai
+  repository: file://../../oracle23ai/helm
+  version: 1.0.0
+digest: sha256:8b503b49db0f76c1345b8b357e4da4729c931b69d04748ebf9680715e32b20e9
+generated: "2025-09-29T23:27:50.224538-04:00"
