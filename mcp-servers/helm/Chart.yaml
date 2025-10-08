@@ -2,7 +2,7 @@ apiVersion: v2
 name: mcp-servers
 description: A Helm chart for deploying MCP (Model Context Protocol) servers using the Toolhive operator
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "0.1.0"
 
 keywords:
@@ -25,5 +25,5 @@ dependencies:
         parent: global
   - name: oracle23ai
     version: 1.0.0
-    repository: file://../../oracle23ai/helm
+    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
     condition: oracle.enabled
