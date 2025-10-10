@@ -1,0 +1,71 @@
+{{- $root := . -}}
+{{- $enabledPipelines := include "ingestion-pipeline.enabledPipelines" . | fromJson -}}
+
+{{/* Create jobs for enabled pipelines */}}
+{{- range $pipelineKey, $pipelineConfig := $enabledPipelines }}
+{{- $jobName := include "ingestion-pipeline.pipelineJobName" (dict "pipelineKey" $pipelineKey) -}}
+{{- $pipelineDict := dict "root" $root "pipelineKey" $pipelineKey "pipelineConfig" $pipelineConfig "pipelineName" $pipelineKey -}}
+{{- $pipelineData := include "ingestion-pipeline.preparePipelineData" $pipelineDict -}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $jobName }}
+  labels:
+    {{- include "ingestion-pipeline.pipelineLabels" $pipelineDict | nindent 4 }}
+  annotations:
+    ingestion-pipeline.ai/pipeline-key: {{ $pipelineKey }}
+    ingestion-pipeline.ai/pipeline-source: {{ $pipelineConfig.source }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "ingestion-pipeline.pipelineLabels" $pipelineDict | nindent 8 }}
+      annotations:
+        ingestion-pipeline.ai/pipeline-key: {{ $pipelineKey }}
+    spec:
+      initContainers:
+        - name: wait-for-pipeline
+          image: "image-registry.openshift-image-registry.svc:5000/openshift/tools:latest"
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              url="http://{{ include "ingestion-pipeline.fullname" $root }}/ping"
+              echo "Waiting for $url..."
+              until curl -ksf "$url"; do
+                echo "Still waiting for $url ..."
+                sleep 10
+              done
+              echo "Ingestion pipeline service ready"
+      containers:
+        - name: create-{{ $pipelineKey }}-pipeline
+          image: "image-registry.openshift-image-registry.svc:5000/openshift/tools:latest"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PIPELINE_KEY
+              value: {{ $pipelineKey | quote }}
+            - name: PIPELINE_SOURCE
+              value: {{ $pipelineConfig.source | quote }}
+            - name: PIPELINE_NAME
+              value: {{ $pipelineConfig.name | quote }}
+            - name: PIPELINE_VERSION
+              value: {{ $pipelineConfig.version | quote }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              echo "Creating pipeline: $PIPELINE_KEY ($PIPELINE_SOURCE)"
+              echo "Pipeline data: {{ $pipelineData }}"
+              
+              curl -sfX 'POST' \
+              'http://{{ include "ingestion-pipeline.fullname" $root }}/add' \
+              -H 'accept: application/json' \
+              -H 'Content-Type: application/json' \
+              -d '{{ $pipelineData }}'
+              
+              echo "Pipeline $PIPELINE_KEY created successfully"
+      restartPolicy: Never
+  backoffLimit: 3
+{{ end }}

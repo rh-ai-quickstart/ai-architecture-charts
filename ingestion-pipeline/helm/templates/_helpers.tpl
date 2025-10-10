@@ -61,3 +61,49 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Pipeline-specific labels for a given pipeline
+*/}}
+{{- define "ingestion-pipeline.pipelineLabels" -}}
+{{ include "ingestion-pipeline.labels" .root }}
+ingestion-pipeline.ai/pipeline-name: {{ .pipelineName }}
+ingestion-pipeline.ai/pipeline-source: {{ .pipelineConfig.source }}
+{{- end }}
+
+{{/*
+Generate pipeline job name from key
+*/}}
+{{- define "ingestion-pipeline.pipelineJobName" -}}
+{{- printf "add-%s-pipeline" .pipelineKey | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Filter enabled pipelines - returns JSON
+*/}}
+{{- define "ingestion-pipeline.enabledPipelines" -}}
+{{- $enabledPipelines := dict -}}
+{{- range $key, $pipeline := .Values.pipelines -}}
+  {{- if $pipeline.enabled -}}
+    {{- $_ := set $enabledPipelines $key $pipeline -}}
+  {{- end -}}
+{{- end -}}
+{{- $enabledPipelines | toJson -}}
+{{- end }}
+
+{{/*
+Prepare pipeline data for API call
+*/}}
+{{- define "ingestion-pipeline.preparePipelineData" -}}
+{{- $pipeline := .pipelineConfig -}}
+{{- $source := $pipeline.source -}}
+{{- $sourceData := index $pipeline $source -}}
+{{- $base := dict
+    "name" $pipeline.name
+    "version" $pipeline.version
+    "source" $pipeline.source
+    "embedding_model" $pipeline.embedding_model
+    "vector_store_name" $pipeline.vector_store_name
+-}}
+{{- merge $base $sourceData | toJson -}}
+{{- end }}

@@ -70,7 +70,7 @@ def add_pipeline(pipeline_name: str, source: str):
         pipeline_id=pipeline_id,
         version_id=version_id,
         experiment_id=experiment_id,
-        job_name=f"fetch-store-run"
+        job_name=f"{pipeline_name}-run"
     )
 
     logger.info(f"Pipeline submitted! Run ID: {run.run_id}")

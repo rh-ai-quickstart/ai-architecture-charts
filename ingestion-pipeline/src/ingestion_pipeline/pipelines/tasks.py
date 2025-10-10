@@ -225,7 +225,7 @@ def store_documents(llamastack_base_url: str, input_dir: dsl.InputPath(), auth_u
         base_url=llamastack_base_url,
         default_headers=headers,
     )
-    print("Creating vector store")
+    print("Creating vector store", vector_store_name)
     try:
         vector_store = asyncio.run(client.vector_stores.create(
             name=vector_store_name,
