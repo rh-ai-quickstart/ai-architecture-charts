@@ -23,25 +23,17 @@ spec:
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      volumes:
-      {{- if and $server.persistence $server.persistence.enabled }}
-      - name: {{ $server.persistence.volumeName | default "data" }}
-        ephemeral:
-          volumeClaimTemplate:
-            metadata:
-              labels:
-                {{- include "mcp-servers.labels" $serverDict | nindent 16 }}
-            spec:
-              accessModes:
-                - {{ $server.persistence.accessMode }}
-              resources:
-                requests:
-                  storage: {{ $server.persistence.size }}
-              {{- if $server.persistence.storageClassName }}
-              storageClassName: {{ $server.persistence.storageClassName }}
-              {{- end }}
+      {{- $volumes := $server.volumes | default list }}
+      {{- if (and $server.persistence $server.persistence.enabled) }}
+        {{- $volumeClaimTemplate := dict "metadata" (dict "labels" (include "mcp-servers.labels" $serverDict)) "spec" (dict "accessModes" (list $server.persistence.accessMode) "resources" (dict "requests" (dict "storage" $server.persistence.size))) }}
+        {{- if $server.persistence.storageClassName }}
+          {{- $volumeClaimTemplate = set $volumeClaimTemplate.spec "storageClassName" $server.persistence.storageClassName }}
+        {{- end }}
+        {{- $ephemeralVolume := dict "name" ($server.persistence.volumeName | default "data") "ephemeral" (dict "volumeClaimTemplate" $volumeClaimTemplate) }}
+        {{- $volumes = append $volumes $ephemeralVolume }}
       {{- end }}
-      {{- with $server.volumes }}
+      {{- with $volumes }}
+      volumes:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- if $server.waitFor }}
@@ -129,9 +121,16 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
-        {{- with $server.volumeMounts }}
+        {{- $volumeMounts := $server.volumeMounts | default list }}
+        {{- if (and $server.persistence $server.persistence.enabled) }}
+          {{- $volumeName := $server.persistence.volumeName | default "data" }}
+          {{- $mountPath := $server.persistence.mountPath | default "/data" }}
+          {{- $persistenceVolumeMount := dict "name" $volumeName "mountPath" $mountPath }}
+          {{- $volumeMounts = append $volumeMounts $persistenceVolumeMount }}
+        {{- end }}
+        {{- with $volumeMounts }}
         volumeMounts:
-        {{- toYaml . | nindent 8 }}
+          {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with $server.resources }}
         resources:

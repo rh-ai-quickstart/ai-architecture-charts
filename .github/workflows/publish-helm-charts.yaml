@@ -182,6 +182,13 @@ jobs:
             if [ -f "$component/helm/Chart.yaml" ]; then
               echo "Packaging helm chart for $component"
               helm dependency update "$component/helm"
+
+              # Run pre-package script if it exists
+              if [ -x "$component/scripts/pre-package.sh" ]; then
+                echo "Running pre-package script for $component"
+                "$component/scripts/pre-package.sh" "$component/helm"
+              fi
+
               helm package "$component/helm" -d gh-pages
             fi
           done

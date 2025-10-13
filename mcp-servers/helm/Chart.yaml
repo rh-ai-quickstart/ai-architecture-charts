@@ -12,13 +12,13 @@ keywords:
 
 dependencies:
   - name: toolhive-operator-crds
-    version: 0.0.30
+    version: 0.0.34
     repository: https://stacklok.github.io/toolhive
     import-values:
       - child: global
         parent: global
   - name: toolhive-operator
-    version: 0.2.19
+    version: 0.2.21
     repository: https://stacklok.github.io/toolhive
     import-values:
       - child: global

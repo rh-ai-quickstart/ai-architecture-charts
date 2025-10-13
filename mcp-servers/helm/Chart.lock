@@ -1,12 +1,9 @@
 dependencies:
 - name: toolhive-operator-crds
   repository: https://stacklok.github.io/toolhive
-  version: 0.0.30
+  version: 0.0.34
 - name: toolhive-operator
   repository: https://stacklok.github.io/toolhive
-  version: 0.2.19
-- name: oracle23ai
-  repository: file://../../oracle23ai/helm
-  version: 1.0.0
-digest: sha256:8b503b49db0f76c1345b8b357e4da4729c931b69d04748ebf9680715e32b20e9
-generated: "2025-09-29T23:27:50.224538-04:00"
+  version: 0.2.21
+digest: sha256:d45b238776d1e4636321522cf7822b729ccca46af7313f612b28187722e13119
+generated: "2025-10-10T17:05:47.086697116-04:00"

@@ -1,6 +1,9 @@
 # Toolhive operator subchart configuration
 toolhive-operator:
   operator:
+    rbac:
+      scope: namespace
+      allowedNamespaces: []  # Will be appended with .Release.Namespace at install time
     resources:
       requests:
         cpu: 100m
@@ -92,6 +95,7 @@ mcp-servers:
     persistence:
       enabled: true
       volumeName: sqlcl-data
+      mountPath: /sqlcl-home
       accessMode: ReadWriteOnce
       size: 5Gi
       storageClassName: gp3-csi

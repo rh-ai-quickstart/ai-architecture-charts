@@ -25,7 +25,7 @@ roleRef:
 {{/* Dynamic SCC bindings for MCP servers */}}
 {{- $servers := include "mcp-servers.mergeMcpServers" . | fromJson }}
 {{- range $key, $server := $servers }}
-{{- if and $server.mcpserver $server.mcpserver.enabled }}
+{{- if $server.enabled }}
 {{- $serverDict := dict "root" $root "key" $key "server" $server }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
