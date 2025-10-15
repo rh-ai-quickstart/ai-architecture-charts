@@ -122,7 +122,7 @@ models:
       - --tool-call-parser
       - llama3_json
       - --max-model-len
-      - "14336"
+      - "131072"
       - --max-num-seqs
       - "32"
 
@@ -144,24 +144,24 @@ models:
 
   llama-3-1-8b-instruct:
     id: meta-llama/Llama-3.1-8B-Instruct
-    enabled: false
+    enabled: true
     resources:
       limits:
-        cpu: "2"
-        memory: 32Gi
+        cpu: "6"
+        memory: 40Gi
       requests:
-        cpu: "1"
-        memory: 16Gi
+        cpu: "3"
+        memory: 20Gi
     args:
-      - --max-model-len
-      - "14336"
-      - --max-num-seqs
-      - "32"
       - --enable-auto-tool-choice
       - --chat-template
       - /chat-templates/tool_chat_template_llama3.2_json.jinja
       - --tool-call-parser
       - llama3_json
+      - --max-model-len
+      - "131072"
+      - --max-num-seqs
+      - "32"
 
   llama-3-3-70b-instruct:
     id: meta-llama/Llama-3.3-70B-Instruct

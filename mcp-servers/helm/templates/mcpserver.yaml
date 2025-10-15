@@ -36,6 +36,67 @@ spec:
       volumes:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if $server.waitFor }}
+      initContainers:
+      {{- range $waitItem := $server.waitFor }}
+      - name: wait-for-{{ $waitItem.name }}
+        image: "alpine/k8s:1.28.2"
+        imagePullPolicy: "IfNotPresent"
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -euo pipefail
+            NAMESPACE="{{ $root.Release.Namespace }}"
+            TIMEOUT={{ $waitItem.timeout | default 1800 }}
+            INTERVAL={{ $waitItem.interval | default 5 }}
+            echo "Init container: Waiting up to ${TIMEOUT}s for {{ $waitItem.name }}..."
+            start=$(date +%s)
+            while true; do
+              {{- if eq $waitItem.type "secret" }}
+              # Wait for secret to exist
+              if kubectl get secret "{{ $waitItem.name }}" -n "${NAMESPACE}" >/dev/null 2>&1; then
+                echo "Secret {{ $waitItem.name }} found. Proceeding with MCPServer startup."
+                exit 0
+              else
+                echo "Secret {{ $waitItem.name }} not yet created..."
+              fi
+              {{- else if eq $waitItem.type "pod" }}
+              # Wait for pod to be ready
+              if kubectl get pod "{{ $waitItem.name }}" -n "${NAMESPACE}" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' | grep -q "True"; then
+                echo "Pod {{ $waitItem.name }} is ready. Proceeding with MCPServer startup."
+                exit 0
+              else
+                echo "Pod {{ $waitItem.name }} not ready yet..."
+              fi
+              {{- else if eq $waitItem.type "job" }}
+              # Wait for job to complete
+              JOB_PODS=$(kubectl get pods -n "${NAMESPACE}" -l job-name="{{ $waitItem.name }}" --field-selector=status.phase=Succeeded -o name | head -1)
+              if [ -n "${JOB_PODS}" ]; then
+                echo "Job {{ $waitItem.name }} completed successfully. Proceeding with MCPServer startup."
+                exit 0
+              else
+                echo "Job {{ $waitItem.name }} not completed yet..."
+                kubectl get pods -n "${NAMESPACE}" -l job-name="{{ $waitItem.name }}" || echo "No job pods found yet"
+              fi
+              {{- end }}
+              now=$(date +%s)
+              elapsed=$(( now - start ))
+              if [ $elapsed -ge $TIMEOUT ]; then
+                echo "{{ $waitItem.name }} not ready after ${TIMEOUT}s"
+                exit 1
+              fi
+              sleep ${INTERVAL}
+            done
+        resources:
+          requests:
+            cpu: {{ $waitItem.resources.requests.cpu | default "100m" }}
+            memory: {{ $waitItem.resources.requests.memory | default "128Mi" }}
+          limits:
+            cpu: {{ $waitItem.resources.limits.cpu | default "500m" }}
+            memory: {{ $waitItem.resources.limits.memory | default "512Mi" }}
+      {{- end }}
+      {{- end }}
       containers:
       - name: mcp
         image: "{{ $server.image }}"
