@@ -56,7 +56,7 @@ mcp-servers:
     enabled: false
     port: 8080
     transport: stdio
-    image: "quay.io/lrangine/sqlcl-mcp-server:4.0.3"
+    image: "quay.io/ecosystem-appeng/oracle-sqlcl:0.2.0"
     permissionProfile:
       name: network
       type: builtin
