@@ -125,10 +125,16 @@ models:
     registerShield: true
   llama-3-2-1b-instruct:
     id: meta-llama/Llama-3.2-1B-Instruct
-    enabled: false
+    enabled: true
+    url: http://llama-3-2-1b-instruct-predictor.${env.NAMESPACE}.svc.cluster.local:8080/v1
+    apiToken: fake
+    maxTokens: 4096
   llama-3-1-8b-instruct:
     id: meta-llama/Llama-3.1-8B-Instruct
     enabled: false
+    url: http://llama-3-1-8b-instruct-predictor.${env.NAMESPACE}.svc.cluster.local:8080/v1
+    apiToken: fake
+    maxTokens: 32768
   llama-guard-3-1b:
     id: meta-llama/Llama-Guard-3-1B
     enabled: false

@@ -53,13 +53,16 @@ mcp-servers:
     # Oracle SQLcl MCP Server configuration
     # NOTE: Requires Oracle database and oracle23ai secret to exist
     # Default: disabled. Enable with: make install ORACLE=true
-    enabled: false  # Oracle DB is available
+    enabled: false
     port: 8080
     transport: stdio
     image: "quay.io/ecosystem-appeng/oracle-sqlcl:0.1.0"
     permissionProfile:
       name: network
       type: builtin
+    # Service account configuration for Oracle SQLcl MCP server
+    createServiceAccount: true
+    serviceAccountName: oracle-sqlcl-sa
     env:
       ORACLE_USER: "SYSTEM"
       ORACLE_PASSWORD: null  # Sourced from secret
@@ -77,11 +80,11 @@ mcp-servers:
         key: jdbc-uri
     resources:
       requests:
-        cpu: 500m
-        memory: 512Mi
-      limits:
         cpu: 1000m
-        memory: 1Gi
+        memory: 4Gi
+      limits:
+        cpu: 2000m
+        memory: 8Gi
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -95,7 +98,6 @@ mcp-servers:
     persistence:
       enabled: true
       volumeName: sqlcl-data
-      mountPath: /sqlcl-home
       accessMode: ReadWriteOnce
       size: 5Gi
       storageClassName: gp3-csi
@@ -128,6 +130,6 @@ mcp-servers:
             cpu: 500m
             memory: 512Mi
 
-# Oracle dependency - enables Oracle23ai chart installation
-oracle:
-  enabled: true
+# Oracle dependency - enables Oracle23ai chart installation. By default, it is disabled.
+oracledb:
+  enabled: false

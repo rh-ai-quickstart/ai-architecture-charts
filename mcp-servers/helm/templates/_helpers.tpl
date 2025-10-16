@@ -30,7 +30,7 @@ Create the name of the service account to use
 */}}
 {{- define "mcp-servers.serviceAccountName" -}}
 {{- if (default false .server.createServiceAccount) }}
-{{- .server.serviceAccountName | default .key }}
+{{- .server.serviceAccountName | default (printf "%s-sa" .key) }}
 {{- else }}
 {{- .server.serviceAccountName | default "default" }}
 {{- end }}

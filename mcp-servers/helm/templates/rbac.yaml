@@ -1,0 +1,36 @@
+{{- $root := . }}
+{{- $servers := include "mcp-servers.mergeMcpServers" . | fromJson }}
+{{- range $key, $server := $servers }}
+{{- if and $server.enabled (default false $server.createServiceAccount) (eq $key "oracle-sqlcl") }}
+{{- $serverDict := dict "root" $root "key" $key "server" $server }}
+---
+# RBAC for Oracle SQLcl MCPServer init container
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $key }}-oracle-wait
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "mcp-servers.labels" $serverDict | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets", "pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $key }}-oracle-wait
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "mcp-servers.labels" $serverDict | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "mcp-servers.serviceAccountName" $serverDict }}
+    namespace: {{ $root.Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $key }}-oracle-wait
+{{- end }}
+{{- end }}
