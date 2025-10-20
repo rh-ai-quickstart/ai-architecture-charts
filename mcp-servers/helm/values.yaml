@@ -95,12 +95,6 @@ mcp-servers:
       fsGroupChangePolicy: OnRootMismatch
       seccompProfile:
         type: RuntimeDefault
-    persistence:
-      enabled: true
-      volumeName: sqlcl-data
-      accessMode: ReadWriteOnce
-      size: 5Gi
-      storageClassName: gp3-csi
     # Volume mounts for persistent storage
     volumeMounts:
       - name: sqlcl-data
@@ -129,6 +123,13 @@ mcp-servers:
           limits:
             cpu: 500m
             memory: 512Mi
+    # Persistence configuration for Oracle SQLcl MCP server
+    persistence:
+      enabled: true
+      volumeName: sqlcl-data
+      accessMode: ReadWriteOnce
+      size: 5Gi
+      storageClassName: gp3-csi
 
 # Oracle dependency - enables Oracle23ai chart installation. By default, it is disabled.
 oracledb:

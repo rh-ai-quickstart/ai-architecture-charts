@@ -25,10 +25,12 @@ spec:
       {{- end }}
       {{- $volumes := $server.volumes | default list }}
       {{- if (and $server.persistence $server.persistence.enabled) }}
-        {{- $volumeClaimTemplate := dict "metadata" (dict "labels" (include "mcp-servers.labels" $serverDict)) "spec" (dict "accessModes" (list $server.persistence.accessMode) "resources" (dict "requests" (dict "storage" $server.persistence.size))) }}
+        {{- $volumeClaimTemplate := dict "metadata" (dict "labels" (include "mcp-servers.labels" $serverDict)) }}
+        {{- $volumeClaimSpec := dict "accessModes" (list $server.persistence.accessMode) "resources" (dict "requests" (dict "storage" $server.persistence.size)) }}
         {{- if $server.persistence.storageClassName }}
-          {{- $volumeClaimTemplate = set $volumeClaimTemplate.spec "storageClassName" $server.persistence.storageClassName }}
+          {{- $volumeClaimSpec = set $volumeClaimSpec "storageClassName" $server.persistence.storageClassName }}
         {{- end }}
+        {{- $volumeClaimTemplate = set $volumeClaimTemplate "spec" $volumeClaimSpec }}
         {{- $ephemeralVolume := dict "name" ($server.persistence.volumeName | default "data") "ephemeral" (dict "volumeClaimTemplate" $volumeClaimTemplate) }}
         {{- $volumes = append $volumes $ephemeralVolume }}
       {{- end }}
