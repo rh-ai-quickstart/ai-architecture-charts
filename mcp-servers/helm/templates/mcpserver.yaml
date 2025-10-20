@@ -1,7 +1,15 @@
 {{- $root := . }}
+{{- $canDeploy := include "mcp-servers.canDeployMCPServer" . }}
 {{- $servers := include "mcp-servers.mergeMcpServers" . | fromJson }}
 {{- range $key, $server := $servers }}
-{{- if $server.enabled }}
+{{- $deploymentMode := $server.deploymentMode | default "auto" }}
+{{- $useMCPServer := false }}
+{{- if eq $deploymentMode "mcpserver" }}
+  {{- $useMCPServer = true }}
+{{- else if eq $deploymentMode "auto" }}
+  {{- $useMCPServer = eq $canDeploy "true" }}
+{{- end }}
+{{- if and $server.enabled $useMCPServer }}
 {{- $serverDict := dict "root" $root "key" $key "server" $server }}
 ---
 apiVersion: toolhive.stacklok.dev/v1alpha1
@@ -11,141 +19,57 @@ metadata:
   labels:
     {{- include "mcp-servers.labels" $serverDict | nindent 4 }}
 spec:
-  image: "{{ $server.image }}"
+  image: "{{ $server.image.repository }}:{{ $server.image.tag | default $root.Chart.Version }}"
+  transport: {{ $server.transport | default "stdio" }}
+  {{- with $server.port }}
+  port: {{ . }}
+  {{- end }}
+  {{- with $server.targetPort }}
+  targetPort: {{ . }}
+  {{- end }}
+  {{- with $server.permissionProfile }}
   permissionProfile:
-    name: {{ $server.permissionProfile.name | default "network" }}
-    type: {{ $server.permissionProfile.type | default "builtin" }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $server.env }}
+  env:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $server.envSecrets }}
+  secrets:
+    {{- range $envName, $secretRef := . }}
+    - name: {{ $secretRef.name }}
+      key: {{ $secretRef.key }}
+      targetEnvName: {{ $envName }}
+    {{- end }}
+  {{- end }}
+  {{- if or $server.securityContext $server.podSecurityContext $server.volumes $server.volumeMounts $server.resources }}
   podTemplateSpec:
-    metadata: {}
     spec:
-      serviceAccountName: {{ include "mcp-servers.serviceAccountName" $serverDict }}
       {{- with $server.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- $volumes := $server.volumes | default list }}
-      {{- if (and $server.persistence $server.persistence.enabled) }}
-        {{- $volumeClaimTemplate := dict "metadata" (dict "labels" (include "mcp-servers.labels" $serverDict)) }}
-        {{- $volumeClaimSpec := dict "accessModes" (list $server.persistence.accessMode) "resources" (dict "requests" (dict "storage" $server.persistence.size)) }}
-        {{- if $server.persistence.storageClassName }}
-          {{- $volumeClaimSpec = set $volumeClaimSpec "storageClassName" $server.persistence.storageClassName }}
-        {{- end }}
-        {{- $volumeClaimTemplate = set $volumeClaimTemplate "spec" $volumeClaimSpec }}
-        {{- $ephemeralVolume := dict "name" ($server.persistence.volumeName | default "data") "ephemeral" (dict "volumeClaimTemplate" $volumeClaimTemplate) }}
-        {{- $volumes = append $volumes $ephemeralVolume }}
-      {{- end }}
-      {{- with $volumes }}
+      {{- with $server.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if $server.waitFor }}
-      initContainers:
-      {{- range $waitItem := $server.waitFor }}
-      - name: wait-for-{{ $waitItem.name }}
-        image: "alpine/k8s:1.28.2"
-        imagePullPolicy: "IfNotPresent"
-        command:
-          - /bin/sh
-          - -c
-          - |
-            set -euo pipefail
-            NAMESPACE="{{ $root.Release.Namespace }}"
-            TIMEOUT={{ $waitItem.timeout | default 1800 }}
-            INTERVAL={{ $waitItem.interval | default 5 }}
-            echo "Init container: Waiting up to ${TIMEOUT}s for {{ $waitItem.name }}..."
-            start=$(date +%s)
-            while true; do
-              {{- if eq $waitItem.type "secret" }}
-              # Wait for secret to exist
-              if kubectl get secret "{{ $waitItem.name }}" -n "${NAMESPACE}" >/dev/null 2>&1; then
-                echo "Secret {{ $waitItem.name }} found. Proceeding with MCPServer startup."
-                exit 0
-              else
-                echo "Secret {{ $waitItem.name }} not yet created..."
-              fi
-              {{- else if eq $waitItem.type "pod" }}
-              # Wait for pod to be ready
-              if kubectl get pod "{{ $waitItem.name }}" -n "${NAMESPACE}" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' | grep -q "True"; then
-                echo "Pod {{ $waitItem.name }} is ready. Proceeding with MCPServer startup."
-                exit 0
-              else
-                echo "Pod {{ $waitItem.name }} not ready yet..."
-              fi
-              {{- else if eq $waitItem.type "job" }}
-              # Wait for job to complete
-              JOB_PODS=$(kubectl get pods -n "${NAMESPACE}" -l job-name="{{ $waitItem.name }}" --field-selector=status.phase=Succeeded -o name | head -1)
-              if [ -n "${JOB_PODS}" ]; then
-                echo "Job {{ $waitItem.name }} completed successfully. Proceeding with MCPServer startup."
-                exit 0
-              else
-                echo "Job {{ $waitItem.name }} not completed yet..."
-                kubectl get pods -n "${NAMESPACE}" -l job-name="{{ $waitItem.name }}" || echo "No job pods found yet"
-              fi
-              {{- end }}
-              now=$(date +%s)
-              elapsed=$(( now - start ))
-              if [ $elapsed -ge $TIMEOUT ]; then
-                echo "{{ $waitItem.name }} not ready after ${TIMEOUT}s"
-                exit 1
-              fi
-              sleep ${INTERVAL}
-            done
-        resources:
-          requests:
-            cpu: {{ $waitItem.resources.requests.cpu | default "100m" }}
-            memory: {{ $waitItem.resources.requests.memory | default "128Mi" }}
-          limits:
-            cpu: {{ $waitItem.resources.limits.cpu | default "500m" }}
-            memory: {{ $waitItem.resources.limits.memory | default "512Mi" }}
-      {{- end }}
-      {{- end }}
+      {{- if or $server.securityContext $server.volumeMounts $server.resources }}
       containers:
       - name: mcp
-        image: "{{ $server.image }}"
-        imagePullPolicy: {{ $server.imagePullPolicy | default "IfNotPresent" }}
-        {{- if or $server.env $server.envSecrets }}
-        env:
-        {{- with $server.env }}
-        {{- range $envKey, $envValue := . }}
-        {{- if ne $envValue nil }}
-        - name: {{ $envKey }}
-          value: {{ $envValue | quote }}
+        {{- with $server.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- with $server.envSecrets }}
-        {{- range $envKey, $secretSpec := . }}
-        - name: {{ $envKey }}
-          valueFrom:
-            secretKeyRef:
-              name: {{ $secretSpec.name }}
-              key: {{ $secretSpec.key }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- $volumeMounts := $server.volumeMounts | default list }}
-        {{- if (and $server.persistence $server.persistence.enabled) }}
-          {{- $volumeName := $server.persistence.volumeName | default "data" }}
-          {{- $mountPath := $server.persistence.mountPath | default "/data" }}
-          {{- $persistenceVolumeMount := dict "name" $volumeName "mountPath" $mountPath }}
-          {{- $volumeMounts = append $volumeMounts $persistenceVolumeMount }}
-        {{- end }}
-        {{- with $volumeMounts }}
+        {{- with $server.volumeMounts }}
         volumeMounts:
-          {{- toYaml . | nindent 8 }}
+          {{- toYaml . | nindent 10 }}
         {{- end }}
         {{- with $server.resources }}
         resources:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- with $server.securityContext }}
-        securityContext:
-          {{- toYaml . | nindent 10 }}
-        {{- end }}
-  port: {{ $server.port | default 8080 }}
-  {{- if $server.targetPort }}
-  targetPort: {{ $server.targetPort }}
+      {{- end }}
   {{- end }}
-  transport: {{ $server.transport | default "stdio" }}
 {{- end }}
 {{- end }}

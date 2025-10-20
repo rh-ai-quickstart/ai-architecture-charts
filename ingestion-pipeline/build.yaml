@@ -1,0 +1,4 @@
+builds:
+  - name: ingestion-pipeline
+    containerfile: Containerfile
+    context: src

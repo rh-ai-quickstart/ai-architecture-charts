@@ -15,6 +15,7 @@ helm.sh/chart: {{ include "mcp-servers.chart" . }}
 app.kubernetes.io/version: {{ .root.Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .root.Release.Service }}
+app.kubernetes.io/component: mcp-server
 {{- end }}
 
 {{/*
@@ -42,4 +43,26 @@ Create the name of the service account to use
   {{- $localServers := index .Values "mcp-servers" | default dict }}
   {{- $merged := merge $globalServers $localServers }}
   {{- toJson $merged }}
+{{- end }}
+
+{{/*
+Check if MCPServer resources can be deployed
+Returns true if:
+1. MCPServer CRD exists
+2. toolhive-system namespace exists
+*/}}
+{{- define "mcp-servers.canDeployMCPServer" -}}
+  {{- $hasCRD := .Capabilities.APIVersions.Has "toolhive.stacklok.dev/v1alpha1/MCPServer" }}
+  {{- $hasToolhiveNamespace := false }}
+  {{- if $hasCRD }}
+    {{- $namespaces := lookup "v1" "Namespace" "" "" }}
+    {{- if $namespaces }}
+      {{- range $namespaces.items }}
+        {{- if eq .metadata.name "toolhive-system" }}
+          {{- $hasToolhiveNamespace = true }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- and $hasCRD $hasToolhiveNamespace }}
 {{- end }}

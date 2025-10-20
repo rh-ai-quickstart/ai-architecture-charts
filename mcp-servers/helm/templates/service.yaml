@@ -1,0 +1,35 @@
+{{- $root := . }}
+{{- $canDeploy := include "mcp-servers.canDeployMCPServer" . }}
+{{- $servers := include "mcp-servers.mergeMcpServers" . | fromJson }}
+{{- range $key, $server := $servers }}
+{{- $deploymentMode := $server.deploymentMode | default "auto" }}
+{{- $useDeployment := false }}
+{{- if eq $deploymentMode "deployment" }}
+  {{- $useDeployment = true }}
+{{- else if eq $deploymentMode "auto" }}
+  {{- $useDeployment = ne $canDeploy "true" }}
+{{- end }}
+{{- if and $server.enabled $useDeployment }}
+{{- $serverDict := dict "root" $root "key" $key "server" $server }}
+{{- if or $server.port $server.targetPort }}
+{{- $servicePort := $server.port | default $server.targetPort }}
+{{- $targetPort := $server.targetPort | default $server.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-{{ $key }}
+  labels:
+    {{- include "mcp-servers.labels" $serverDict | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ $servicePort }}
+    targetPort: {{ $targetPort }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "mcp-servers.selectorLabels" $serverDict | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}

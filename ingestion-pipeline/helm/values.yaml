@@ -5,9 +5,9 @@
 replicaCount: 1
 
 image:
-  repository: quay.io/ecosystem-appeng/ingestion-pipeline
+  repository: quay.io/rh-ai-quickstart/ingestion-pipeline
   pullPolicy: Always
-  # Use Chart.AppVersion for image tag, so no need to set it here
+  # Defaults to Chart.Version (e.g., 0.2.18+3) for image tag
   # tag: "0.2.8"
 
 imagePullSecrets: []

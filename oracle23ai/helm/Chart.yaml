@@ -2,8 +2,8 @@ apiVersion: v2
 name: oracle23ai
 description: A Helm chart for Oracle 23ai Database with TPC-DS data loading
 type: application
-version: 1.0.0
-appVersion: "23ai"
+version: 0.5.0
+appVersion: "0.5.0"
 
 keywords:
   - oracle

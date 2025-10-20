@@ -122,15 +122,41 @@ def store_documents(llamastack_base_url: str, input_dir: dsl.InputPath(), auth_u
     from llama_stack_client import AsyncLlamaStackClient
     from llama_stack_client.types import Document as LlamaStackDocument
 
+    # Set up writable cache directories for OCR engines
     os.environ["EASYOCR_MODULE_PATH"] = "/tmp/.EasyOCR"
+    os.environ["RAPIDOCR_HOME"] = "/tmp/.rapidocr"
+    os.environ["TORCH_HOME"] = "/tmp/.torch"
+    os.environ["XDG_CACHE_HOME"] = "/tmp/.cache"
+    
+    # Configure Tesseract language data path
+    # Check common locations for tessdata
+    tessdata_paths = [
+        "/usr/share/tesseract-ocr/5/tessdata",
+        "/usr/share/tesseract-ocr/4.00/tessdata",
+        "/usr/share/tessdata"
+    ]
+    for path in tessdata_paths:
+        if os.path.exists(path):
+            os.environ["TESSDATA_PREFIX"] = path
+            print(f"Found tessdata at: {path}")
+            break
+    
+    # Create cache directories
+    os.makedirs("/tmp/.EasyOCR", exist_ok=True)
+    os.makedirs("/tmp/.rapidocr", exist_ok=True)
+    os.makedirs("/tmp/.torch", exist_ok=True)
+    os.makedirs("/tmp/.cache", exist_ok=True)
 
     # Configuring the vector store
     embedding_model = os.getenv("EMBEDDING_MODEL")
     vector_store_name = os.getenv("VECTOR_STORE_NAME")
 
-    # Setup docling components
+    # Setup docling components with Tesseract OCR
+    from docling.datamodel.pipeline_options import TesseractOcrOptions
+    
     pipeline_options = PdfPipelineOptions()
     pipeline_options.generate_picture_images = True
+    pipeline_options.ocr_options = TesseractOcrOptions(force_full_page_ocr=False)
     converter = DocumentConverter(
         allowed_formats=[
             InputFormat.PDF,

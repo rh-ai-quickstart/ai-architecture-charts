@@ -32,7 +32,7 @@ spec:
       Replicates entire install.sh wait_for_oracle_ready() + verify_system_user_access() logic
       */}}
       - name: wait-for-oracle-complete-readiness
-        image: "quay.io/ecosystem-appeng/oracle23ai-tpcds:{{ .Chart.Version }}"
+        image: "quay.io/rh-ai-quickstart/oracle23ai-tpcds:{{ .Chart.Version }}"
         command: ["/bin/bash", "-c"]
         args:
         - |
@@ -185,7 +185,7 @@ spec:
       Replaces install.sh tpcds data loading steps
       */}}
       - name: tpcds-populate
-        image: "quay.io/ecosystem-appeng/oracle23ai-tpcds:{{ .Chart.Version }}"
+        image: "quay.io/rh-ai-quickstart/oracle23ai-tpcds:{{ .Chart.Version }}"
         imagePullPolicy: Always
         command: ["/bin/bash", "-c"]
         args:

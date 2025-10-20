@@ -1,70 +1,33 @@
-# Toolhive operator subchart configuration
-toolhive-operator:
-  operator:
-    rbac:
-      scope: namespace
-      allowedNamespaces: []  # Will be appended with .Release.Namespace at install time
-    resources:
-      requests:
-        cpu: 100m
-        memory: 1Gi
-      limits:
-        cpu: 1000m
-        memory: 1Gi
-    # OpenShift security context overrides - requires anyuid SCC
-    containerSecurityContext:
-      allowPrivilegeEscalation: false
-      readOnlyRootFilesystem: true
-      runAsNonRoot: true
-      runAsUser: 1000  # Will be overridden by anyuid SCC
-      capabilities:
-        drop:
-        - ALL
-    podSecurityContext:
-      runAsNonRoot: true
-
 # MCP servers configuration
 mcp-servers:
   weather:
-    # Weather MCP Server configuration
     enabled: true
-    port: 8000
-    targetPort: 8000
+    # Deployment mode: auto, mcpserver, or deployment
+    # - auto: Use MCPServer if Toolhive is available, otherwise use Deployment (default)
+    # - mcpserver: Always use MCPServer (requires Toolhive)
+    # - deployment: Always use Deployment (ignore Toolhive)
+    deploymentMode: auto
+    image:
+      repository: quay.io/rh-ai-quickstart/mcp-weather
+      tag: ""  # Defaults to .Chart.Version
     transport: sse
-    image: "quay.io/ecosystem-appeng/mcp-weather:0.1.0"
-    permissionProfile:
-      name: network
-      type: builtin
-    resources:
-      requests:
-        cpu: 100m
-        memory: 128Mi
-      limits:
-        cpu: 500m
-        memory: 512Mi
-    securityContext:
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-    # Example: Wait for external API to be available (no waitFor needed for weather)
+    targetPort: 8000
   
   oracle-sqlcl:
     # Oracle SQLcl MCP Server configuration
     # NOTE: Requires Oracle database and oracle23ai secret to exist
-    # Default: disabled. Enable with: make install ORACLE=true
-    enabled: false
+    enabled: false  # Oracle DB is available
+    deploymentMode: mcpserver  # auto, mcpserver, or deployment
     port: 8080
     transport: stdio
-    image: "quay.io/ecosystem-appeng/oracle-sqlcl:0.2.0"
+    image:
+      repository: quay.io/rh-ai-quickstart/oracle-sqlcl
+      tag: ""  # Defaults to .Chart.Version
     permissionProfile:
       name: network
       type: builtin
-    # Service account configuration for Oracle SQLcl MCP server
-    createServiceAccount: true
-    serviceAccountName: oracle-sqlcl-sa
     env:
-      ORACLE_USER: "SYSTEM"
+      ORACLE_USER: "sales"
       ORACLE_PASSWORD: null  # Sourced from secret
       ORACLE_CONNECTION_STRING: null  # Sourced from secret
       ORACLE_CONN_NAME: oracle_connection
@@ -80,11 +43,11 @@ mcp-servers:
         key: jdbc-uri
     resources:
       requests:
-        cpu: 1000m
-        memory: 4Gi
+        cpu: 500m
+        memory: 512Mi
       limits:
-        cpu: 2000m
-        memory: 8Gi
+        cpu: 1000m
+        memory: 1Gi
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -95,42 +58,17 @@ mcp-servers:
       fsGroupChangePolicy: OnRootMismatch
       seccompProfile:
         type: RuntimeDefault
-    # Volume mounts for persistent storage
+    volumes:
+      - name: sqlcl-data
+        ephemeral:
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: gp3-csi
+              resources:
+                requests:
+                  storage: 5Gi
     volumeMounts:
       - name: sqlcl-data
         mountPath: /sqlcl-home
-    # Wait for Oracle dependencies before starting MCP server
-    waitFor:
-      - name: oracle23ai
-        type: secret
-        timeout: 300
-        interval: 5
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-      - name: oracle23ai-tpcds-populate
-        type: job
-        timeout: 1800
-        interval: 10
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-    # Persistence configuration for Oracle SQLcl MCP server
-    persistence:
-      enabled: true
-      volumeName: sqlcl-data
-      accessMode: ReadWriteOnce
-      size: 5Gi
-      storageClassName: gp3-csi
-
-# Oracle dependency - enables Oracle23ai chart installation. By default, it is disabled.
-oracledb:
-  enabled: false

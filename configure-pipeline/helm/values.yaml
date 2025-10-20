@@ -1,7 +1,7 @@
 notebook:
   create: true
   image: image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/s2i-generic-data-science-notebook:2024.2
-  repo: "https://github.com/RHEcosystemAppEng/RAG-Blueprint.git"
+  repo: "https://github.com/rh-ai-quickstart/RAG.git"
   pvcName: "pipeline-vol"
 
 minio:

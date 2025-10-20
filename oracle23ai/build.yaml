@@ -1,0 +1,4 @@
+builds:
+  - name: oracle23ai-tpcds
+    containerfile: tpcds-util/Containerfile
+    context: tpcds-util

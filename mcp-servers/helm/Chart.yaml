@@ -2,28 +2,10 @@ apiVersion: v2
 name: mcp-servers
 description: A Helm chart for deploying MCP (Model Context Protocol) servers using the Toolhive operator
 type: application
-version: 0.2.0
-appVersion: "0.1.0"
+version: 0.5.1
+appVersion: "0.5.1"
 
 keywords:
   - mcp
   - toolhive
   - model-context-protocol
-
-dependencies:
-  - name: toolhive-operator-crds
-    version: 0.0.34
-    repository: https://stacklok.github.io/toolhive
-    import-values:
-      - child: global
-        parent: global
-  - name: toolhive-operator
-    version: 0.2.21
-    repository: https://stacklok.github.io/toolhive
-    import-values:
-      - child: global
-        parent: global
-  - name: oracle23ai
-    version: 1.0.0
-    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-    condition: oracledb.enabled

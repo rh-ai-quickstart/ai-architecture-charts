@@ -13,121 +13,240 @@ permissions:
 
 jobs:
   detect-changes:
-    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts'
+    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     outputs:
-      build-matrix: ${{ steps.changes.outputs.build-matrix }}
-      changed-helm-components: ${{ steps.changes.outputs.changed-helm-components }}
+      changed-components: ${{ steps.changes.outputs.changed-components }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Detect changes
+      - name: Detect changed components
         id: changes
         run: |
-          # Define the original build matrix
-          ORIGINAL_MATRIX='{
-            "include": [
-              {
-                "name": "ingestion-pipeline",
-                "file": "ingestion-pipeline/Containerfile",
-                "chart": "ingestion-pipeline/helm/Chart.yaml",
-                "context": "ingestion-pipeline/src"
-              },
-              {
-                "name": "mcp-weather",
-                "file": "mcp-servers/weather/Containerfile",
-                "context": "mcp-servers/weather/src",
-                "chart": "mcp-servers/helm/Chart.yaml"
-              },
-              {
-                "name": "oracle-sqlcl",
-                "file": "mcp-servers/oracle-sqlcl/Containerfile",
-                "context": "mcp-servers/oracle-sqlcl",
-                "chart": "mcp-servers/helm/Chart.yaml"
-              },
-              {
-                "name": "oracle23ai-tpcds",
-                "file": "oracle23ai/tpcds-util/Containerfile",
-                "context": "oracle23ai/tpcds-util",
-                "chart": "oracle23ai/helm/Chart.yaml"
-              }
-            ]
-          }'
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..HEAD)
 
-          # Get changed files as JSON array (compare against main before this PR was merged)
-          CHANGED_FILES_JSON=$(git diff --name-only ${{ github.event.before }}..HEAD | jq -R -s 'split("\n") | map(select(length > 0))')
-
-          # Get all helm components dynamically
-          ALL_HELM_COMPONENTS=$(find . -maxdepth 3 -name "Chart.yaml" -path "*/helm/Chart.yaml" | cut -d'/' -f2 | sort | jq -R -s 'split("\n") | map(select(length > 0))')
+          # Get all helm components
+          ALL_COMPONENTS=$(find . -maxdepth 3 -name "Chart.yaml" -path "*/helm/Chart.yaml" | cut -d'/' -f2 | sort | uniq)
 
           echo "Changed files:"
           echo "=============="
-          echo "$CHANGED_FILES_JSON" | jq .
+          echo "$CHANGED_FILES"
+          echo ""
 
-          echo "Original build matrix:"
-          echo "======================"
-          echo "$ORIGINAL_MATRIX" | jq .
+          echo "All components:"
+          echo "==============="
+          echo "$ALL_COMPONENTS"
+          echo ""
 
-          echo "Helm components:"
-          echo "================"
-          echo "$ALL_HELM_COMPONENTS" | jq .
+          # Check if workflow changed
+          if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/"; then
+            # Workflow changed, process all components
+            CHANGED_COMPONENTS="$ALL_COMPONENTS"
+            echo "Workflow changed - processing all components"
+          else
+            # Find components with changes
+            CHANGED_COMPONENTS=""
+            for component in $ALL_COMPONENTS; do
+              if echo "$CHANGED_FILES" | grep -q "^${component}/"; then
+                CHANGED_COMPONENTS="$CHANGED_COMPONENTS $component"
+              fi
+            done
+          fi
 
-          # Check if workflow changed and filter build matrix in one jq command
-          RESULT=$(echo "$ORIGINAL_MATRIX" | jq --argjson changed_files "$CHANGED_FILES_JSON" --argjson all_helm_components "$ALL_HELM_COMPONENTS" '
-            {
-              "build_matrix": (
-                if ($changed_files | any(test("^\\.github/workflows/"))) then
-                  .
-                else
-                  {
-                    "include": [
-                      .include[] as $item |
-                      $item |
-                      select(
-                        $changed_files | any(
-                          test("^" + ($item.chart | split("/")[0]) + "/")
-                        )
-                      )
-                    ]
-                  }
-                end
-              ),
-              "changed_helm_components": (
-                if ($changed_files | any(test("^\\.github/workflows/"))) then
-                  $all_helm_components | join(" ")
-                else
-                  [
-                    $changed_files[] |
-                    select(test("/helm/")) |
-                    split("/")[0]
-                  ] | unique | join(" ")
-                end
-              )
-            }
-          ')
+          # Trim whitespace
+          CHANGED_COMPONENTS=$(echo $CHANGED_COMPONENTS | xargs)
 
-          # Debug output
-          echo "Detected changes:"
-          echo "================="
-          echo "$RESULT" | jq .
+          echo "Changed components: $CHANGED_COMPONENTS"
+          echo "changed-components=$CHANGED_COMPONENTS" >> $GITHUB_OUTPUT
 
-          # Extract results
-          echo "build-matrix=$(echo "$RESULT" | jq -c '.build_matrix')" >> $GITHUB_OUTPUT
-          echo "changed-helm-components=$(echo "$RESULT" | jq -r '.changed_helm_components')" >> $GITHUB_OUTPUT
-
-  build-and-push:
+  construct-build-matrix:
     needs: detect-changes
-    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts' && needs.detect-changes.outputs.build-matrix != '{"include":[]}'
+    if: needs.detect-changes.outputs.changed-components != ''
     runs-on: ubuntu-latest
-    strategy:
-      matrix: ${{ fromJson(needs.detect-changes.outputs.build-matrix) }}
-
+    outputs:
+      build-matrix: ${{ steps.matrix.outputs.build-matrix }}
+      has-builds: ${{ steps.matrix.outputs.has-builds }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Construct build matrix from build.yaml files
+        id: matrix
+        run: |
+          CHANGED_COMPONENTS="${{ needs.detect-changes.outputs.changed-components }}"
+
+          # Initialize empty matrix
+          MATRIX_JSON='{"include":[]}'
+
+          for component in $CHANGED_COMPONENTS; do
+            BUILD_FILE="${component}/build.yaml"
+
+            if [ -f "$BUILD_FILE" ]; then
+              echo "Found build.yaml for $component"
+
+              # Read builds from YAML and convert to JSON matrix entries
+              CHART_PATH="${component}/helm/Chart.yaml"
+
+              # Process each build entry
+              BUILD_COUNT=$(yq eval '.builds | length' "$BUILD_FILE")
+
+              for ((i=0; i<BUILD_COUNT; i++)); do
+                NAME=$(yq eval ".builds[$i].name" "$BUILD_FILE")
+                CONTAINERFILE=$(yq eval ".builds[$i].containerfile" "$BUILD_FILE")
+                CONTEXT=$(yq eval ".builds[$i].context" "$BUILD_FILE")
+
+                # Create matrix entry
+                ENTRY=$(jq -n \
+                  --arg name "$NAME" \
+                  --arg file "${component}/${CONTAINERFILE}" \
+                  --arg context "${component}/${CONTEXT}" \
+                  --arg chart "$CHART_PATH" \
+                  --arg component "$component" \
+                  '{name: $name, file: $file, context: $context, chart: $chart, component: $component}')
+
+                # Add to matrix
+                MATRIX_JSON=$(echo "$MATRIX_JSON" | jq --argjson entry "$ENTRY" '.include += [$entry]')
+              done
+            else
+              echo "No build.yaml for $component - skipping image builds"
+            fi
+          done
+
+          echo "Final build matrix:"
+          echo "$MATRIX_JSON" | jq .
+
+          # Check if we have any builds
+          BUILD_COUNT=$(echo "$MATRIX_JSON" | jq '.include | length')
+          if [ "$BUILD_COUNT" -gt 0 ]; then
+            echo "has-builds=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-builds=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "build-matrix=$(echo "$MATRIX_JSON" | jq -c .)" >> $GITHUB_OUTPUT
+
+  update-versions-and-tag:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.changed-components != ''
+    runs-on: ubuntu-latest
+    outputs:
+      commit-shas: ${{ steps.push.outputs.commit-shas }}
+      final-sha: ${{ steps.push.outputs.final-sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update versions, create tags, and push
+        id: push
+        run: |
+          CHANGED_COMPONENTS="${{ needs.detect-changes.outputs.changed-components }}"
+
+          # Initialize JSON map for component -> commit SHA
+          COMMIT_SHAS_JSON='{}'
+
+          # Process each component: update version, commit, and tag
+          for component in $CHANGED_COMPONENTS; do
+            CHART_PATH="${component}/helm/Chart.yaml"
+
+            if [ ! -f "$CHART_PATH" ]; then
+              echo "Skipping $component - no Chart.yaml found"
+              continue
+            fi
+
+            echo "Processing $component..."
+
+            # Read current version
+            current_version=$(grep '^version:' "$CHART_PATH" | awk '{print $2}')
+            echo "  Current version: $current_version"
+
+            # Check if tag exists for this version
+            tag_name="${component}-${current_version}"
+            if git rev-parse "$tag_name" >/dev/null 2>&1; then
+              echo "  Tag $tag_name already exists, auto-incrementing patch version"
+
+              # Parse version
+              IFS='.' read -r major minor patch <<< "$current_version"
+
+              # Increment patch
+              new_patch=$((patch + 1))
+              new_version="${major}.${minor}.${new_patch}"
+
+              echo "  Auto-incremented to: $new_version"
+
+              # Update both version and appVersion to be the same
+              sed -i "s/^version: .*/version: $new_version/" "$CHART_PATH"
+              sed -i "s/^appVersion: .*/appVersion: \"$new_version\"/" "$CHART_PATH"
+
+              # Commit this component's version update
+              git add "$CHART_PATH"
+              git commit -m "chore(${component}): bump version to ${new_version}"
+
+              echo "  Created version bump commit"
+            else
+              echo "  Tag $tag_name does not exist, using current version"
+              new_version="$current_version"
+              echo "  No version change needed, tag will be created on current commit"
+            fi
+
+            # Get the commit SHA for this component (current HEAD)
+            COMMIT_SHA=$(git rev-parse HEAD)
+
+            # Add to JSON map
+            COMMIT_SHAS_JSON=$(echo "$COMMIT_SHAS_JSON" | jq --arg component "$component" --arg sha "$COMMIT_SHA" '. + {($component): $sha}')
+
+            # Create annotated tag for this commit
+            tag_name="${component}-${new_version}"
+            git tag -a "$tag_name" -m "Release ${component} version ${new_version}
+
+            Version: ${new_version}
+            Commit: $(git rev-parse --short HEAD)"
+
+            echo "Created tag: $tag_name (SHA: $COMMIT_SHA)"
+          done
+
+          # Push all commits and tags together
+          git push origin main --follow-tags
+
+          # Get final commit SHA (includes all component bumps)
+          FINAL_SHA=$(git rev-parse HEAD)
+
+          # Output the JSON map of component -> commit SHA
+          echo "commit-shas=$(echo "$COMMIT_SHAS_JSON" | jq -c .)" >> $GITHUB_OUTPUT
+          echo "final-sha=$FINAL_SHA" >> $GITHUB_OUTPUT
+          echo "Component commit SHAs:"
+          echo "$COMMIT_SHAS_JSON" | jq .
+          echo "Final SHA: $FINAL_SHA"
+
+  build-and-push:
+    needs: [construct-build-matrix, update-versions-and-tag]
+    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts' && needs.construct-build-matrix.outputs.has-builds == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.construct-build-matrix.outputs.build-matrix) }}
+
+    steps:
+      - name: Checkout tagged commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ fromJson(needs.update-versions-and-tag.outputs.commit-shas)[matrix.component] }}  # Build from component's tagged commit
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -139,11 +258,21 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
 
-      - name: Extract version from Chart.yaml
+      - name: Extract version information
         id: version
         run: |
+          # Extract version (appVersion = version, always in sync)
           version=$(grep '^version:' ${{ matrix.chart }} | awk '{print $2}')
-          echo "tag=$version" >> $GITHUB_OUTPUT
+
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+          # Get short commit SHA (7 characters)
+          short_sha=$(git rev-parse --short HEAD)
+          echo "short_sha=$short_sha" >> $GITHUB_OUTPUT
+
+          echo "Component: ${{ matrix.name }}"
+          echo "  Version: $version"
+          echo "  Git SHA: $short_sha"
 
       - name: Build and push ${{ matrix.name }}
         uses: docker/build-push-action@v5
@@ -151,17 +280,20 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
           push: true
-          tags: quay.io/ecosystem-appeng/${{ matrix.name }}:${{ steps.version.outputs.tag }}
-          build-args: |
-            IMAGE_TAG=${{ steps.version.outputs.tag }}
+          tags: |
+            quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.version.outputs.version }}
+            quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.version.outputs.short_sha }}
+            quay.io/rh-ai-quickstart/${{ matrix.name }}:latest
 
   package-helm-charts:
-    needs: detect-changes
-    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts' && needs.detect-changes.outputs.changed-helm-components != ''
+    needs: [detect-changes, update-versions-and-tag]
+    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts' && needs.detect-changes.outputs.changed-components != ''
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout tagged commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.update-versions-and-tag.outputs.final-sha }}  # Package from final commit (includes all component bumps)
 
       - name: Set up Helm
         uses: azure/setup-helm@v3
@@ -177,7 +309,7 @@ jobs:
       - name: Package charts
         run: |
           mkdir -p gh-pages
-          read -ra CHANGED_COMPONENTS <<< "${{ needs.detect-changes.outputs.changed-helm-components }}"
+          read -ra CHANGED_COMPONENTS <<< "${{ needs.detect-changes.outputs.changed-components }}"
           for component in "${CHANGED_COMPONENTS[@]}"; do
             if [ -f "$component/helm/Chart.yaml" ]; then
               echo "Packaging helm chart for $component"

@@ -1,18 +1,24 @@
 FROM python:3.13-slim
 
-ARG IMAGE_TAG
 WORKDIR /app
 
 COPY requirements.txt .
 
-# Make sure IMAGE_TAG is provided
-RUN bash -c '[[ -z "${IMAGE_TAG}" ]] && { echo "IMAGE_TAG is required but not provided."; exit 1; } ||:'
-
 RUN apt-get update && \
-    apt-get install -y git
+    apt-get install -y \
+    git \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip && \
-    sed -i 's/__LLAMASTACK_VERSION__/${IMAGE_TAG}/g' requirements.txt && \
     pip install --no-cache-dir -r requirements.txt
 
 COPY ingestion_pipeline ingestion_pipeline

@@ -8,8 +8,7 @@ rawDeploymentMode: true
 image:
   repository: llamastack/distribution-starter
   pullPolicy: IfNotPresent
-  # Use Chart.AppVersion for image tag, so no need to set it here
-  # tag: "0.2.8"
+  tag: "0.2.22"
 
 imagePullSecrets: []
 nameOverride: "llamastack"

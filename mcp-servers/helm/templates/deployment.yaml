@@ -1,0 +1,82 @@
+{{- $root := . }}
+{{- $canDeploy := include "mcp-servers.canDeployMCPServer" . }}
+{{- $servers := include "mcp-servers.mergeMcpServers" . | fromJson }}
+{{- range $key, $server := $servers }}
+{{- $deploymentMode := $server.deploymentMode | default "auto" }}
+{{- $useDeployment := false }}
+{{- if eq $deploymentMode "deployment" }}
+  {{- $useDeployment = true }}
+{{- else if eq $deploymentMode "auto" }}
+  {{- $useDeployment = ne $canDeploy "true" }}
+{{- end }}
+{{- if and $server.enabled $useDeployment }}
+{{- $serverDict := dict "root" $root "key" $key "server" $server }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-{{ $key }}
+  labels:
+    {{- include "mcp-servers.labels" $serverDict | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "mcp-servers.selectorLabels" $serverDict | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mcp-servers.selectorLabels" $serverDict | nindent 8 }}
+    spec:
+      {{- with $server.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $server.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ $key }}
+        image: "{{ $server.image.repository }}:{{ $server.image.tag | default $root.Chart.Version }}"
+        imagePullPolicy: {{ $server.imagePullPolicy | default "IfNotPresent" }}
+        {{- if $server.port }}
+        ports:
+        - name: http
+          containerPort: {{ $server.targetPort | default $server.port }}
+          protocol: TCP
+        {{- end }}
+        {{- if or $server.env $server.envSecrets }}
+        env:
+        {{- with $server.env }}
+        {{- range $envKey, $envValue := . }}
+        {{- if ne $envValue nil }}
+        - name: {{ $envKey }}
+          value: {{ $envValue | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- with $server.envSecrets }}
+        {{- range $envKey, $secretSpec := . }}
+        - name: {{ $envKey }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ $secretSpec.name }}
+              key: {{ $secretSpec.key }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- with $server.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $server.volumeMounts }}
+        volumeMounts:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $server.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+{{- end }}
+{{- end }}

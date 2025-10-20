@@ -1,61 +1,117 @@
-🚀 MCP Servers with Toolhive have been deployed successfully!
+🚀 MCP Servers have been deployed successfully!
 
 Release: {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}
 
+{{- $canDeploy := include "mcp-servers.canDeployMCPServer" . }}
+{{- $usingToolhive := eq $canDeploy "true" }}
+
+{{- if $usingToolhive }}
+Deployment Mode: MCPServer CRDs (Toolhive)
+{{- else }}
+Deployment Mode: Standard Deployments
+{{- end }}
+
 ## 📋 Deployment Status
 
-Check Toolhive Operator:
-  kubectl get deployment -l app.kubernetes.io/name=toolhive-operator -n {{ .Release.Namespace }}
+Check all MCP server resources:
+  oc get all -l app.kubernetes.io/component=mcp-server -n {{ .Release.Namespace }}
+
+{{- if $usingToolhive }}
 
 Check MCPServer Resources:
-  kubectl get mcpservers -n {{ .Release.Namespace }}
+  oc get mcpservers -n {{ .Release.Namespace }}
+
+Check Toolhive Operator:
+  oc get deployment -l app.kubernetes.io/name=toolhive-operator -n toolhive-system
+{{- else }}
+
+Check Deployments:
+  oc get deployments -l app.kubernetes.io/component=mcp-server -n {{ .Release.Namespace }}
+
+Check Services:
+  oc get services -l app.kubernetes.io/component=mcp-server -n {{ .Release.Namespace }}
+{{- end }}
 
 ## 🔍 Monitoring Commands
+{{- $servers := include "mcp-servers.mergeMcpServers" . | fromJson }}
 
+{{- if $usingToolhive }}
 # View all MCP server statuses
-kubectl get mcpservers -n {{ .Release.Namespace }} -o wide
+oc get mcpservers -n {{ .Release.Namespace }} -o wide
 
 # Check specific MCP server details
-{{- $servers := include "mcp-servers.mergeMcpServers" . | fromJson }}
 {{- range $key, $server := $servers }}
-{{- if and $server.mcpserver $server.mcpserver.enabled }}
-kubectl describe mcpserver {{ $key }} -n {{ $.Release.Namespace }}
+{{- if $server.enabled }}
+oc describe mcpserver {{ $key }} -n {{ $.Release.Namespace }}
 {{- end }}
 {{- end }}
 
 # View MCP server logs
 {{- range $key, $server := $servers }}
-{{- if and $server.mcpserver $server.mcpserver.enabled }}
-kubectl logs -l toolhive-name={{ $key }} -n {{ $.Release.Namespace }}
+{{- if $server.enabled }}
+oc logs -l toolhive-name={{ $key }} -n {{ $.Release.Namespace }}
+{{- end }}
+{{- end }}
+{{- else }}
+# View all deployment statuses
+oc get deployments -l app.kubernetes.io/component=mcp-server -n {{ .Release.Namespace }} -o wide
+
+# Check specific deployment details
+{{- range $key, $server := $servers }}
+{{- if $server.enabled }}
+oc describe deployment mcp-{{ $key }} -n {{ $.Release.Namespace }}
+{{- end }}
+{{- end }}
+
+# View deployment logs
+{{- range $key, $server := $servers }}
+{{- if $server.enabled }}
+oc logs -l app.kubernetes.io/name={{ $key }} -n {{ $.Release.Namespace }}
+{{- end }}
 {{- end }}
 {{- end }}
 
 ## 🌐 Service Endpoints
 
+{{- if $usingToolhive }}
 {{- range $key, $server := $servers }}
-{{- if and $server.mcpserver $server.mcpserver.enabled }}
+{{- if $server.enabled }}
 {{ $key | title }} MCP Server:
-  Service: http://mcp-{{ $key }}-proxy.{{ $.Release.Namespace }}.svc.cluster.local:{{ $server.mcpserver.port | default 8080 }}
-  Health:  http://mcp-{{ $key }}-proxy.{{ $.Release.Namespace }}.svc.cluster.local:{{ $server.mcpserver.port | default 8080 }}/health
-  {{- if eq $server.mcpserver.transport "sse" }}
-  SSE:     http://mcp-{{ $key }}-proxy.{{ $.Release.Namespace }}.svc.cluster.local:{{ $server.mcpserver.port | default 8080 }}/sse
+  Service: http://mcp-{{ $key }}-proxy.{{ $.Release.Namespace }}.svc.cluster.local:{{ $server.port | default 8080 }}
+  Health:  http://mcp-{{ $key }}-proxy.{{ $.Release.Namespace }}.svc.cluster.local:{{ $server.port | default 8080 }}/health
+  {{- if eq $server.transport "sse" }}
+  SSE:     http://mcp-{{ $key }}-proxy.{{ $.Release.Namespace }}.svc.cluster.local:{{ $server.port | default 8080 }}/sse
   {{- end }}
+{{- end }}
+{{- end }}
+{{- else }}
+{{- range $key, $server := $servers }}
+{{- if $server.enabled }}
+{{- $servicePort := $server.port | default $server.targetPort }}
+{{- if or $server.port $server.targetPort }}
+{{ $key | title }} MCP Server:
+  Service: http://mcp-{{ $key }}.{{ $.Release.Namespace }}.svc.cluster.local:{{ $servicePort }}
+  {{- if eq $server.transport "sse" }}
+  SSE:     http://mcp-{{ $key }}.{{ $.Release.Namespace }}.svc.cluster.local:{{ $servicePort }}/sse
+  {{- end }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 
 ## 🔐 Security Notes
 
 {{- range $key, $server := $servers }}
-{{- if and $server.mcpserver $server.mcpserver.enabled }}
-{{- if and $server.mcpserver.envSecrets $server.mcpserver.envSecrets.ORACLE_PASSWORD }}
+{{- if $server.enabled }}
+{{- if and $server.envSecrets $server.envSecrets.ORACLE_PASSWORD }}
 {{ $key | title }} Database Credentials:
-  Credentials are securely sourced from Kubernetes secret: {{ $server.mcpserver.envSecrets.ORACLE_PASSWORD.name | default "oracle23ai" }}
+  Credentials are securely sourced from Kubernetes secret: {{ $server.envSecrets.ORACLE_PASSWORD.name | default "oracle23ai" }}
   Ensure this secret exists with required keys
 {{- end }}
-{{- if and $server.mcpserver.env $server.mcpserver.env.TAVILY_API_KEY }}
+{{- if and $server.env $server.env.TAVILY_API_KEY }}
 {{ $key | title }} API Configuration:
-  {{- if eq ($server.mcpserver.env.TAVILY_API_KEY | default "") "" }}
+  {{- if eq ($server.env.TAVILY_API_KEY | default "") "" }}
   ⚠️  TAVILY_API_KEY is empty. Update with your API key for weather functionality.
   {{- else }}
   ✅ TAVILY_API_KEY is configured.
@@ -66,15 +122,29 @@ kubectl logs -l toolhive-name={{ $key }} -n {{ $.Release.Namespace }}
 
 ## 🛠️ Troubleshooting
 
+{{- if $usingToolhive }}
 If pods are not starting:
-1. Check MCPServer resource status
-2. Verify Toolhive operator is running
-3. Ensure secrets exist (for oracle-sqlcl)
-4. Check SCC permissions
+1. Check MCPServer resource status: oc get mcpservers -n {{ .Release.Namespace }}
+2. Verify Toolhive operator is running: oc get pods -n toolhive-system
+3. Ensure secrets exist (for oracle-sqlcl): oc get secrets -n {{ .Release.Namespace }}
+4. Check SCC permissions: oc get clusterrolebindings | grep mcp-servers
 
 Debug commands:
-  kubectl logs -l app.kubernetes.io/name=toolhive-operator -n {{ .Release.Namespace }}
-  kubectl get events -n {{ .Release.Namespace }} --sort-by='.lastTimestamp'
+  oc logs -l app.kubernetes.io/name=toolhive-operator -n toolhive-system
+  oc get events -n {{ .Release.Namespace }} --sort-by='.lastTimestamp'
+  oc describe mcpserver <server-name> -n {{ .Release.Namespace }}
+{{- else }}
+If pods are not starting:
+1. Check Deployment status: oc get deployments -l app.kubernetes.io/component=mcp-server -n {{ .Release.Namespace }}
+2. Check pod status: oc get pods -l app.kubernetes.io/component=mcp-server -n {{ .Release.Namespace }}
+3. Ensure secrets exist (for oracle-sqlcl): oc get secrets -n {{ .Release.Namespace }}
+4. Check events: oc get events -n {{ .Release.Namespace }} --sort-by='.lastTimestamp'
+
+Debug commands:
+  oc describe deployment mcp-<server-name> -n {{ .Release.Namespace }}
+  oc logs deployment/mcp-<server-name> -n {{ .Release.Namespace }}
+  oc get events -n {{ .Release.Namespace }} --sort-by='.lastTimestamp'
+{{- end }}
 
 ## 📚 Next Steps
 

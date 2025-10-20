@@ -1,0 +1,7 @@
+builds:
+  - name: mcp-weather
+    containerfile: weather/Containerfile
+    context: weather/src
+  - name: oracle-sqlcl
+    containerfile: oracle-sqlcl/Containerfile
+    context: oracle-sqlcl

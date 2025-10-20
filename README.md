@@ -232,12 +232,22 @@ Each component is designed to be:
 
 The repository includes automated container image building through GitHub workflows:
 
-- **Supported components**: ingestion-pipeline and mcp-servers support building custom container images
+- **Supported components**: Components with a `build.yaml` file automatically build container images
 - **Automated publishing**: Images are built and pushed to Quay.io with chart versioning
-- **Custom development**: Add new MCP servers or modify existing components with automatic CI/CD
-- **Workflow integration**: Components with source code are automatically built when chart versions are updated
+- **Custom development**: Add new components or modify existing ones with automatic CI/CD
+- **Workflow integration**: Components are automatically built when changes are detected
 
-To add a new buildable component, place your source code and Containerfile in the appropriate component directory and configure the GitHub workflow matrix in `.github/workflows/publish-helm-charts.yaml`.
+To add container builds to a component, create a `build.yaml` file in the component directory:
+
+```yaml
+# component/build.yaml
+builds:
+  - name: component-name
+    containerfile: Containerfile
+    context: src
+```
+
+The workflow automatically discovers and builds images for all components with `build.yaml` files.
 
 ### Helm Repository and Versioning
 
@@ -526,11 +536,62 @@ oc logs -l toolhive-name=<server-name>
 curl -v http://<server-route>/sse -H "Accept: text/event-stream" --max-time 5
 ```
 
+## Versioning and Releases
+
+This repository uses automated per-component semantic versioning with git tagging. Every merge to `main` creates traceable releases with git tags and versioned container images.
+
+### Version Format
+
+Each component follows semantic versioning:
+```
+component-name-X.Y.Z
+```
+
+Where:
+- `X` - Major version (breaking changes)
+- `Y` - Minor version (new features)
+- `Z` - Patch version (bug fixes)
+
+Examples:
+- `ingestion-pipeline-0.2.18`
+- `llama-stack-0.3.0`
+- `mcp-servers-0.1.0`
+
+### Container Image Tags
+
+Each build creates three image tags:
+```bash
+quay.io/rh-ai-quickstart/ingestion-pipeline:0.2.19   # Version (matches chart)
+quay.io/rh-ai-quickstart/ingestion-pipeline:a1b2c3d  # Git SHA
+quay.io/rh-ai-quickstart/ingestion-pipeline:latest   # Latest build
+```
+
+### For Contributors
+
+When making changes to a component:
+
+1. **(Optional) Bump the chart version** in `component/helm/Chart.yaml`:
+   ```yaml
+   version: 0.3.0  # Manually bump for major/minor changes
+   ```
+   Or leave unchanged to let the workflow auto-increment the patch version
+
+2. **Commit and create PR** with a descriptive commit message - on merge, the workflow automatically:
+   - Auto-increments patch version if tag exists, or uses your manual version
+   - Updates both `version` and `appVersion` to match
+   - Builds and tags container images
+   - Creates git tag (e.g., `ingestion-pipeline-0.2.19`)
+   - Publishes Helm chart
+
+For detailed versioning guidelines, see [VERSIONING.md](./VERSIONING.md).
+
 ## Contributing
 
 When contributing to this repository:
 1. Follow OpenShift best practices
-2. Update component READMEs for any changes
-3. Test integrations between components
-4. Ensure security and operational standards
+2. **Bump version** for component changes (see [Versioning](#versioning-and-releases))
+3. **Use conventional commits** for clear git history (`feat:`, `fix:`, `docs:`, etc.)
+4. Update component READMEs for any changes
+5. Test integrations between components
+6. Ensure security and operational standards
 

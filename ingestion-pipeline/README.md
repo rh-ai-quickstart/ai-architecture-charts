@@ -54,7 +54,7 @@ helm install ingestion-pipeline ./helm \
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `replicaCount` | Number of service replicas | `1` |
-| `image.repository` | Container image repository | `quay.io/ecosystem-appeng/ingestion-pipeline` |
+| `image.repository` | Container image repository | `quay.io/rh-ai-quickstart/ingestion-pipeline` |
 | `image.pullPolicy` | Image pull policy | `Always` |
 | `service.port` | Service port | `80` |
 | `service.targetPort` | Container target port | `8000` |
