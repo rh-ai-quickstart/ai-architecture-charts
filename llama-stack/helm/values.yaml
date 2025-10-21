@@ -124,7 +124,7 @@ models:
     registerShield: true
   llama-3-2-1b-instruct:
     id: meta-llama/Llama-3.2-1B-Instruct
-    enabled: true
+    enabled: false
     url: http://llama-3-2-1b-instruct-predictor.${env.NAMESPACE}.svc.cluster.local:8080/v1
     apiToken: fake
     maxTokens: 4096

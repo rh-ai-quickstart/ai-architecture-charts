@@ -27,7 +27,7 @@ mcp-servers:
       name: network
       type: builtin
     env:
-      ORACLE_USER: "sales"
+      ORACLE_USER: "system"
       ORACLE_PASSWORD: null  # Sourced from secret
       ORACLE_CONNECTION_STRING: null  # Sourced from secret
       ORACLE_CONN_NAME: oracle_connection

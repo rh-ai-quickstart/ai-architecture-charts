@@ -9,3 +9,9 @@ keywords:
   - mcp
   - toolhive
   - model-context-protocol
+
+dependencies:
+  - name: oracle23ai
+    version: 0.5.0
+    repository: file://../../../oracle23ai/helm
+    condition: oracle-sqlcl.enabled
