@@ -31,10 +31,29 @@ graph TB
 ## 📋 Prerequisites
 
 ### Required Components
+- **Toolhive Operator**: MCP server lifecycle management (MUST be installed first)
 - **Oracle Database**: Oracle 23ai or compatible version
-- **Toolhive Operator**: MCP server lifecycle management
 - **Kubernetes Cluster**: OpenShift or standard Kubernetes
 - **Storage Class**: `gp3-csi` or compatible storage class
+
+### Installing Toolhive Operator
+
+Before deploying the Oracle MCP server, you must install the Toolhive operator:
+
+```bash
+# Install Toolhive operator
+helm repo add toolhive https://stacklok.github.io/toolhive
+helm repo update
+
+# Install Toolhive operator
+helm install toolhive toolhive/toolhive-operator \
+  --namespace toolhive-system \
+  --create-namespace \
+  --wait
+
+# Verify installation
+kubectl get pods -n toolhive-system
+```
 
 ### Required Secrets
 - **oracle23ai**: Contains Oracle database credentials
@@ -42,14 +61,6 @@ graph TB
   - `jdbc-uri`: Oracle JDBC connection string
 
 ## 🚀 Deployment
-
-> **⚠️ Important Note: LLM Model Selection**
-> 
-> For Oracle MCP server deployments, we recommend:
-> - **Development/Testing**: Use the **8B model** (Llama-3.1-8B-Instruct) for faster iteration and lower resource requirements
-> - **Production Use Cases**: Use the **70B model** (Llama-3.3-70B-Instruct) for superior response quality, better SQL generation accuracy, and more reliable natural language to SQL query conversion
-> 
-> The 70B model provides significantly better performance in understanding complex business requirements and generating correct SQL queries from natural language inputs. The 8B model is enabled by default with `ORACLE=true`, but you can configure the 70B model for production deployments by updating the model configuration in your Helm values.
 
 ### Quick Start
 
@@ -76,33 +87,106 @@ graph TB
 mcp-servers:
   oracle-sqlcl:
     enabled: true
-    image: "quay.io/ecosystem-appeng/oracle-sqlcl:0.2.0"
-    createServiceAccount: true
-    serviceAccountName: oracle-sqlcl-sa
+    deploymentMode: mcpserver  # Uses Toolhive operator
+    image:
+      repository: quay.io/rh-ai-quickstart/oracle-sqlcl
+      tag: ""  # Defaults to .Chart.Version
+    port: 8080
+    transport: stdio
 ```
 
-#### Resource Configuration
+#### MCP Server Image Details
+The Oracle MCP server uses the `quay.io/rh-ai-quickstart/oracle-sqlcl` image which includes:
+- **Oracle SQLcl**: Command-line interface for Oracle databases
+- **MCP Server Implementation**: Model Context Protocol server for AI integration
+- **Startup Script**: Automatically creates named connections during pod initialization
+- **Java Runtime**: Optimized JVM configuration for database operations
+
+#### Service Account Configuration
 ```yaml
-resources:
-  requests:
-    cpu: 1000m
-    memory: 4Gi
-  limits:
-    cpu: 2000m
-    memory: 8Gi
+serviceAccount:
+  name: "oracle-sqlcl-sa"  # Use existing service account
+  createServiceAccount: false  # Toolhive creates it automatically
 ```
 
-#### Storage Configuration
+#### Environment Variables
 ```yaml
-persistence:
-  enabled: true
-  volumeName: sqlcl-data
-  accessMode: ReadWriteOnce
-  size: 1Gi
-  storageClassName: gp3-csi
+env:
+  ORACLE_USER: "system"
+  ORACLE_PASSWORD: null  # Sourced from secret
+  ORACLE_CONNECTION_STRING: null  # Sourced from secret
+  ORACLE_CONN_NAME: oracle_connection
+  JAVA_TOOL_OPTIONS: "-Djava.io.tmpdir=/sqlcl-home/tmp"
+  HOME: "/sqlcl-home"
+envSecrets:
+  ORACLE_PASSWORD:
+    name: oracle23ai
+    key: password
+  ORACLE_CONNECTION_STRING:
+    name: oracle23ai
+    key: jdbc-uri
+```
+
+#### Wait Conditions
+```yaml
+waitFor:
+  - name: oracle23ai
+    type: secret
+    timeout: 300
+    interval: 5
+  - name: oracle23ai-tpcds-populate
+    type: job
+    timeout: 1800
+    interval: 10
 ```
 
 ## 🔧 Configuration
+
+### Named Connections and Startup Process
+
+The Oracle MCP server automatically creates named connections during startup using the startup script (`start-mcp.sh`). This process:
+
+1. **Environment Variable Validation**: Checks for required Oracle connection parameters
+2. **Connection Creation**: Creates a saved connection using SQLcl's `connect -savepwd -save` command
+3. **Connection Verification**: Validates the connection was created successfully
+4. **MCP Server Launch**: Starts the MCP server with the saved connection available
+
+#### Default Named Connection
+- **Connection Name**: `oracle_connection` (configurable via `ORACLE_CONN_NAME`)
+- **User**: `system` (configurable via `ORACLE_USER`)
+- **Connection String**: Extracted from `ORACLE_CONNECTION_STRING` environment variable
+- **Password**: Stored securely using `-savepwd` flag
+
+#### Managing Named Connections in Oracle MCP Pod
+
+**List All Named Connections**:
+```bash
+# Using SQLcl command
+kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connmgr list"
+
+# Using MCP server tool
+kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "list-connections"
+```
+
+**Show Specific Connection Details**:
+```bash
+# Show connection details
+kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connmgr show oracle_connection"
+
+# Test connection
+kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connect oracle_connection"
+```
+
+**Create Additional Named Connections**:
+```bash
+# Create a new named connection
+kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connect -savepwd -save my_connection username/password@host:port/service"
+```
+
+**Connection Storage Location**:
+- **SQLcl Home**: `/sqlcl-home/.sqlcl/aliases.xml`
+- **DBTools Connections**: `/sqlcl-home/.dbtools/connections/`
+- **Persistent Storage**: 5Gi PVC ensures connections survive pod restarts
 
 ### Environment Variables
 
@@ -115,39 +199,33 @@ persistence:
 | `JAVA_TOOL_OPTIONS` | JVM options | `-Djava.io.tmpdir=/sqlcl-home/tmp` | ❌ |
 | `HOME` | SQLcl home directory | `/sqlcl-home` | ❌ |
 
-### Service Account Configuration
-
-The Oracle MCP server uses a dedicated service account with the following permissions:
-
+### Resource Configuration
 ```yaml
-# Service Account
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: oracle-sqlcl-sa
-  namespace: your-namespace
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+```
 
-# Role
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: oracle-sqlcl-oracle-wait
-rules:
-- apiGroups: [""]
-  resources: ["secrets", "pods"]
-  verbs: ["get", "list", "watch"]
-
-# RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: oracle-sqlcl-oracle-wait
-subjects:
-- kind: ServiceAccount
-  name: oracle-sqlcl-sa
-roleRef:
-  kind: Role
-  name: oracle-sqlcl-oracle-wait
+### Storage Configuration
+```yaml
+volumes:
+  - name: sqlcl-data
+    ephemeral:
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: gp3-csi
+          resources:
+            requests:
+              storage: 5Gi
+volumeMounts:
+  - name: sqlcl-data
+    mountPath: /sqlcl-home
 ```
 
 ## 🧪 Testing
@@ -155,23 +233,22 @@ roleRef:
 ### 1. Verify Deployment
 ```bash
 # Check MCP server pod
-oc get pods -l app.kubernetes.io/name=oracle-sqlcl
+kubectl get pods -l app.kubernetes.io/name=oracle-sqlcl
 
-# Check service account
-oc get serviceaccount oracle-sqlcl-sa
+# Check MCPServer resource
+kubectl get mcpserver oracle-sqlcl
 
-# Check RBAC
-oc get role oracle-sqlcl-oracle-wait
-oc get rolebinding oracle-sqlcl-oracle-wait
+# Check service account (created by Toolhive)
+kubectl get serviceaccount oracle-sqlcl-sa
 ```
 
 ### 2. Test Database Connection
 ```bash
-# Port forward to MCP server
-oc port-forward oracle-sqlcl-0 8080:8080
+# Check pod logs for connection status
+kubectl logs oracle-sqlcl-0 -c mcp
 
-# Test connection (if curl is available)
-curl -X POST http://localhost:8080/health
+# Test saved connection
+kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connmgr show oracle_connection"
 ```
 
 ### 3. Test AI Integration
@@ -184,52 +261,84 @@ curl -X POST http://localhost:8080/health
 
 ### Common Issues
 
-#### 1. MCP Server Not Starting
+#### 1. Toolhive Operator Not Installed
 ```bash
-# Check pod logs
-oc logs oracle-sqlcl-0 -c mcp
+# Check if Toolhive operator is running
+kubectl get pods -n toolhive-system
 
-# Check init container logs
-oc logs oracle-sqlcl-0 -c wait-for-oracle23ai
+# Install Toolhive operator if missing
+helm install toolhive toolhive/toolhive-operator \
+  --namespace toolhive-system \
+  --create-namespace
 ```
 
-#### 2. Database Connection Failed
-- **Verify Oracle secret exists**: `oc get secret oracle23ai`
-- **Check connection string**: `oc get secret oracle23ai -o yaml`
+#### 2. MCP Server Not Starting
+```bash
+# Check pod logs
+kubectl logs oracle-sqlcl-0 -c mcp
+
+# Check init container logs
+kubectl logs oracle-sqlcl-0 -c wait-for-oracle23ai
+kubectl logs oracle-sqlcl-0 -c wait-for-oracle23ai-tpcds-populate
+```
+
+#### 3. Database Connection Failed
+- **Verify Oracle secret exists**: `kubectl get secret oracle23ai`
+- **Check connection string**: `kubectl get secret oracle23ai -o yaml`
 - **Validate Oracle database**: Ensure database is accessible
+- **Check SYSTEM account**: Ensure it's unlocked and password is correct
 
-#### 3. Permission Denied
-- **Check service account**: `oc get serviceaccount oracle-sqlcl-sa`
-- **Verify RBAC**: `oc describe role oracle-sqlcl-oracle-wait`
-- **Check role binding**: `oc describe rolebinding oracle-sqlcl-oracle-wait`
+#### 4. Named Connection Issues
+```bash
+# Check if named connection was created during startup
+kubectl exec oracle-sqlcl-0 -c mcp -- ls -la /sqlcl-home/.sqlcl/
+kubectl exec oracle-sqlcl-0 -c mcp -- cat /sqlcl-home/.sqlcl/aliases.xml
 
-#### 4. Storage Issues
-- **Check PVC status**: `oc get pvc oracle-sqlcl-0-sqlcl-data`
-- **Verify storage class**: `oc get storageclass gp3-csi`
-- **Check pod events**: `oc describe pod oracle-sqlcl-0`
+# Verify connection creation in logs
+kubectl logs oracle-sqlcl-0 -c mcp | grep -i "connection\|oracle_connection"
+
+# Manually create connection if startup failed
+kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connect -savepwd -save oracle_connection system/password@host:port/service"
+```
+
+#### 5. Permission Denied
+- **Check service account**: `kubectl get serviceaccount oracle-sqlcl-sa`
+- **Verify RBAC**: `kubectl describe role oracle-sqlcl-oracle-wait`
+- **Check role binding**: `kubectl describe rolebinding oracle-sqlcl-oracle-wait`
+
+#### 6. Storage Issues
+- **Check PVC status**: `kubectl get pvc oracle-sqlcl-0-sqlcl-data`
+- **Verify storage class**: `kubectl get storageclass gp3-csi`
+- **Check pod events**: `kubectl describe pod oracle-sqlcl-0`
 
 ### Debug Commands
 
 ```bash
 # Get detailed pod information
-oc describe pod oracle-sqlcl-0
+kubectl describe pod oracle-sqlcl-0
 
 # Check MCP server status
-oc get mcpserver oracle-sqlcl -o yaml
+kubectl get mcpserver oracle-sqlcl -o yaml
 
 # View toolhive operator logs
-oc logs -l app.kubernetes.io/name=toolhive-operator
+kubectl logs -l app.kubernetes.io/name=toolhive-operator -n toolhive-system
 
 # Check Oracle database connectivity
-oc exec oracle-sqlcl-0 -c mcp -- sql -S -name oracle_connection
+kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connect oracle_connection"
+
+# List all named connections
+kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connmgr list"
+
+# Check connection storage files
+kubectl exec oracle-sqlcl-0 -c mcp -- find /sqlcl-home -name "*connection*" -o -name "aliases.xml"
 ```
 
 ## 📊 Monitoring
 
 ### Key Metrics
-- **Pod Status**: `oc get pods -l app.kubernetes.io/name=oracle-sqlcl`
-- **Resource Usage**: `oc top pod oracle-sqlcl-0`
-- **Storage Usage**: `oc get pvc oracle-sqlcl-0-sqlcl-data`
+- **Pod Status**: `kubectl get pods -l app.kubernetes.io/name=oracle-sqlcl`
+- **Resource Usage**: `kubectl top pod oracle-sqlcl-0`
+- **Storage Usage**: `kubectl get pvc oracle-sqlcl-0-sqlcl-data`
 
 ### Health Checks
 - **Liveness Probe**: HTTP GET `/health` on port 8080
