@@ -18,6 +18,19 @@ mcp-servers:
     # NOTE: Requires Oracle database and oracle23ai secret to exist
     enabled: false  # Oracle DB is available
     deploymentMode: mcpserver  # auto, mcpserver, or deployment
+    # Service account configuration
+    serviceAccount:
+      # Use existing service account or let Toolhive create one automatically
+      # If specified, must exist and have proper RBAC permissions
+      name: "oracle-sqlcl-sa"  # Use the service account created by Toolhive operator
+      # RBAC configuration for init containers (only used if createServiceAccount is true)
+      createServiceAccount: false  # Don't create service account, Toolhive already created it
+      # Permissions needed for init containers (only used if createServiceAccount is true)
+      rbac:
+        rules:
+          - apiGroups: [""]
+            resources: ["secrets", "jobs"]
+            verbs: ["get", "list", "watch"]
     port: 8080
     transport: stdio
     image:
@@ -72,3 +85,29 @@ mcp-servers:
     volumeMounts:
       - name: sqlcl-data
         mountPath: /sqlcl-home
+    # Wait for Oracle dependencies before starting MCP server
+    waitFor:
+      - name: oracle23ai
+        type: secret
+        timeout: 300
+        interval: 5
+        image: bitnami/kubectl:latest
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+      - name: oracle23ai-tpcds-populate
+        type: job
+        timeout: 1800
+        interval: 10
+        image: bitnami/kubectl:latest
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi

@@ -50,7 +50,12 @@ spec:
       targetEnvName: {{ $envName }}
     {{- end }}
   {{- end }}
-  {{- if or $server.securityContext $server.podSecurityContext $server.volumes $server.volumeMounts $server.resources }}
+  {{- if $server.serviceAccount }}
+  {{- with $server.serviceAccount.name }}
+  serviceAccount: {{ . }}
+  {{- end }}
+  {{- end }}
+  {{- if or $server.securityContext $server.podSecurityContext $server.volumes $server.volumeMounts $server.resources $server.waitFor }}
   podTemplateSpec:
     spec:
       {{- with $server.podSecurityContext }}
@@ -60,6 +65,41 @@ spec:
       {{- with $server.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $server.waitFor }}
+      initContainers:
+        {{- range $index, $waitItem := . }}
+        - name: wait-for-{{ $waitItem.name }}
+          image: {{ $waitItem.image | default "busybox:1.35" }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for {{ $waitItem.name }} ({{ $waitItem.type }})..."
+              {{- if eq $waitItem.type "secret" }}
+              until kubectl get secret {{ $waitItem.name }} -n {{ $root.Release.Namespace }} >/dev/null 2>&1; do
+                echo "Waiting for secret {{ $waitItem.name }}..."
+                sleep {{ $waitItem.interval | default 5 }}
+              done
+              echo "Secret {{ $waitItem.name }} is ready!"
+              {{- else if eq $waitItem.type "job" }}
+              until kubectl get job {{ $waitItem.name }} -n {{ $root.Release.Namespace }} -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' | grep -q "True"; do
+                echo "Waiting for job {{ $waitItem.name }} to complete..."
+                sleep {{ $waitItem.interval | default 10 }}
+              done
+              echo "Job {{ $waitItem.name }} completed successfully!"
+              {{- else if eq $waitItem.type "pod" }}
+              until kubectl get pod {{ $waitItem.name }} -n {{ $root.Release.Namespace }} -o jsonpath='{.status.phase}' | grep -q "Running"; do
+                echo "Waiting for pod {{ $waitItem.name }} to be running..."
+                sleep {{ $waitItem.interval | default 5 }}
+              done
+              echo "Pod {{ $waitItem.name }} is running!"
+              {{- end }}
+          {{- with $waitItem.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
       {{- end }}
       {{- if or $server.securityContext $server.volumeMounts $server.resources }}
       containers:

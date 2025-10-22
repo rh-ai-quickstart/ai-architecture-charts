@@ -159,42 +159,28 @@ providers:
           db_path: ${env.SQLITE_STORE_DIR:=~/.llama/distributions/starter}/responses_store.db
         max_infer_iters: 30
 
-auth: {}
-# auth:
-#   provider_config:
-#     type: "custom"
-#     endpoint: "https://auth.example.com/validate"
-#   access_policy:
-#   - permit:
-#       actions: [create]
-#       resource: session::*
-#     description: all users have create access to sessions
-#   - permit:
-#       actions: [read]
-#       resource: agent::*
-#     description: all users have read access to agents
-#   - permit:
-#       actions: [read]
-#       resource: tool_group::*
-#     description: all users have read access to tool_groups
-#   - permit:
-#       actions: [read]
-#       resource: model::*
-#     description: all users have read access to models
-#   - permit:
-#       actions: [read]
-#       resource: vector_db::*
-#     description: all users have read access to vector_dbs
-#   - permit:
-#       actions: [create, update, delete]
-#       resource: vector_db::*
-#     when: user with admin in roles
-#     description: users with the admin role can create, update or delete vector_dbs
-#   - forbid:
-#       actions: [create, update, delete]
-#     unless: user with admin in roles
-#     description: only users with the admin role can create, update or delete resources
-#   - permit:
-#       actions: [read, update, delete]
-#     when: user is owner
-#     description: users can read, update and delete resources they own
+auth:
+  provider_config:
+    type: "custom"
+    endpoint: "http://ai-virtual-agent:8000/api/v1/validate"
+  access_policy:
+  - permit:
+      actions: [create]
+      resource: session::*
+    description: all users have create access to sessions
+  - permit:
+      actions: [read]
+      resource: agent::*
+    description: all users have read access to agents
+  - permit:
+      actions: [read, create, update, delete]
+      resource: tool_group::*
+    description: all users have full access to tool_groups
+  - permit:
+      actions: [read]
+      resource: model::*
+    description: all users have read access to models
+  - permit:
+      actions: [read, create, update, delete]
+      resource: vector_db::*
+    description: all users have full access to vector_dbs

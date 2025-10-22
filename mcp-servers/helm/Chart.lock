@@ -1,9 +1,6 @@
 dependencies:
-- name: toolhive-operator-crds
-  repository: https://stacklok.github.io/toolhive
-  version: 0.0.34
-- name: toolhive-operator
-  repository: https://stacklok.github.io/toolhive
-  version: 0.2.21
-digest: sha256:d45b238776d1e4636321522cf7822b729ccca46af7313f612b28187722e13119
-generated: "2025-10-10T17:05:47.086697116-04:00"
+- name: oracle23ai
+  repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+  version: 0.5.0
+digest: sha256:b6ca39ae29253d97842cdec1522cf0f024357e8db8da73956dc8d269cb61ea7a
+generated: "2025-10-21T19:49:05.680055-04:00"

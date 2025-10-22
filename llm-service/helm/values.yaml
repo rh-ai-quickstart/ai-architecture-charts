@@ -63,7 +63,7 @@ secret:
 models:
   llama-3-2-1b-instruct:
     id: meta-llama/Llama-3.2-1B-Instruct
-    enabled: true
+    enabled: false
     # device: hpu  # Can be gpu, hpu, or cpu - defaults to global device if not specified
     # A default "nvidia.com/gpu" toleration is implemented in the
     # inference-service.yaml template and can be overriden as follows:
