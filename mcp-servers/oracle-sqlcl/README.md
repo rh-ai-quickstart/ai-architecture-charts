@@ -32,7 +32,8 @@ graph TB
 
 ### Required Components
 - **Toolhive Operator**: MCP server lifecycle management (MUST be installed first)
-- **Oracle Database**: Oracle 23ai or compatible version
+- **Oracle Database**: Oracle 23ai deployed via oracle23ai Helm chart (MUST be deployed first)
+- **Oracle Secret**: `oracle23ai` secret created by the oracle23ai Helm chart
 - **Kubernetes Cluster**: OpenShift or standard Kubernetes
 - **Storage Class**: `gp3-csi` or compatible storage class
 
@@ -55,12 +56,37 @@ helm install toolhive toolhive/toolhive-operator \
 kubectl get pods -n toolhive-system
 ```
 
+### Installing Oracle Database
+
+The Oracle database must be deployed before the MCP server:
+
+```bash
+# The oracle23ai Helm chart is included in the ai-virtual-agent deployment
+# It will be automatically deployed when ORACLE=true is set during make install
+# This creates:
+# - Oracle 23ai database pod
+# - oracle23ai secret with database credentials
+# - TPC-DS data population job
+
+# Verify Oracle database deployment
+kubectl get pods -l app=oracle23ai
+kubectl get secret oracle23ai
+```
+
 ### Required Secrets
-- **oracle23ai**: Contains Oracle database credentials
+- **oracle23ai**: Contains Oracle database credentials (automatically created by oracle23ai Helm chart)
   - `password`: Oracle database password
   - `jdbc-uri`: Oracle JDBC connection string
 
 ## 🚀 Deployment
+
+### Prerequisites
+
+Before deploying the Oracle MCP server, you must:
+
+1. **Install Oracle Database**: Deploy Oracle 23ai using the oracle23ai Helm chart
+2. **Enable Oracle MCP Server**: Configure the oracle-sqlcl MCP server in values.yaml
+3. **Set Required Environment Variables**: Include `ORACLE=true` for Oracle-specific components
 
 ### Quick Start
 
@@ -70,14 +96,29 @@ kubectl get pods -n toolhive-system
    export ADMIN_EMAIL=your-email@company.com
    export HF_TOKEN=your-huggingface-token
    export NAMESPACE=your-namespace
-   export ORACLE=true
+   export ORACLE=true  # Required for Oracle-specific components
    ```
 
-2. **Deploy with Oracle Integration**:
+2. **Enable Oracle MCP Server** (Required):
+   ```yaml
+   # In mcp-servers/helm/values.yaml(ai-virtual-agent)
+   mcp-servers:
+     oracle-sqlcl:
+       enabled: true  # Must be enabled before deployment
+   ```
+
+3. **Deploy with Oracle Integration**:
    ```bash
    cd ai-virtual-agent/deploy/cluster
    make install NAMESPACE=$NAMESPACE ORACLE=true
    ```
+
+### Important Notes
+
+- **Oracle Database First**: The oracle23ai database must be deployed before the MCP server
+- **Oracle Secret Required**: The `oracle23ai` secret (containing database credentials) is automatically created by the oracle23ai Helm chart
+- **MCP Server Not Default**: The oracle-sqlcl MCP server is **disabled by default** and must be explicitly enabled
+- **ORACLE=true Required**: Without this environment variable, Oracle-specific components will not be installed
 
 ### Manual Configuration
 

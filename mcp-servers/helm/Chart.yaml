@@ -9,9 +9,3 @@ keywords:
   - mcp
   - toolhive
   - model-context-protocol
-
-dependencies:
-  - name: oracle23ai
-    version: 0.5.0
-    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-    condition: oracle-sqlcl.enabled
