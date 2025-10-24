@@ -38,9 +38,6 @@ spec:
       initContainers:
         - name: wait-for-models
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          env:
-            - name: NAMESPACE
-              value: "{{ .Release.Namespace }}"
           command:
             - /bin/bash
             - -c
@@ -50,7 +47,7 @@ spec:
               {{- if $model.enabled }}
               {{- if $model.url }}
               # Check external model: {{ $key }}
-              url="http://{{ $key }}-predictor.${NAMESPACE}.svc.cluster.local:8080"
+              url="http://{{ $key }}-predictor.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local:8080"
               auth="{{ $model.apiToken }}"
               echo "Waiting for external model at $url..."
               # Try /v1/models first (vLLM standard), then /models (legacy)
@@ -87,8 +84,6 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           env:
-            - name: NAMESPACE
-              value: "{{ .Release.Namespace }}"
             {{- toYaml .Values.env | nindent 12 }}
           envFrom:
           - secretRef:
