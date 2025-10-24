@@ -4,89 +4,74 @@
 
 The Oracle SQLcl MCP Server enables AI agents to interact with Oracle databases through natural language queries. This server implements the Model Context Protocol (MCP) to provide database connectivity and SQL execution capabilities for AI-powered applications.
 
-## ✨ Features
+## ✅ Current Status
 
-- **🔗 Database Connectivity**: Direct connection to Oracle databases using SQLcl
-- **🤖 AI Integration**: Natural language to SQL query conversion
-- **🔒 Secure Access**: Service account-based authentication with RBAC
-- **💾 Persistent Storage**: 5Gi PVC for SQLcl home directory
-- **⏱️ Dependency Management**: Init containers for Oracle secret and job validation
-- **🛡️ Security**: Pod security contexts and capability restrictions
+**FULLY OPERATIONAL** - The Oracle MCP server is working correctly with verified data flow from AI Virtual Agent → LlamaStack → Toolhive Proxy → Oracle MCP Server → Oracle Database.
 
-## 🏗️ Architecture
+**Verified Components**:
+- ✅ Toolhive Operator v0.4.0 (resolves SSE channel management issues)
+- ✅ Oracle 23ai database with TPC-DS data (100,000+ customer records)
+- ✅ Oracle MCP server with named connection (`oracle_connection`)
+- ✅ AI Virtual Agent integration with proper authentication
+- ✅ Chat functionality working for appropriate query sizes
 
-```mermaid
-graph TB
-    A[AI Agent] --> B[LlamaStack]
-    B --> C[MCP Proxy]
-    C --> D[Oracle SQLcl MCP Server]
-    D --> E[Oracle Database]
-    
-    F[Service Account] --> D
-    G[RBAC Role] --> F
-    H[Persistent Volume] --> D
-    I[Oracle Secret] --> D
-```
+**Important Limitation**: Large datasets (e.g., "show me all customers") will exceed the LLM's context limit (32,768 tokens). Use pagination, limits, or aggregation queries instead.
 
 ## 📋 Prerequisites
 
 ### Required Components
-- **Toolhive Operator**: MCP server lifecycle management (MUST be installed first)
-- **Oracle Database**: Oracle 23ai deployed via oracle23ai Helm chart (MUST be deployed first)
+- **Toolhive Operator**: v0.4.0 minimum (operator application version)
+  - **For OpenShift**: Must use the official OpenShift-specific values file: [values-openshift.yaml](https://raw.githubusercontent.com/stacklok/toolhive/c7ef74ab08388f5c5add962d5e20e04da9c518c6/deploy/charts/operator/values-openshift.yaml)
+- **Oracle Database**: Oracle 23ai deployed via oracle23ai Helm chart
 - **Oracle Secret**: `oracle23ai` secret created by the oracle23ai Helm chart
 - **Kubernetes Cluster**: OpenShift or standard Kubernetes
 - **Storage Class**: `gp3-csi` or compatible storage class
 
 ### Installing Toolhive Operator
 
-Before deploying the Oracle MCP server, you must install the Toolhive operator:
-
+#### Step 1: Add Helm Repository
 ```bash
-# Install Toolhive operator
 helm repo add toolhive https://stacklok.github.io/toolhive
 helm repo update
+```
 
-# Install Toolhive operator
-helm install toolhive toolhive/toolhive-operator \
+#### Step 2: Install CRDs First
+```bash
+helm install toolhive-operator-crds toolhive/toolhive-operator-crds \
   --namespace toolhive-system \
   --create-namespace \
+  --version 0.0.42 \
   --wait
-
-# Verify installation
-kubectl get pods -n toolhive-system
 ```
 
-### Installing Oracle Database
-
-The Oracle database must be deployed before the MCP server:
-
+#### Step 3: Install Operator with v0.4.0 Images
 ```bash
-# The oracle23ai Helm chart is included in the ai-virtual-agent deployment
-# It will be automatically deployed when ORACLE=true is set during make install
-# This creates:
-# - Oracle 23ai database pod
-# - oracle23ai secret with database credentials
-# - TPC-DS data population job
+# Create values file with v0.4.0 images
+# Note: v0.4.0 refers to the Toolhive operator application version (not Helm chart version)
+cat > /tmp/toolhive-install.yaml << 'EOF'
+operator:
+  image: ghcr.io/stacklok/toolhive/operator:v0.4.0  # Toolhive operator app version
+  toolhiveRunnerImage: ghcr.io/stacklok/toolhive/proxyrunner:v0.4.0  # Toolhive runner app version
+EOF
 
-# Verify Oracle database deployment
-kubectl get pods -l app=oracle23ai
-kubectl get secret oracle23ai
+# Install with OpenShift-specific configuration
+# Note: --version 0.3.0 is the Helm chart version (different from app version)
+# The values-openshift.yaml file is required for OpenShift deployments
+helm install toolhive-operator toolhive/toolhive-operator \
+  --namespace toolhive-system \
+  --version 0.3.0 \
+  --values https://raw.githubusercontent.com/stacklok/toolhive/c7ef74ab08388f5c5add962d5e20e04da9c518c6/deploy/charts/operator/values-openshift.yaml \
+  --values /tmp/toolhive-install.yaml \
+  --wait
 ```
 
-### Required Secrets
-- **oracle23ai**: Contains Oracle database credentials (automatically created by oracle23ai Helm chart)
-  - `password`: Oracle database password
-  - `jdbc-uri`: Oracle JDBC connection string
+#### Step 4: Verify Installation
+```bash
+kubectl get pods -n toolhive-system
+kubectl get pod -l app.kubernetes.io/name=toolhive-operator -n toolhive-system -o jsonpath='{.items[0].spec.containers[0].image}'
+```
 
-## 🚀 Deployment
-
-### Prerequisites
-
-Before deploying the Oracle MCP server, you must:
-
-1. **Install Oracle Database**: Deploy Oracle 23ai using the oracle23ai Helm chart
-2. **Enable Oracle MCP Server**: Configure the oracle-sqlcl MCP server in values.yaml
-3. **Set Required Environment Variables**: Include `ORACLE=true` for Oracle-specific components
+## 🚀 Deployment of AI-Virtual-Agent with Oracle MCP Server
 
 ### Quick Start
 
@@ -99,15 +84,15 @@ Before deploying the Oracle MCP server, you must:
    export ORACLE=true  # Required for Oracle-specific components
    ```
 
-2. **Enable Oracle MCP Server** (Required):
+2. **Enable Oracle MCP Server**:
    ```yaml
-   # In mcp-servers/helm/values.yaml(ai-virtual-agent)
+   # In mcp-servers/helm/values.yaml
    mcp-servers:
      oracle-sqlcl:
        enabled: true  # Must be enabled before deployment
    ```
 
-3. **Deploy with Oracle Integration**:
+3. **Deploy**:
    ```bash
    cd ai-virtual-agent/deploy/cluster
    make install NAMESPACE=$NAMESPACE ORACLE=true
@@ -116,101 +101,31 @@ Before deploying the Oracle MCP server, you must:
 ### Important Notes
 
 - **Oracle Database First**: The oracle23ai database must be deployed before the MCP server
-- **Oracle Secret Required**: The `oracle23ai` secret (containing database credentials) is automatically created by the oracle23ai Helm chart
+- **Oracle Secret Required**: The `oracle23ai` secret is automatically created by the oracle23ai Helm chart
 - **MCP Server Not Default**: The oracle-sqlcl MCP server is **disabled by default** and must be explicitly enabled
 - **ORACLE=true Required**: Without this environment variable, Oracle-specific components will not be installed
 
-### Manual Configuration
+## 🔧 Configuration
 
-#### Enable Oracle MCP Server
-```yaml
-# In mcp-servers/helm/values.yaml
-mcp-servers:
-  oracle-sqlcl:
-    enabled: true
-    deploymentMode: mcpserver  # Uses Toolhive operator
-    image:
-      repository: quay.io/rh-ai-quickstart/oracle-sqlcl
-      tag: ""  # Defaults to .Chart.Version
-    port: 8080
-    transport: stdio
-```
-
-#### MCP Server Image Details
+### MCP Server Image Details
 The Oracle MCP server uses the `quay.io/rh-ai-quickstart/oracle-sqlcl` image which includes:
 - **Oracle SQLcl**: Command-line interface for Oracle databases
 - **MCP Server Implementation**: Model Context Protocol server for AI integration
 - **Startup Script**: Automatically creates named connections during pod initialization
-- **Java Runtime**: Optimized JVM configuration for database operations
 
-#### Service Account Configuration
-```yaml
-serviceAccount:
-  name: "oracle-sqlcl-sa"  # Use existing service account
-  createServiceAccount: false  # Toolhive creates it automatically
-```
+### Named Connections
+The Oracle MCP server automatically creates named connections during startup:
 
-#### Environment Variables
-```yaml
-env:
-  ORACLE_USER: "system"
-  ORACLE_PASSWORD: null  # Sourced from secret
-  ORACLE_CONNECTION_STRING: null  # Sourced from secret
-  ORACLE_CONN_NAME: oracle_connection
-  JAVA_TOOL_OPTIONS: "-Djava.io.tmpdir=/sqlcl-home/tmp"
-  HOME: "/sqlcl-home"
-envSecrets:
-  ORACLE_PASSWORD:
-    name: oracle23ai
-    key: password
-  ORACLE_CONNECTION_STRING:
-    name: oracle23ai
-    key: jdbc-uri
-```
-
-#### Wait Conditions
-```yaml
-waitFor:
-  - name: oracle23ai
-    type: secret
-    timeout: 300
-    interval: 5
-  - name: oracle23ai-tpcds-populate
-    type: job
-    timeout: 1800
-    interval: 10
-```
-
-## 🔧 Configuration
-
-### Named Connections and Startup Process
-
-The Oracle MCP server automatically creates named connections during startup using the startup script (`start-mcp.sh`). This process:
-
-1. **Environment Variable Validation**: Checks for required Oracle connection parameters
-2. **Connection Creation**: Creates a saved connection using SQLcl's `connect -savepwd -save` command
-3. **Connection Verification**: Validates the connection was created successfully
-4. **MCP Server Launch**: Starts the MCP server with the saved connection available
-
-#### Default Named Connection
 - **Connection Name**: `oracle_connection` (configurable via `ORACLE_CONN_NAME`)
 - **User**: `system` (configurable via `ORACLE_USER`)
 - **Connection String**: Extracted from `ORACLE_CONNECTION_STRING` environment variable
 - **Password**: Stored securely using `-savepwd` flag
 
-#### Managing Named Connections in Oracle MCP Pod
-
-**List All Named Connections**:
+#### Managing Named Connections
 ```bash
-# Using SQLcl command
+# List all named connections
 kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connmgr list"
 
-# Using MCP server tool
-kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "list-connections"
-```
-
-**Show Specific Connection Details**:
-```bash
 # Show connection details
 kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connmgr show oracle_connection"
 
@@ -218,56 +133,46 @@ kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connm
 kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connect oracle_connection"
 ```
 
-**Create Additional Named Connections**:
-```bash
-# Create a new named connection
-kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connect -savepwd -save my_connection username/password@host:port/service"
+## 💡 Query Best Practices
+
+### Recommended Query Patterns
+
+**✅ Good Queries** (Will work well):
+```sql
+-- Pagination
+"Show me the first 10 customers"
+"List the top 50 customers by income"
+
+-- Aggregation
+"How many customers are there?"
+"What's the average income of customers?"
+"Show me customer statistics by state"
+
+-- Filtered queries
+"Show me customers from California"
+"List customers with income above $50,000"
 ```
 
-**Connection Storage Location**:
-- **SQLcl Home**: `/sqlcl-home/.sqlcl/aliases.xml`
-- **DBTools Connections**: `/sqlcl-home/.dbtools/connections/`
-- **Persistent Storage**: 5Gi PVC ensures connections survive pod restarts
-
-### Environment Variables
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `ORACLE_USER` | Oracle database user | `SYSTEM` | ✅ |
-| `ORACLE_PASSWORD` | Oracle database password | From secret | ✅ |
-| `ORACLE_CONNECTION_STRING` | JDBC connection string | From secret | ✅ |
-| `ORACLE_CONN_NAME` | Named connection name | `oracle_connection` | ✅ |
-| `JAVA_TOOL_OPTIONS` | JVM options | `-Djava.io.tmpdir=/sqlcl-home/tmp` | ❌ |
-| `HOME` | SQLcl home directory | `/sqlcl-home` | ❌ |
-
-### Resource Configuration
-```yaml
-resources:
-  requests:
-    cpu: 500m
-    memory: 512Mi
-  limits:
-    cpu: 1000m
-    memory: 1Gi
+**❌ Avoid These Queries** (Will exceed context limit):
+```sql
+-- Large datasets
+"Show me all customers"           -- 100,000+ rows
+"List every customer record"      -- Too much data
+"Display the entire customer table" -- Exceeds 32K token limit
 ```
 
-### Storage Configuration
-```yaml
-volumes:
-  - name: sqlcl-data
-    ephemeral:
-      volumeClaimTemplate:
-        spec:
-          accessModes:
-            - ReadWriteOnce
-          storageClassName: gp3-csi
-          resources:
-            requests:
-              storage: 5Gi
-volumeMounts:
-  - name: sqlcl-data
-    mountPath: /sqlcl-home
-```
+### Context Limit Guidelines
+- **LLM Context Limit**: 32,768 tokens
+- **Typical Customer Record**: ~70-80 tokens
+- **Safe Query Size**: ≤ 400 rows (≈ 32,000 tokens)
+- **Recommended Limit**: ≤ 100 rows for optimal performance
+
+### Query Optimization Tips
+1. **Use ROWNUM**: `WHERE ROWNUM <= 10`
+2. **Select Specific Columns**: Avoid `SELECT *`
+3. **Add Filters**: Reduce result set size
+4. **Use Aggregation**: `COUNT()`, `SUM()`, `AVG()` instead of raw data
+5. **Implement Pagination**: Process data in chunks
 
 ## 🧪 Testing
 
@@ -278,9 +183,6 @@ kubectl get pods -l app.kubernetes.io/name=oracle-sqlcl
 
 # Check MCPServer resource
 kubectl get mcpserver oracle-sqlcl
-
-# Check service account (created by Toolhive)
-kubectl get serviceaccount oracle-sqlcl-sa
 ```
 
 ### 2. Test Database Connection
@@ -295,8 +197,10 @@ kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connm
 ### 3. Test AI Integration
 1. **Access AI Virtual Agent**: Navigate to the application URL
 2. **Select Oracle Agent**: Choose the Oracle MCP agent template
-3. **Test Query**: Ask "Show me all customers with age above 50"
+3. **Test Query**: Ask "Show me the first 10 customers" or "How many customers are there?"
 4. **Verify Response**: Check that SQL is generated and executed
+
+**⚠️ Important**: Avoid queries that return large datasets as they will exceed the LLM's context limit (32,768 tokens).
 
 ## 🔍 Troubleshooting
 
@@ -307,13 +211,62 @@ kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connm
 # Check if Toolhive operator is running
 kubectl get pods -n toolhive-system
 
-# Install Toolhive operator if missing
-helm install toolhive toolhive/toolhive-operator \
-  --namespace toolhive-system \
-  --create-namespace
+# If not installed, follow the installation process above
 ```
 
-#### 2. MCP Server Not Starting
+#### 2. Channel Full Error (SSE Proxy Issues)
+If you encounter "Failed to send pending message to client (channel full)" errors:
+
+**Root Cause**: Versions prior to v0.4.0 have SSE channel management issues.
+
+**Solution**: Upgrade to v0.4.0:
+```bash
+# Create upgrade values file with v0.4.0 images
+# Note: v0.4.0 refers to the Toolhive operator application version (not Helm chart version)
+cat > /tmp/toolhive-upgrade.yaml << 'EOF'
+operator:
+  image: ghcr.io/stacklok/toolhive/operator:v0.4.0  # Toolhive operator app version
+  toolhiveRunnerImage: ghcr.io/stacklok/toolhive/proxyrunner:v0.4.0  # Toolhive runner app version
+EOF
+
+# Upgrade with OpenShift-specific configuration
+# Note: --version 0.3.0 is the Helm chart version (different from app version)
+# The values-openshift.yaml file is required for OpenShift deployments
+helm upgrade toolhive-operator toolhive/toolhive-operator \
+  --namespace toolhive-system \
+  --version 0.3.0 \
+  --values https://raw.githubusercontent.com/stacklok/toolhive/c7ef74ab08388f5c5add962d5e20e04da9c518c6/deploy/charts/operator/values-openshift.yaml \
+  --values /tmp/toolhive-upgrade.yaml \
+  --wait
+
+# Restart MCP server pods to pick up new proxy version
+kubectl delete pod -l app.kubernetes.io/name=oracle-sqlcl
+```
+
+#### 3. OpenShift Security Context Constraint (SCC) Issues
+If you encounter "unable to validate against any security context constraint" errors:
+
+**Solution**: Use the OpenShift-specific values file which handles SCC requirements (see installation steps above).
+
+#### 4. LLM Context Limit Exceeded
+If you encounter errors like "This model's maximum context length is 32768 tokens":
+
+**Root Cause**: The Oracle MCP server successfully executed your query, but the response exceeded the LLM's context limit.
+
+**Solutions**:
+```sql
+-- Instead of: SELECT * FROM CUSTOMER
+-- Use pagination:
+SELECT * FROM CUSTOMER WHERE ROWNUM <= 10;
+
+-- Use aggregation:
+SELECT COUNT(*) FROM CUSTOMER;
+
+-- Use filtering:
+SELECT * FROM CUSTOMER WHERE AGE > 50 AND ROWNUM <= 100;
+```
+
+#### 5. MCP Server Not Starting
 ```bash
 # Check pod logs
 kubectl logs oracle-sqlcl-0 -c mcp
@@ -323,34 +276,21 @@ kubectl logs oracle-sqlcl-0 -c wait-for-oracle23ai
 kubectl logs oracle-sqlcl-0 -c wait-for-oracle23ai-tpcds-populate
 ```
 
-#### 3. Database Connection Failed
+#### 6. Database Connection Failed
 - **Verify Oracle secret exists**: `kubectl get secret oracle23ai`
 - **Check connection string**: `kubectl get secret oracle23ai -o yaml`
 - **Validate Oracle database**: Ensure database is accessible
 - **Check SYSTEM account**: Ensure it's unlocked and password is correct
 
-#### 4. Named Connection Issues
+#### 7. Named Connection Issues
 ```bash
 # Check if named connection was created during startup
 kubectl exec oracle-sqlcl-0 -c mcp -- ls -la /sqlcl-home/.sqlcl/
 kubectl exec oracle-sqlcl-0 -c mcp -- cat /sqlcl-home/.sqlcl/aliases.xml
 
-# Verify connection creation in logs
-kubectl logs oracle-sqlcl-0 -c mcp | grep -i "connection\|oracle_connection"
-
 # Manually create connection if startup failed
 kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connect -savepwd -save oracle_connection system/password@host:port/service"
 ```
-
-#### 5. Permission Denied
-- **Check service account**: `kubectl get serviceaccount oracle-sqlcl-sa`
-- **Verify RBAC**: `kubectl describe role oracle-sqlcl-oracle-wait`
-- **Check role binding**: `kubectl describe rolebinding oracle-sqlcl-oracle-wait`
-
-#### 6. Storage Issues
-- **Check PVC status**: `kubectl get pvc oracle-sqlcl-0-sqlcl-data`
-- **Verify storage class**: `kubectl get storageclass gp3-csi`
-- **Check pod events**: `kubectl describe pod oracle-sqlcl-0`
 
 ### Debug Commands
 
@@ -366,91 +306,43 @@ kubectl logs -l app.kubernetes.io/name=toolhive-operator -n toolhive-system
 
 # Check Oracle database connectivity
 kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connect oracle_connection"
-
-# List all named connections
-kubectl exec oracle-sqlcl-0 -c mcp -- /opt/oracle/sqlcl/bin/sql /NOLOG -c "connmgr list"
-
-# Check connection storage files
-kubectl exec oracle-sqlcl-0 -c mcp -- find /sqlcl-home -name "*connection*" -o -name "aliases.xml"
-```
-
-## 📊 Monitoring
-
-### Key Metrics
-- **Pod Status**: `kubectl get pods -l app.kubernetes.io/name=oracle-sqlcl`
-- **Resource Usage**: `kubectl top pod oracle-sqlcl-0`
-- **Storage Usage**: `kubectl get pvc oracle-sqlcl-0-sqlcl-data`
-
-### Health Checks
-- **Liveness Probe**: HTTP GET `/health` on port 8080
-- **Readiness Probe**: HTTP GET `/health` on port 8080
-- **Startup Probe**: Not configured (relies on init containers)
-
-## 🔒 Security Considerations
-
-### Pod Security
-- **Non-root user**: Runs as non-root user
-- **Read-only root filesystem**: Enabled where possible
-- **Capability restrictions**: Drops all capabilities
-- **Security context**: Configured for OpenShift compliance
-
-### Network Security
-- **Service account**: Dedicated service account for Oracle access
-- **RBAC**: Minimal required permissions
-- **Secret management**: Oracle credentials stored in Kubernetes secrets
-
-### Data Protection
-- **Persistent storage**: Encrypted PVC for SQLcl home directory
-- **Connection security**: JDBC connection strings support SSL
-- **Credential rotation**: Supports secret updates without pod restart
-
-## 🚀 Advanced Configuration
-
-### Custom SQLcl Configuration
-```yaml
-env:
-  JAVA_TOOL_OPTIONS: "-Xmx2g -Djava.io.tmpdir=/sqlcl-home/tmp"
-  _JAVA_OPTIONS: "-XX:+UseG1GC"
-```
-
-### Custom Wait Conditions
-```yaml
-waitFor:
-- name: custom-oracle-secret
-  type: secret
-  timeout: 600
-  interval: 10
-```
-
-### Resource Scaling
-```yaml
-resources:
-  requests:
-    cpu: 2000m      # Increase for heavy workloads
-    memory: 8Gi     # Increase for large datasets
-  limits:
-    cpu: 4000m
-    memory: 16Gi
 ```
 
 ## 📚 References
 
-- [Oracle SQLcl MCP Server Documentation](https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug/using-oracle-sqlcl-mcp-server.html) - Official Oracle documentation for SQLcl MCP Server
-- [Oracle SQLcl Documentation](https://docs.oracle.com/en/database/oracle/sql-developer-command-line/)
+- [Oracle SQLcl MCP Server Documentation](https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug/using-oracle-sqlcl-mcp-server.html)
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/)
 - [Toolhive Operator Documentation](https://github.com/stacklok/toolhive)
-- [Kubernetes RBAC Guide](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
+- [Toolhive Operator v0.4.0 Release Notes](https://github.com/stacklok/toolhive/releases/tag/v0.4.0)
 
-## 🤝 Contributing
+## 🎯 Quick Summary
 
-1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feature/oracle-mcp-enhancement`
-3. **Make your changes**
-4. **Test thoroughly**
-5. **Submit a pull request**
+### ✅ What's Working
+- **Oracle MCP Server**: Fully operational with Toolhive Operator v0.4.0
+- **Database Connectivity**: Oracle 23ai with 100,000+ customer records
+- **AI Integration**: Chat functionality working for appropriate query sizes
+- **Authentication**: Proper service account and RBAC configuration
+
+### ⚠️ Key Limitations
+- **Context Limit**: LLM can only handle ~32,768 tokens (≈ 400 rows)
+- **Large Datasets**: Avoid queries like "show me all customers"
+- **Query Size**: Use pagination, limits, or aggregation for large tables
+
+### 🚀 Quick Start
+1. **Install Toolhive Operator v0.4.0** (see Prerequisites section)
+2. **Deploy Oracle 23ai database**
+3. **Enable Oracle MCP server** (`oracle-sqlcl.enabled: true`)
+4. **Set `ORACLE=true` environment variable**
+5. **Run `make install NAMESPACE=$NAMESPACE ORACLE=true`**
+
+### 💡 Best Practices
+- Use `ROWNUM <= 10` for pagination
+- Prefer aggregation queries (`COUNT`, `SUM`, `AVG`)
+- Select specific columns instead of `SELECT *`
+- Test with small datasets first
+
+---
 
 ## 📄 License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](../../LICENSE) file for details.
-
----
