@@ -1,0 +1,34 @@
+{{- $root := . }}
+{{- $servers := include "mcp-servers.mergeMcpServers" . | fromJson }}
+{{- range $key, $server := $servers }}
+{{- if and $server.enabled $server.serviceAccount $server.serviceAccount.name $server.serviceAccount.rbac }}
+{{- $serverDict := dict "root" $root "key" $key "server" $server }}
+---
+# RBAC for {{ $key }} MCPServer init containers
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $key }}-wait-role
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "mcp-servers.labels" $serverDict | nindent 4 }}
+rules:
+  {{- toYaml $server.serviceAccount.rbac.rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $key }}-wait-binding
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "mcp-servers.labels" $serverDict | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $server.serviceAccount.name | default (printf "%s-sa" $key) }}
+    namespace: {{ $root.Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $key }}-wait-role
+{{- end }}
+{{- end }}

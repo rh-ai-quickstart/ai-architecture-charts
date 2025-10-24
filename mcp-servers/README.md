@@ -138,12 +138,14 @@ helm upgrade -i toolhive-operator-crds \
 
 **OpenShift Installation:**
 ```bash
-# Install Toolhive operator with OpenShift-specific security context settings
+# Install Toolhive operator with OpenShift-specific security context settings and increased memory limits
 helm upgrade -i toolhive-operator \
   oci://ghcr.io/stacklok/toolhive/toolhive-operator \
   -n toolhive-system --create-namespace \
   --set operator.podSecurityContext.seccompProfile.type=RuntimeDefault \
-  --set operator.containerSecurityContext.runAsUser=null
+  --set operator.containerSecurityContext.runAsUser=null \
+  --set operator.resources.limits.memory=1Gi \
+  --set operator.resources.limits.cpu=500m
 
 # Verify Toolhive operator is running
 oc get pods -n toolhive-system
@@ -173,11 +175,13 @@ helm upgrade -i toolhive-operator-crds \
   --create-namespace
 
 helm upgrade -i toolhive-operator \
-  -n toolhive-system \
   oci://ghcr.io/stacklok/toolhive/toolhive-operator \
+  -n toolhive-system \
   --create-namespace \
   --set operator.podSecurityContext.seccompProfile.type=RuntimeDefault \
-  --set operator.containerSecurityContext.runAsUser=null
+  --set operator.containerSecurityContext.runAsUser=null \
+  --set operator.resources.limits.memory=1Gi \
+  --set operator.resources.limits.cpu=500m
 
 # 2. Install MCP Servers (auto-detects Toolhive)
 helm install mcp-servers ./helm --namespace <your-namespace> --create-namespace
@@ -302,6 +306,16 @@ oc logs -l app.kubernetes.io/name=weather
 3. **Secret Not Found**: Ensure Oracle secret exists before installing
 
 4. **Toolhive Operator OOMKilled**: Increase memory limits to 1Gi (default 128Mi is insufficient)
+   ```bash
+   # Fix: Patch the deployment to increase memory limits
+   oc patch deployment toolhive-operator -n toolhive-system --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value": "1Gi"}]'
+   
+   # Or reinstall with proper memory settings:
+   helm upgrade -i toolhive-operator oci://ghcr.io/stacklok/toolhive/toolhive-operator \
+     -n toolhive-system \
+     --set operator.resources.limits.memory=1Gi \
+     --set operator.resources.limits.cpu=500m
+   ```
 
 5. **MCP Server Pods Not Starting (Toolhive mode)**: Verify SCC permissions were automatically created by checking ClusterRoleBindings
 

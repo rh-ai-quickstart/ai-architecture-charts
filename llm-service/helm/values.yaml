@@ -131,7 +131,7 @@ models:
       - --tool-call-parser
       - llama3_json
       - --max-model-len
-      - "14336"
+      - "131072"
       - --max-num-seqs
       - "32"
 
@@ -156,21 +156,27 @@ models:
     enabled: false
     resources:
       limits:
-        cpu: "2"
-        memory: 32Gi
+        cpu: "6"
+        memory: 30Gi
       requests:
-        cpu: "1"
-        memory: 16Gi
+        cpu: "3"
+        memory: 15Gi
+    tolerations:
+      - effect: NoSchedule
+        key: g6e-gpu
+        operator: Exists
     args:
-      - --max-model-len
-      - "14336"
-      - --max-num-seqs
-      - "32"
       - --enable-auto-tool-choice
       - --chat-template
       - /chat-templates/tool_chat_template_llama3.2_json.jinja
       - --tool-call-parser
       - llama3_json
+      - --max-model-len
+      - "32768"
+      - --max-num-seqs
+      - "32"
+      - --gpu-memory-utilization
+      - "0.95"
 
   llama-3-3-70b-instruct:
     id: meta-llama/Llama-3.3-70B-Instruct

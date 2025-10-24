@@ -43,22 +43,32 @@ spec:
             - -c
             - |
               set -e
-              for url_data in {{ range $key, $model := $models }}{{- if $model.enabled }}{{ $model.url }}/models#{{ $model.apiToken }} {{ end }}{{ end }}; do
-                url_components=(${url_data//#/ })
-                url=${url_components[0]}
-                auth=${url_components[1]}
-                echo "Waiting for $url..."
-                curl_options=("-ksf" "$url")
-                if [[ -n "$auth" ]]; then
-                  curl_options+=("-H" "Authorization: Bearer $auth")
-                fi
-                until curl "${curl_options[@]}"; do
+              {{ range $key, $model := $models }}
+              {{- if $model.enabled }}
+              {{- if $model.url }}
+              # Check external model: {{ $key }}
+              url="http://{{ $key }}-predictor.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local:8080"
+              auth="{{ $model.apiToken }}"
+              echo "Waiting for external model at $url..."
+              # Try /v1/models first (vLLM standard), then /models (legacy)
+              if curl -ksf -H "Authorization: Bearer $auth" "$url/v1/models" 2>/dev/null; then
+                echo "$url/v1/models is ready."
+              elif curl -ksf -H "Authorization: Bearer $auth" "$url/models" 2>/dev/null; then
+                echo "$url/models is ready."
+              else
+                echo "Waiting for $url (trying both /v1/models and /models)..."
+                until curl -ksf -H "Authorization: Bearer $auth" "$url/v1/models" 2>/dev/null || curl -ksf -H "Authorization: Bearer $auth" "$url/models" 2>/dev/null; do
                   echo "Still waiting for $url ..."
                   sleep 10
                 done
                 echo "$url is ready."
-              done
-              echo "All services are up."
+              fi
+              {{- else }}
+              # Skip check for local model: {{ $key }} (served by LlamaStack itself)
+              echo "Skipping health check for local model: {{ $key }}"
+              {{- end }}
+              {{- end }}
+              {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
