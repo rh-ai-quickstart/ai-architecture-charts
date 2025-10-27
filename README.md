@@ -105,7 +105,7 @@ MCP server that exposes Oracle SQLcl capabilities to AI agents via Toolhive, ena
 
 **Key Features:**
 - Execute SQL/PLSQL against Oracle databases via Model Context Protocol
-- Integrates with Toolhive Operator v0.2.19 (CRDs v0.0.30 and operator managed as chart dependencies)
+- Integrates with Toolhive Operator v0.4.0 (with OpenShift-specific security context settings)
 - Orale connection managed via Kubernetes secrets and configurable service
 
 ## Quick Start

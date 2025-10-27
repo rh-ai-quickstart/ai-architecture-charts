@@ -138,14 +138,24 @@ helm upgrade -i toolhive-operator-crds \
 
 **OpenShift Installation:**
 ```bash
-# Install Toolhive operator with OpenShift-specific security context settings and increased memory limits
-helm upgrade -i toolhive-operator \
+# Create values file with v0.4.0 images
+# Note: v0.4.0 refers to the Toolhive operator application version (not Helm chart version)
+cat > /tmp/toolhive-install.yaml << 'EOF'
+operator:
+  image: ghcr.io/stacklok/toolhive/operator:v0.4.0  # Toolhive operator app version
+  toolhiveRunnerImage: ghcr.io/stacklok/toolhive/proxyrunner:v0.4.0  # Toolhive runner app version
+EOF
+
+# Install with OpenShift-specific configuration
+# Note: --version 0.3.0 is the Helm chart version (different from app version)
+# The values-openshift.yaml file is required for OpenShift deployments
+helm install toolhive-operator \
   oci://ghcr.io/stacklok/toolhive/toolhive-operator \
-  -n toolhive-system --create-namespace \
-  --set operator.podSecurityContext.seccompProfile.type=RuntimeDefault \
-  --set operator.containerSecurityContext.runAsUser=null \
-  --set operator.resources.limits.memory=1Gi \
-  --set operator.resources.limits.cpu=500m
+  --namespace toolhive-system \
+  --version 0.3.0 \
+  --values https://raw.githubusercontent.com/stacklok/toolhive/c7ef74ab08388f5c5add962d5e20e04da9c518c6/deploy/charts/operator/values-openshift.yaml \
+  --values /tmp/toolhive-install.yaml \
+  --wait
 
 # Verify Toolhive operator is running
 oc get pods -n toolhive-system
@@ -168,25 +178,36 @@ oc get services -l app.kubernetes.io/component=mcp-server -n <your-namespace>
 
 ### Complete Installation Example (with Toolhive)
 ```bash
-# 1. Install Toolhive CRDs and Operator (OPTIONAL - only needed for MCPServer CRD mode)
-helm upgrade -i toolhive-operator-crds \
-  -n toolhive-system \
-  oci://ghcr.io/stacklok/toolhive/toolhive-operator-crds \
-  --create-namespace
+# 1. Install Toolhive CRDs (OPTIONAL - only needed for MCPServer CRD mode)
+helm install toolhive-operator-crds \
+  toolhive/toolhive-operator-crds \
+  --namespace toolhive-system \
+  --version 0.0.42 \
+  --wait
 
-helm upgrade -i toolhive-operator \
-  oci://ghcr.io/stacklok/toolhive/toolhive-operator \
-  -n toolhive-system \
-  --create-namespace \
-  --set operator.podSecurityContext.seccompProfile.type=RuntimeDefault \
-  --set operator.containerSecurityContext.runAsUser=null \
-  --set operator.resources.limits.memory=1Gi \
-  --set operator.resources.limits.cpu=500m
+# 2. Create values file with v0.4.0 images
+# Note: v0.4.0 refers to the Toolhive operator application version (not Helm chart version)
+cat > /tmp/toolhive-install.yaml << 'EOF'
+operator:
+  image: ghcr.io/stacklok/toolhive/operator:v0.4.0  # Toolhive operator app version
+  toolhiveRunnerImage: ghcr.io/stacklok/toolhive/proxyrunner:v0.4.0  # Toolhive runner app version
+EOF
 
-# 2. Install MCP Servers (auto-detects Toolhive)
+# 3. Install Toolhive Operator with OpenShift-specific configuration
+# Note: --version 0.3.0 is the Helm chart version (different from app version)
+# The values-openshift.yaml file is required for OpenShift deployments
+helm install toolhive-operator \
+  toolhive/toolhive-operator \
+  --namespace toolhive-system \
+  --version 0.3.0 \
+  --values https://raw.githubusercontent.com/stacklok/toolhive/c7ef74ab08388f5c5add962d5e20e04da9c518c6/deploy/charts/operator/values-openshift.yaml \
+  --values /tmp/toolhive-install.yaml \
+  --wait
+
+# 4. Install MCP Servers (auto-detects Toolhive)
 helm install mcp-servers ./helm --namespace <your-namespace> --create-namespace
 
-# 3. Check deployment status
+# 5. Check deployment status
 oc get mcpservers -n <your-namespace>
 oc get pods -l toolhive=true -n <your-namespace>
 ```
@@ -305,16 +326,22 @@ oc logs -l app.kubernetes.io/name=weather
 
 3. **Secret Not Found**: Ensure Oracle secret exists before installing
 
-4. **Toolhive Operator OOMKilled**: Increase memory limits to 1Gi (default 128Mi is insufficient)
+4. **Toolhive Operator OOMKilled**: Reinstall with v0.4.0 images and proper resource settings
    ```bash
-   # Fix: Patch the deployment to increase memory limits
-   oc patch deployment toolhive-operator -n toolhive-system --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value": "1Gi"}]'
+   # Create values file with v0.4.0 images
+   cat > /tmp/toolhive-install.yaml << 'EOF'
+   operator:
+     image: ghcr.io/stacklok/toolhive/operator:v0.4.0
+     toolhiveRunnerImage: ghcr.io/stacklok/toolhive/proxyrunner:v0.4.0
+   EOF
    
-   # Or reinstall with proper memory settings:
-   helm upgrade -i toolhive-operator oci://ghcr.io/stacklok/toolhive/toolhive-operator \
+   # Reinstall with OpenShift configuration and v0.4.0
+   helm upgrade toolhive-operator \
+     oci://ghcr.io/stacklok/toolhive/toolhive-operator \
      -n toolhive-system \
-     --set operator.resources.limits.memory=1Gi \
-     --set operator.resources.limits.cpu=500m
+     --version 0.3.0 \
+     --values https://raw.githubusercontent.com/stacklok/toolhive/c7ef74ab08388f5c5add962d5e20e04da9c518c6/deploy/charts/operator/values-openshift.yaml \
+     --values /tmp/toolhive-install.yaml
    ```
 
 5. **MCP Server Pods Not Starting (Toolhive mode)**: Verify SCC permissions were automatically created by checking ClusterRoleBindings
