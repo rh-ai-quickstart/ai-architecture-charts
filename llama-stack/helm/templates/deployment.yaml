@@ -75,6 +75,10 @@ spec:
           {{- end }}
           env:
             {{- toYaml .Values.env | nindent 12 }}
+            {{- if .Values.otelExporter }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otelExporter }}
+            {{- end }}
           envFrom:
           - secretRef:
               name: {{ .Chart.Name }}-env

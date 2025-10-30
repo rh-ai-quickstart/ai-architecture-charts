@@ -43,8 +43,6 @@ env:
     value: "4096"
   - name: VLLM_API_TOKEN
     value: fake
-  - name: OTEL_ENDPOINT
-    value: http://otel-collector-collector.observability-hub.svc.cluster.local:4318/v1/traces
   - name: POSTGRES_USER
     valueFrom:
       secretKeyRef:
