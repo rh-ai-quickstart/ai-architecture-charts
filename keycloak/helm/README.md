@@ -105,6 +105,135 @@ echo "Username: $ADMIN_USER"
 echo "Password: $ADMIN_PASS"
 ```
 
+## Application Integration Quick Start
+
+Once Keycloak is deployed, integrate authentication in your application in 5 minutes.
+
+### Frontend (React)
+
+```bash
+npm install react-oidc-context
+```
+
+```typescript
+// src/main.tsx
+import { AuthProvider } from 'react-oidc-context';
+
+const oidcConfig = {
+  authority: 'https://keycloak.example.com/realms/ai-platform',
+  client_id: 'ai-platform-client',
+  redirect_uri: window.location.origin,
+  response_type: 'code',
+  scope: 'openid profile email',
+};
+
+root.render(
+  <AuthProvider {...oidcConfig}>
+    <App />
+  </AuthProvider>
+);
+```
+
+```typescript
+// src/App.tsx
+import { useAuth } from 'react-oidc-context';
+
+function App() {
+  const auth = useAuth();
+
+  if (auth.isLoading) return <div>Loading...</div>;
+  if (!auth.isAuthenticated) {
+    return <button onClick={() => auth.signinRedirect()}>Login</button>;
+  }
+
+  return (
+    <div>
+      <p>Welcome {auth.user?.profile.email}</p>
+      <button onClick={() => auth.signoutRedirect()}>Logout</button>
+    </div>
+  );
+}
+```
+
+### Backend (Python/FastAPI)
+
+```bash
+pip install fastapi python-jose[cryptography] httpx
+```
+
+```python
+# src/auth/middleware.py
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBearer
+from jose import jwt
+import httpx
+
+security = HTTPBearer()
+
+async def validate_token(token: str) -> dict:
+    """Validate JWT token using Keycloak JWKS"""
+    async with httpx.AsyncClient() as client:
+        config_url = "https://keycloak.example.com/realms/ai-platform/.well-known/openid-configuration"
+        config = (await client.get(config_url)).json()
+        jwks = (await client.get(config['jwks_uri'])).json()
+    
+    return jwt.decode(token, jwks, algorithms=['RS256'], issuer=config['issuer'])
+
+async def get_current_user(credentials = Depends(security)):
+    """Extract user from JWT"""
+    if not credentials:
+        raise HTTPException(status_code=401, detail='Not authenticated')
+    
+    claims = await validate_token(credentials.credentials)
+    return {
+        'id': claims['sub'],
+        'email': claims['email'],
+        'roles': claims.get('realm_access', {}).get('roles', []),
+    }
+
+# src/main.py
+from fastapi import FastAPI, Depends
+
+app = FastAPI()
+
+@app.get('/profile')
+async def get_profile(current_user = Depends(get_current_user)):
+    """Protected endpoint"""
+    return {'user': current_user}
+```
+
+### Environment Variables
+
+```bash
+# Frontend (.env)
+VITE_KEYCLOAK_URL=https://keycloak.example.com/realms/ai-platform
+VITE_KEYCLOAK_CLIENT_ID=ai-platform-client
+
+# Backend (.env)
+KEYCLOAK_URL=https://keycloak.example.com
+KEYCLOAK_REALM=ai-platform
+KEYCLOAK_CLIENT_ID=ai-platform-client
+```
+
+### Key URLs
+
+| URL | Purpose |
+|-----|---------|
+| `{KEYCLOAK_URL}/realms/{realm}/.well-known/openid-configuration` | OIDC auto-discovery |
+| `{KEYCLOAK_URL}/realms/{realm}/protocol/openid-connect/certs` | JWKS (public keys) |
+| `{KEYCLOAK_URL}/admin` | Admin console |
+
+### Common Issues
+
+- **"Invalid issuer"**: Check `KEYCLOAK_URL` matches exactly
+- **"CORS error"**: Add your frontend URL to Keycloak client "Web Origins"
+- **"Token validation fails"**: Verify JWKS endpoint, check system time
+- **"User not found"**: Implement user ID mapping (see integration guide)
+
+For complete integration details including user ID mapping, role-based access, and production best practices, see [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md).
+
+---
+
 ## Configuration
 
 ### Basic Configuration
@@ -441,12 +570,37 @@ To contribute:
 3. Test thoroughly
 4. Submit a pull request
 
+## Complete Integration Guide
+
+For comprehensive integration documentation, see **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** covering:
+
+- **Architecture & Flow**: Detailed sequence diagrams and OAuth 2.0 / OIDC flow
+- **Frontend Integration**: Complete React with `react-oidc-context` implementation
+- **Backend Integration**: FastAPI with `python-jose` JWT validation  
+- **User ID Mapping**: Critical for apps with existing users (database schema, migration)
+- **Protected Resources**: Frontend routes and backend endpoint patterns
+- **Role-Based Access Control**: Realm and client roles
+- **User Registration**: Three strategies for new user onboarding
+- **Best Practices**: Security, performance, and production readiness
+- **Troubleshooting**: Common issues and debug techniques
+
+### Reference Implementation
+
+The [Spending Transaction Monitor](https://github.com/rh-ai-quickstart/spending-transaction-monitor) demonstrates:
+- Complete React + FastAPI authentication
+- User ID mapping between Keycloak and app database
+- Protected routes and endpoints  
+- Role-based authorization
+- Profile management (`/users/profile` endpoint)
+
 ## Resources
 
+- [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) - Complete application integration guide
 - [Keycloak Documentation](https://www.keycloak.org/documentation)
 - [Keycloak Operator Guide](https://www.keycloak.org/guides#operator)
 - [Keycloak on OpenShift](https://www.keycloak.org/getting-started/getting-started-openshift)
 - [AI Architecture Charts](https://github.com/rh-ai-quickstart/ai-architecture-charts)
+- [Spending Transaction Monitor](https://github.com/rh-ai-quickstart/spending-transaction-monitor) - Reference implementation
 
 ## License
 
