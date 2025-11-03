@@ -137,6 +137,20 @@ models:
     id: RedHatAI/Llama-3.2-1B-Instruct-quantized.w8a8
     enabled: false
 
+# Metadata store configuration (distribution registry)
+# By default uses SQLite (single replica only)
+# For multi-replica deployments, override in parent values.yaml to use PostgreSQL
+metadataStore:
+  type: sqlite
+  db_path: ${env.SQLITE_STORE_DIR:=~/.llama/distributions/starter}/registry.db
+
+# Vector IO provider kvstore configuration
+# By default uses SQLite (single replica only)
+# For multi-replica deployments, override in parent values.yaml to use PostgreSQL
+vectorIOKvstore:
+  type: sqlite
+  db_path: ${env.SQLITE_STORE_DIR:=~/.llama/distributions/starter}/pgvector_registry.db
+
 providers:
   agents:
     - provider_id: meta-reference
