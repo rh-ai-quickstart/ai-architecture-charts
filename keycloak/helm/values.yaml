@@ -1,0 +1,254 @@
+# Default values for Keycloak chart
+# This chart deploys Keycloak using the Keycloak Operator
+
+global:
+  # Global image settings (override if needed)
+  imageRegistry: quay.io
+  imagePullPolicy: IfNotPresent
+
+# ⚠️  PREREQUISITE: Keycloak Operator must be installed by cluster admin
+# Installation:
+#   OpenShift: Operators → OperatorHub → Search "Keycloak Operator"
+#   CLI: kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.7/kubernetes/kubernetes.yml
+#
+# The chart includes a pre-flight check that will FAIL if operator is not installed
+
+# Keycloak instance configuration
+keycloak:
+  # Name of the Keycloak instance
+  name: keycloak
+  
+  # Number of Keycloak replicas
+  replicas: 1
+  
+  # Keycloak container image (leave empty to use operator default)
+  image:
+    repository: ""  # e.g., "quay.io/keycloak/keycloak"
+    tag: ""         # e.g., "25.0"
+  
+  # Resource limits and requests
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  
+  # Enable health and metrics endpoints
+  health:
+    enabled: true
+  
+  metrics:
+    enabled: true
+  
+  # Proxy configuration (for OpenShift routes with TLS termination)
+  proxy:
+    headers: xforwarded
+  
+  # Hostname configuration
+  hostname:
+    strict: false
+    strictBackchannel: false
+  
+  # HTTP configuration
+  http:
+    enabled: true
+    port: 8080
+  
+  # OpenShift Route configuration (operator will create route automatically)
+  route:
+    enabled: true
+    # annotations: {}
+    # host: ""  # Leave empty for auto-generated hostname
+  
+  # Additional Keycloak options (passed to server)
+  additionalOptions: []
+    # - name: log-level
+    #   value: INFO
+    # - name: features
+    #   value: token-exchange,admin-fine-grained-authz
+
+# Database configuration
+database:
+  # Use external database (recommended for production)
+  enabled: true
+  
+  # Database vendor (postgres, mysql, mariadb, mssql, oracle)
+  vendor: postgres
+  
+  # Database connection details
+  host: postgresql  # Service name if using in-cluster database
+  port: 5432
+  name: keycloak
+  
+  # Database credentials (stored in secret)
+  username: keycloak
+  password: changeme  # ⚠️  Change in production!
+  
+  # Existing secret containing database credentials
+  # If provided, username/password above are ignored
+  existingSecret:
+    enabled: false
+    name: ""
+    usernameKey: username
+    passwordKey: password
+
+# Realm configuration
+realm:
+  # Create a realm via KeycloakRealmImport CR
+  enabled: true
+  
+  # Realm name
+  name: "ai-platform"
+  
+  # Realm display name
+  displayName: "AI Platform"
+  
+  # Realm settings
+  sslRequired: "external"  # none, external, all
+  registrationAllowed: false
+  loginWithEmailAllowed: true
+  duplicateEmailsAllowed: false
+  resetPasswordAllowed: true
+  editUsernameAllowed: false
+  bruteForceProtected: true
+  
+  # Client configuration
+  client:
+    # Client ID
+    id: "ai-platform-client"
+    
+    # Client name and description
+    name: "AI Platform Client"
+    description: "Default client for AI platform applications"
+    
+    # Client type (public = frontend apps, confidential = backend services)
+    public: true
+    
+    # OAuth/OIDC settings
+    standardFlowEnabled: true        # Authorization code flow
+    implicitFlowEnabled: false       # Implicit flow (not recommended)
+    directAccessGrantsEnabled: true  # Direct access (password grant)
+    serviceAccountsEnabled: false    # Service account for confidential clients
+    
+    # Valid redirect URIs (wildcards allowed)
+    redirectUris:
+      - "*"
+    
+    # Web origins for CORS
+    webOrigins:
+      - "*"
+    
+    # Token lifespan (seconds)
+    accessTokenLifespan: 300  # 5 minutes
+    
+    # Additional client attributes
+    attributes: {}
+      # post.logout.redirect.uris: "*"
+      # backchannel.logout.session.required: "true"
+  
+  # Default users to create in the realm
+  users:
+    # Admin user
+    - username: admin
+      email: admin@example.com
+      firstName: Admin
+      lastName: User
+      enabled: true
+      emailVerified: true
+      # Password (should be changed on first login in production)
+      credentials:
+        - type: password
+          value: admin123
+          temporary: false
+      # Realm roles
+      realmRoles:
+        - admin
+        - user
+      # Client roles (optional)
+      # clientRoles:
+      #   ai-platform-client:
+      #     - client-admin
+    
+    # Test user
+    - username: testuser
+      email: testuser@example.com
+      firstName: Test
+      lastName: User
+      enabled: true
+      emailVerified: true
+      credentials:
+        - type: password
+          value: test123
+          temporary: false
+      realmRoles:
+        - user
+  
+  # Realm roles
+  roles:
+    realm:
+      - name: admin
+        description: Administrator role with full access
+      - name: user
+        description: Standard user role
+    # Client roles (optional)
+    # client:
+    #   ai-platform-client:
+    #     - name: client-admin
+    #       description: Client administrator
+
+# Pre-flight check configuration
+preflight:
+  # Enable pre-flight check to verify operator is installed
+  enabled: true
+  
+  # Image for preflight check job
+  image:
+    repository: quay.io/openshift/origin-cli
+    tag: latest
+  
+  # Resource limits for preflight job
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "200m"
+
+# ServiceAccount
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod Security Context
+podSecurityContext: {}
+
+# Security Context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Common labels to add to all resources
+commonLabels: {}
+
+# Common annotations to add to all resources
+commonAnnotations: {}
+

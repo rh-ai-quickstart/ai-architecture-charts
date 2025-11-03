@@ -1,0 +1,76 @@
+# Development Environment Values
+# Quick setup for local development and testing
+#
+# Usage:
+#   helm install keycloak ./helm --values examples/dev-values.yaml
+
+keycloak:
+  # Single instance for dev
+  replicas: 1
+  
+  # Reduced resources for local testing
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Use embedded H2 database (WARNING: Not for production!)
+# Data is lost when pod restarts
+database:
+  enabled: false
+
+realm:
+  name: dev-realm
+  displayName: "Development Realm"
+  
+  # Relaxed security for dev
+  sslRequired: "none"
+  registrationAllowed: true  # Allow self-registration in dev
+  
+  client:
+    id: dev-client
+    redirectUris:
+      - "http://localhost:3000/*"
+      - "http://localhost:5173/*"  # Vite default port
+      - "http://localhost:8080/*"
+    webOrigins:
+      - "http://localhost:3000"
+      - "http://localhost:5173"
+      - "http://localhost:8080"
+  
+  # Development users with simple passwords
+  users:
+    - username: dev
+      email: dev@example.com
+      firstName: Developer
+      lastName: User
+      enabled: true
+      emailVerified: true
+      credentials:
+        - type: password
+          value: dev123
+          temporary: false
+      realmRoles:
+        - admin
+        - user
+    
+    - username: test
+      email: test@example.com
+      firstName: Test
+      lastName: User
+      enabled: true
+      emailVerified: true
+      credentials:
+        - type: password
+          value: test123
+          temporary: false
+      realmRoles:
+        - user
+
+# Enable preflight check even in dev
+preflight:
+  enabled: true
+

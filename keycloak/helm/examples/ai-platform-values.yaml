@@ -1,0 +1,116 @@
+# AI Platform Integration Values
+# Optimized for AI/ML application authentication
+#
+# Usage:
+#   helm install keycloak ./helm --values examples/ai-platform-values.yaml
+
+keycloak:
+  replicas: 2
+  
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+# Integrate with pgvector database
+database:
+  enabled: true
+  vendor: postgres
+  host: pgvector-postgresql  # If using pgvector chart
+  port: 5432
+  name: keycloak
+  username: keycloak
+  password: changeme  # Use secret in production!
+
+realm:
+  name: ai-platform
+  displayName: "AI Platform"
+  
+  sslRequired: "external"
+  registrationAllowed: false
+  bruteForceProtected: true
+  
+  client:
+    id: ai-platform-client
+    name: "AI Platform Client"
+    description: "Authentication for AI/ML applications"
+    
+    redirectUris:
+      - "https://chatbot.example.com/*"
+      - "https://rag-app.example.com/*"
+      - "https://model-serving.example.com/*"
+    
+    webOrigins:
+      - "https://chatbot.example.com"
+      - "https://rag-app.example.com"
+      - "https://model-serving.example.com"
+    
+    # AI apps may need longer sessions
+    accessTokenLifespan: 600  # 10 minutes
+  
+  # AI platform roles
+  roles:
+    realm:
+      - name: admin
+        description: Platform administrator
+      - name: data-scientist
+        description: Can train and deploy models
+      - name: ml-engineer
+        description: Can manage ML infrastructure
+      - name: user
+        description: Can use AI applications
+      - name: viewer
+        description: Read-only access
+  
+  # Default users for AI platform
+  users:
+    - username: admin
+      email: admin@example.com
+      firstName: Platform
+      lastName: Admin
+      enabled: true
+      emailVerified: true
+      credentials:
+        - type: password
+          value: admin123
+          temporary: true  # Force password change on first login
+      realmRoles:
+        - admin
+    
+    - username: data-scientist
+      email: ds@example.com
+      firstName: Data
+      lastName: Scientist
+      enabled: true
+      emailVerified: true
+      credentials:
+        - type: password
+          value: ds123
+          temporary: true
+      realmRoles:
+        - data-scientist
+        - user
+    
+    - username: testuser
+      email: user@example.com
+      firstName: Test
+      lastName: User
+      enabled: true
+      emailVerified: true
+      credentials:
+        - type: password
+          value: test123
+          temporary: false
+      realmRoles:
+        - user
+
+preflight:
+  enabled: true
+
+commonLabels:
+  app: ai-platform
+  component: authentication
+

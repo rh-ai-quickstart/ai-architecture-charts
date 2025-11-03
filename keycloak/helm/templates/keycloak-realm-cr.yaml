@@ -1,0 +1,88 @@
+{{- if .Values.realm.enabled }}
+---
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakRealmImport
+metadata:
+  name: {{ .Values.realm.name }}
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+    app.kubernetes.io/component: realm
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  keycloakCRName: {{ include "keycloak.instanceName" . }}
+  realm:
+    id: {{ .Values.realm.name }}
+    realm: {{ .Values.realm.name }}
+    enabled: true
+    displayName: {{ .Values.realm.displayName | quote }}
+    sslRequired: {{ .Values.realm.sslRequired | quote }}
+    registrationAllowed: {{ .Values.realm.registrationAllowed }}
+    loginWithEmailAllowed: {{ .Values.realm.loginWithEmailAllowed }}
+    duplicateEmailsAllowed: {{ .Values.realm.duplicateEmailsAllowed }}
+    resetPasswordAllowed: {{ .Values.realm.resetPasswordAllowed }}
+    editUsernameAllowed: {{ .Values.realm.editUsernameAllowed }}
+    bruteForceProtected: {{ .Values.realm.bruteForceProtected }}
+    
+    {{- if .Values.realm.roles }}
+    # Realm roles
+    roles:
+      {{- if .Values.realm.roles.realm }}
+      realm:
+        {{- toYaml .Values.realm.roles.realm | nindent 8 }}
+      {{- end }}
+      {{- if .Values.realm.roles.client }}
+      client:
+        {{- toYaml .Values.realm.roles.client | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    
+    # Client configuration
+    clients:
+      - clientId: {{ .Values.realm.client.id }}
+        name: {{ .Values.realm.client.name | quote }}
+        description: {{ .Values.realm.client.description | quote }}
+        enabled: true
+        clientAuthenticatorType: client-secret
+        redirectUris:
+          {{- toYaml .Values.realm.client.redirectUris | nindent 10 }}
+        webOrigins:
+          {{- toYaml .Values.realm.client.webOrigins | nindent 10 }}
+        standardFlowEnabled: {{ .Values.realm.client.standardFlowEnabled }}
+        implicitFlowEnabled: {{ .Values.realm.client.implicitFlowEnabled }}
+        directAccessGrantsEnabled: {{ .Values.realm.client.directAccessGrantsEnabled }}
+        serviceAccountsEnabled: {{ .Values.realm.client.serviceAccountsEnabled }}
+        publicClient: {{ .Values.realm.client.public }}
+        protocol: openid-connect
+        attributes:
+          "access.token.lifespan": {{ .Values.realm.client.accessTokenLifespan | quote }}
+          {{- range $key, $value := .Values.realm.client.attributes }}
+          {{ $key | quote }}: {{ $value | quote }}
+          {{- end }}
+    
+    {{- if .Values.realm.users }}
+    # Default users
+    users:
+      {{- range .Values.realm.users }}
+      - username: {{ .username }}
+        email: {{ .email }}
+        firstName: {{ .firstName }}
+        lastName: {{ .lastName }}
+        enabled: {{ .enabled }}
+        emailVerified: {{ .emailVerified }}
+        credentials:
+          {{- toYaml .credentials | nindent 10 }}
+        {{- if .realmRoles }}
+        realmRoles:
+          {{- toYaml .realmRoles | nindent 10 }}
+        {{- end }}
+        {{- if .clientRoles }}
+        clientRoles:
+          {{- toYaml .clientRoles | nindent 10 }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+{{- end }}
+

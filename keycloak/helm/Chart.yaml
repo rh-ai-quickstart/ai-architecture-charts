@@ -1,0 +1,41 @@
+apiVersion: v2
+name: keycloak
+description: Red Hat Build of Keycloak deployment using the Keycloak Operator with realm and user management
+type: application
+version: 0.1.0
+appVersion: "25.0"
+
+keywords:
+  - keycloak
+  - authentication
+  - oidc
+  - oauth2
+  - sso
+  - identity
+  - security
+
+home: https://github.com/rh-ai-quickstart/ai-architecture-charts
+sources:
+  - https://github.com/rh-ai-quickstart/ai-architecture-charts
+  - https://www.keycloak.org/
+
+maintainers:
+  - name: Red Hat AI Quickstart Team
+    email: ai-quickstart@redhat.com
+
+icon: https://www.keycloak.org/resources/images/keycloak_logo_480x108.png
+
+annotations:
+  category: Security
+  licenses: Apache-2.0
+  operatorRequired: "true"
+  operatorName: "keycloak-operator"
+  operatorCRDs: "keycloaks.k8s.keycloak.org,keycloakrealmimports.k8s.keycloak.org"
+
+# Dependencies (if using pgvector as database)
+# dependencies:
+#   - name: pgvector
+#     version: ">=0.1.0"
+#     repository: "https://rh-ai-quickstart.github.io/ai-architecture-charts"
+#     condition: database.enabled
+

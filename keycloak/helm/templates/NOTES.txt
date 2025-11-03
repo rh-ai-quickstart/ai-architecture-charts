@@ -1,0 +1,117 @@
+🎉 Keycloak has been successfully deployed!
+
+===========================================
+📋 Deployment Information
+===========================================
+
+Namespace:      {{ .Release.Namespace }}
+Release Name:   {{ .Release.Name }}
+Keycloak Name:  {{ include "keycloak.instanceName" . }}
+{{- if .Values.realm.enabled }}
+Realm:          {{ .Values.realm.name }}
+Client ID:      {{ .Values.realm.client.id }}
+{{- end }}
+
+===========================================
+🔍 Check Deployment Status
+===========================================
+
+# Check Keycloak instance status
+kubectl get keycloak {{ include "keycloak.instanceName" . }} -n {{ .Release.Namespace }}
+
+{{- if .Values.realm.enabled }}
+# Check realm import status
+kubectl get keycloakrealmimport {{ .Values.realm.name }} -n {{ .Release.Namespace }}
+{{- end }}
+
+# Check Keycloak pods
+kubectl get pods -n {{ .Release.Namespace }} -l app=keycloak
+
+# Wait for Keycloak to be ready (may take 2-5 minutes)
+kubectl wait --for=condition=Ready keycloak/{{ include "keycloak.instanceName" . }} -n {{ .Release.Namespace }} --timeout=300s
+
+===========================================
+🌐 Access Keycloak
+===========================================
+
+{{- if .Values.keycloak.route.enabled }}
+# Get the Keycloak URL (OpenShift Route)
+KEYCLOAK_URL=$(kubectl get route {{ include "keycloak.instanceName" . }}-ingress -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}' 2>/dev/null)
+if [ -n "$KEYCLOAK_URL" ]; then
+  echo "Keycloak URL: https://$KEYCLOAK_URL"
+  echo "Admin Console: https://$KEYCLOAK_URL/admin"
+{{- if .Values.realm.enabled }}
+  echo "Realm URL: https://$KEYCLOAK_URL/realms/{{ .Values.realm.name }}"
+{{- end }}
+else
+  echo "⏳ Route not ready yet. Wait a moment and try again."
+fi
+{{- else }}
+# Access via port-forward
+kubectl port-forward svc/{{ include "keycloak.instanceName" . }}-service 8080:8080 -n {{ .Release.Namespace }}
+
+# Then open: http://localhost:8080
+{{- end }}
+
+===========================================
+🔑 Default Credentials
+===========================================
+
+{{- if .Values.realm.enabled }}
+{{ if .Values.realm.users }}
+Default users have been created in realm "{{ .Values.realm.name }}":
+{{- range .Values.realm.users }}
+
+Username: {{ .username }}
+Email:    {{ .email }}
+Password: {{ (index .credentials 0).value }}
+{{- if .realmRoles }}
+Roles:    {{ .realmRoles | join ", " }}
+{{- end }}
+{{- end }}
+
+⚠️  SECURITY WARNING: Change these default passwords immediately in production!
+{{- end }}
+{{- end }}
+
+Admin Console Credentials:
+  Get from secret: kubectl get secret {{ include "keycloak.instanceName" . }}-initial-admin -n {{ .Release.Namespace }} -o jsonpath='{.data.username}' | base64 -d
+  Password:        kubectl get secret {{ include "keycloak.instanceName" . }}-initial-admin -n {{ .Release.Namespace }} -o jsonpath='{.data.password}' | base64 -d
+
+===========================================
+📚 Next Steps
+===========================================
+
+1. Wait for Keycloak to be fully ready
+2. Access the Admin Console and change default credentials
+3. Configure your application to use:
+{{- if .Values.realm.enabled }}
+   - OIDC Discovery URL: https://<keycloak-url>/realms/{{ .Values.realm.name }}/.well-known/openid-configuration
+   - Client ID: {{ .Values.realm.client.id }}
+   - Redirect URIs: Configure in your values file
+{{- else }}
+   - Create a realm and client in the Admin Console
+{{- end }}
+
+===========================================
+🛠️ Troubleshooting
+===========================================
+
+# View Keycloak logs
+kubectl logs -l app=keycloak -n {{ .Release.Namespace }} -f
+
+# Check Keycloak events
+kubectl get events -n {{ .Release.Namespace }} --sort-by='.lastTimestamp'
+
+# Describe Keycloak CR for status details
+kubectl describe keycloak {{ include "keycloak.instanceName" . }} -n {{ .Release.Namespace }}
+
+{{- if .Values.realm.enabled }}
+# Check realm import status
+kubectl describe keycloakrealmimport {{ .Values.realm.name }} -n {{ .Release.Namespace }}
+{{- end }}
+
+For more information, visit:
+  - Keycloak Documentation: https://www.keycloak.org/documentation
+  - Keycloak Operator: https://www.keycloak.org/guides#operator
+

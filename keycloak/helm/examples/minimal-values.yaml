@@ -1,0 +1,18 @@
+# Minimal Configuration Values
+# Bare minimum setup with sensible defaults
+#
+# Usage:
+#   helm install keycloak ./helm --values examples/minimal-values.yaml
+
+# Everything else uses chart defaults
+# This creates:
+# - Single Keycloak instance
+# - Realm named "ai-platform"
+# - Client "ai-platform-client"
+# - Admin and test users
+# - PostgreSQL database integration
+
+database:
+  host: postgresql  # Replace with your database service name
+  password: mySecurePassword  # Replace with actual password
+

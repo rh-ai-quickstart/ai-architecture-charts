@@ -1,0 +1,89 @@
+---
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: {{ include "keycloak.instanceName" . }}
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  instances: {{ .Values.keycloak.replicas }}
+  
+  {{- if and .Values.keycloak.image.repository .Values.keycloak.image.tag }}
+  image: {{ .Values.keycloak.image.repository }}:{{ .Values.keycloak.image.tag }}
+  {{- end }}
+  
+  {{- if .Values.database.enabled }}
+  # Use external database for persistence
+  db:
+    vendor: {{ .Values.database.vendor }}
+    host: {{ .Values.database.host }}
+    port: {{ .Values.database.port }}
+    database: {{ .Values.database.name }}
+    usernameSecret:
+      name: {{ include "keycloak.databaseSecretName" . }}
+      key: {{ include "keycloak.databaseUsernameKey" . }}
+    passwordSecret:
+      name: {{ include "keycloak.databaseSecretName" . }}
+      key: {{ include "keycloak.databasePasswordKey" . }}
+  {{- end }}
+  
+  # HTTP settings
+  http:
+    httpEnabled: {{ .Values.keycloak.http.enabled }}
+    httpPort: {{ .Values.keycloak.http.port }}
+  
+  # Hostname configuration
+  hostname:
+    strict: {{ .Values.keycloak.hostname.strict }}
+    strictBackchannel: {{ .Values.keycloak.hostname.strictBackchannel }}
+  
+  {{- if .Values.keycloak.route.enabled }}
+  # Ingress/Route configuration
+  ingress:
+    enabled: true
+    {{- with .Values.keycloak.route.annotations }}
+    annotations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  
+  # Resource limits
+  resources:
+    requests:
+      {{- toYaml .Values.keycloak.resources.requests | nindent 6 }}
+    limits:
+      {{- toYaml .Values.keycloak.resources.limits | nindent 6 }}
+  
+  # Additional configuration
+  additionalOptions:
+    {{- if .Values.keycloak.health.enabled }}
+    - name: health-enabled
+      value: "true"
+    {{- end }}
+    {{- if .Values.keycloak.metrics.enabled }}
+    - name: metrics-enabled
+      value: "true"
+    {{- end }}
+    {{- if .Values.keycloak.http.enabled }}
+    - name: http-enabled
+      value: "true"
+    {{- end }}
+    {{- if .Values.keycloak.proxy.headers }}
+    # Proxy configuration (for routes with TLS termination)
+    - name: proxy-headers
+      value: {{ .Values.keycloak.proxy.headers | quote }}
+    {{- end }}
+    - name: hostname-strict
+      value: {{ .Values.keycloak.hostname.strict | quote }}
+    - name: hostname-strict-backchannel
+      value: {{ .Values.keycloak.hostname.strictBackchannel | quote }}
+    {{- range .Values.keycloak.additionalOptions }}
+    - name: {{ .name }}
+      value: {{ .value | quote }}
+    {{- end }}
+

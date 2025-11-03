@@ -1,0 +1,129 @@
+# Production Environment Values
+# Enterprise-grade configuration with high availability
+#
+# Usage:
+#   helm install keycloak ./helm --values examples/production-values.yaml
+#
+# ⚠️  IMPORTANT: Replace all placeholder values before deploying!
+
+keycloak:
+  replicas: 3  # High availability with 3 replicas
+  
+  # Production resource allocation
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+  
+  # Enable all monitoring features
+  health:
+    enabled: true
+  metrics:
+    enabled: true
+  
+  # Production-specific options
+  additionalOptions:
+    - name: log-level
+      value: INFO
+    - name: features
+      value: token-exchange,admin-fine-grained-authz
+
+# External PostgreSQL database (required for production)
+database:
+  enabled: true
+  vendor: postgres
+  host: postgresql.database.svc.cluster.local  # Replace with your database host
+  port: 5432
+  name: keycloak_prod
+  
+  # Use existing secret for credentials (recommended)
+  existingSecret:
+    enabled: true
+    name: keycloak-db-credentials  # Create this secret separately
+    usernameKey: username
+    passwordKey: password
+  
+  # OR set credentials directly (less secure)
+  # username: keycloak
+  # password: CHANGE-ME-TO-STRONG-PASSWORD
+
+realm:
+  name: production-realm
+  displayName: "Production Platform"
+  
+  # Strict security settings
+  sslRequired: "all"  # Require HTTPS for all connections
+  registrationAllowed: false  # Disable self-registration
+  resetPasswordAllowed: true  # Allow password resets via email
+  bruteForceProtected: true  # Enable brute force protection
+  
+  client:
+    id: production-client
+    name: "Production Application"
+    public: true
+    
+    # Specific redirect URIs (no wildcards in production!)
+    redirectUris:
+      - "https://app.example.com/auth/callback"
+      - "https://app.example.com/silent-check-sso.html"
+    
+    # Specific web origins (no wildcards!)
+    webOrigins:
+      - "https://app.example.com"
+    
+    # Shorter token lifespan for production
+    accessTokenLifespan: 300  # 5 minutes
+    
+    attributes:
+      "backchannel.logout.session.required": "true"
+      "post.logout.redirect.uris": "https://app.example.com/*"
+  
+  # Do NOT create default users in production
+  # Users should be managed via:
+  # - LDAP/Active Directory integration
+  # - SAML federation
+  # - Manual creation by administrators
+  users: []
+  
+  # Define roles but no users
+  roles:
+    realm:
+      - name: admin
+        description: Administrator with full access
+      - name: user
+        description: Standard user
+      - name: viewer
+        description: Read-only access
+
+# Enable preflight checks
+preflight:
+  enabled: true
+
+# Add common labels for production
+commonLabels:
+  environment: production
+  team: platform
+  
+# Add monitoring annotations
+commonAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/metrics"
+
+# Node affinity (optional - spread across availability zones)
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - keycloak
+          topologyKey: topology.kubernetes.io/zone
+

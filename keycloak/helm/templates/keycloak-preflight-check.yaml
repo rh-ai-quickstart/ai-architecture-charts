@@ -1,0 +1,106 @@
+{{- if .Values.preflight.enabled }}
+---
+# Pre-flight check to ensure Keycloak Operator is installed
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "keycloak.fullname" . }}-preflight
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+    app.kubernetes.io/component: preflight
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 60
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        {{- include "keycloak.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: preflight
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "keycloak.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: check-operator
+        image: "{{ .Values.preflight.image.repository }}:{{ .Values.preflight.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+        resources:
+          {{- toYaml .Values.preflight.resources | nindent 10 }}
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          
+          echo "=========================================="
+          echo "🔍 Keycloak Operator Pre-flight Check"
+          echo "=========================================="
+          echo ""
+          
+          # Check if Keycloak CRD exists (indicates operator is installed)
+          if kubectl get crd keycloaks.k8s.keycloak.org &>/dev/null; then
+            echo "✅ Keycloak CRD found: keycloaks.k8s.keycloak.org"
+          else
+            echo "❌ ERROR: Keycloak Operator is NOT installed!"
+            echo ""
+            echo "The Keycloak Operator must be installed before deploying with Keycloak."
+            echo ""
+            echo "📋 Installation Instructions:"
+            echo "   OpenShift:"
+            echo "     1. Open OpenShift Console"
+            echo "     2. Navigate to: Operators → OperatorHub"
+            echo "     3. Search for: 'Red Hat Build of Keycloak Operator' or 'Keycloak Operator'"
+            echo "     4. Click Install and follow the prompts"
+            echo ""
+            echo "   Kubernetes:"
+            echo "     kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.7/kubernetes/kubernetes.yml"
+            echo ""
+            exit 1
+          fi
+          
+          # Check if RealmImport CRD exists
+          if kubectl get crd keycloakrealmimports.k8s.keycloak.org &>/dev/null; then
+            echo "✅ KeycloakRealmImport CRD found: keycloakrealmimports.k8s.keycloak.org"
+          else
+            echo "⚠️  WARNING: KeycloakRealmImport CRD not found"
+            echo "   Realm auto-import may not work."
+          fi
+          
+          # Check if operator pod is running
+          echo ""
+          echo "🔍 Checking for running operator pods..."
+          OPERATOR_PODS=$(kubectl get pods --all-namespaces -l app.kubernetes.io/name=keycloak-operator -o name 2>/dev/null || echo "")
+          
+          if [ -z "$OPERATOR_PODS" ]; then
+            # Try alternative label
+            OPERATOR_PODS=$(kubectl get pods --all-namespaces -l name=keycloak-operator -o name 2>/dev/null || echo "")
+          fi
+          
+          if [ -z "$OPERATOR_PODS" ]; then
+            # Try RHBK operator
+            OPERATOR_PODS=$(kubectl get pods --all-namespaces -l app.kubernetes.io/name=rhbk-operator -o name 2>/dev/null || echo "")
+          fi
+          
+          if [ -n "$OPERATOR_PODS" ]; then
+            echo "✅ Keycloak operator pod(s) found and running"
+            echo "$OPERATOR_PODS"
+          else
+            echo "⚠️  WARNING: Could not find running Keycloak operator pods"
+            echo "   The operator may still be starting up."
+            echo "   If deployment fails, check operator status."
+          fi
+          
+          echo ""
+          echo "=========================================="
+          echo "✅ Pre-flight check PASSED"
+          echo "   Proceeding with Keycloak deployment..."
+          echo "=========================================="
+{{- end }}
+
