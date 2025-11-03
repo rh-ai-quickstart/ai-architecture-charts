@@ -23,6 +23,13 @@ metadata:
     {{- include "mcp-servers.labels" $serverDict | nindent 4 }}
 spec:
   type: ClusterIP
+  {{- with $server.sessionAffinity }}
+  sessionAffinity: {{ . }}
+  {{- end }}
+  {{- with $server.sessionAffinityConfig }}
+  sessionAffinityConfig:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   ports:
   - port: {{ $servicePort }}
     targetPort: {{ $targetPort }}
