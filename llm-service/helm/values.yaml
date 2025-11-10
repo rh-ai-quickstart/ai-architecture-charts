@@ -22,7 +22,7 @@ deviceConfigs:
       - nvidia.com/gpu
     acceleratorType: nvidia.com/gpu
   hpu:
-    image: quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container
+    image: quay.io/modh/vllm:rhoai-2.25-gaudi
     tolerations:
       - key: habana.ai/gaudi
         effect: NoSchedule
@@ -51,6 +51,10 @@ servingRuntime:
   env:
     - name: HOME
       value: /vllm
+    - name: HF_HUB_OFFLINE
+      value: "0"
+    - name: VLLM_SKIP_WARMUP
+      value: "true"
     - name: HF_TOKEN
       valueFrom:
         secretKeyRef:
