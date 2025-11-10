@@ -43,31 +43,17 @@ env:
     value: "4096"
   - name: VLLM_API_TOKEN
     value: fake
-  - name: POSTGRES_USER
-    valueFrom:
-      secretKeyRef:
-        key: user
-        name: pgvector
-  - name: POSTGRES_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        key: password
-        name: pgvector
-  - name: POSTGRES_HOST
-    valueFrom:
-      secretKeyRef:
-        key: host
-        name: pgvector
-  - name: POSTGRES_PORT
-    valueFrom:
-      secretKeyRef:
-        key: port
-        name: pgvector
-  - name: POSTGRES_DBNAME
-    valueFrom:
-      secretKeyRef:
-        key: dbname
-        name: pgvector
+
+# PGVector configuration - set enabled to true to enable pgvector integration
+pgvector:
+  enabled: false
+  # When enabled, the following environment variables will be automatically added
+  # from the 'pgvector' in the deployment.yaml
+  # - POSTGRES_USER
+  # - POSTGRES_PASSWORD
+  # - POSTGRES_HOST
+  # - POSTGRES_PORT
+  # - POSTGRES_DBNAME
 
 resources: {}
 
@@ -136,6 +122,13 @@ models:
   llama-3-2-1b-instruct-quantized:
     id: RedHatAI/Llama-3.2-1B-Instruct-quantized.w8a8
     enabled: false
+  # To configure LlamaStack with remote llm, replace the id,
+  # url and apiToken value and set enabled to true
+  # remote-llm:
+  #   id: llama-3-3-70b-instruct-w8a8
+  #   url: https://somedomain.com/v1
+  #   apiToken: fake-token
+  #   enabled: true
 
 # Metadata store configuration (distribution registry)
 # By default uses SQLite (single replica only)

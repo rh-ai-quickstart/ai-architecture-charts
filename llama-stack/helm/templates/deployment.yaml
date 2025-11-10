@@ -79,6 +79,33 @@ spec:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.otelExporter }}
             {{- end }}
+            {{- if .Values.pgvector.enabled }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  key: user
+                  name: pgvector
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: pgvector
+            - name: POSTGRES_HOST
+              valueFrom:
+                secretKeyRef:
+                  key: host
+                  name: pgvector
+            - name: POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  key: port
+                  name: pgvector
+            - name: POSTGRES_DBNAME
+              valueFrom:
+                secretKeyRef:
+                  key: dbname
+                  name: pgvector
+            {{- end }}
           envFrom:
           - secretRef:
               name: {{ .Chart.Name }}-env

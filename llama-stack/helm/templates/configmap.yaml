@@ -49,17 +49,19 @@ data:
       - provider_id: sentence-transformers
         provider_type: inline::sentence-transformers
         config: {}
-      vector_io:
-      - provider_id: pgvector
-        provider_type: remote::pgvector
-        config:
-          host: ${env.POSTGRES_HOST:=pgvector}
-          port: ${env.POSTGRES_PORT:=5432}
-          db: ${env.POSTGRES_DBNAME:=rag_blueprint}
-          user: ${env.POSTGRES_USER:=postgres}
-          password: ${env.POSTGRES_PASSWORD:=rag_password}
-          kvstore:
-            {{- toYaml .Values.vectorIOKvstore | nindent 12 }}
+      {{- if .Values.pgvector.enabled }}
+        vector_io:
+        - provider_id: pgvector
+          provider_type: remote::pgvector
+          config:
+            host: ${env.POSTGRES_HOST:=pgvector}
+            port: ${env.POSTGRES_PORT:=5432}
+            db: ${env.POSTGRES_DBNAME:=rag_blueprint}
+            user: ${env.POSTGRES_USER:=postgres}
+            password: ${env.POSTGRES_PASSWORD:=rag_password}
+            kvstore:
+              {{- toYaml .Values.vectorIOKvstore | nindent 12 }}
+      {{- end }}
       files:
       - provider_id: meta-reference-files
         provider_type: inline::localfs
