@@ -46,7 +46,7 @@ env:
 
 # PGVector configuration - set enabled to true to enable pgvector integration
 pgvector:
-  enabled: false
+  enabled: true # backwards compatibility
   # When enabled, the following environment variables will be automatically added
   # from the 'pgvector' in the deployment.yaml
   # - POSTGRES_USER
