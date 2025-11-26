@@ -1,0 +1,6 @@
+dependencies:
+- name: pgvector
+  repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+  version: 0.5.1
+digest: sha256:a2d203583a1ffdd86324513435ea4ae64bdb3d943645712b9dc86b368124620d
+generated: "2025-11-20T11:16:01.132484-05:00"
