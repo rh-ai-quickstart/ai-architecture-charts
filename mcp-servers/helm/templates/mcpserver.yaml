@@ -32,11 +32,22 @@ spec:
   permissionProfile:
     {{- toYaml . | nindent 4 }}
   {{- end }}
-  {{- with $server.env }}
+  {{- if or $server.env $server.envSecrets }}
   env:
+  {{- with $server.env }}
   {{- range $envKey, $envValue := . }}
   - name: {{ $envKey }}
     value: {{ $envValue | default "" | quote }}
+  {{- end }}
+  {{- end }}
+  {{- with $server.envSecrets }}
+  {{- range $envKey, $secretSpec := . }}
+  - name: {{ $envKey }}
+    valueFrom:
+      secretKeyRef:
+        name: {{ $secretSpec.name }}
+        key: {{ $secretSpec.key }}
+  {{- end }}
   {{- end }}
   {{- end }}
   {{- if or $server.securityContext $server.podSecurityContext $server.volumes $server.volumeMounts $server.resources $server.secretMounts }}

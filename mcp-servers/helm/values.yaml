@@ -32,3 +32,19 @@ mcp-servers:
     volumeMounts:
       - name: sqlcl-home
         mountPath: /sqlcl-home
+
+  github-mcp:
+    enabled: false
+    deploymentMode: deployment
+    image:
+      repository: quay.io/rh-ai-quickstart/github-mcp
+      tag: "0.5.7"  # Defaults to .Chart.Version
+    transport: streamable-http
+    targetPort: 8080
+    envSecrets:
+      GITHUB_PERSONAL_ACCESS_TOKEN:
+        name: github-mcp-secret                                                        
+        key: GITHUB_PERSONAL_ACCESS_TOKEN
+    # Optional: Limit which tools are available
+    # env:
+    #   GITHUB_TOOLS: "get_file_contents,issue_read,create_pull_request"
