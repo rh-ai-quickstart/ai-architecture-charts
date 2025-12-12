@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"sync"
 )
 
 type MCPProxy struct {
@@ -16,7 +15,6 @@ type MCPProxy struct {
 	stdin    io.WriteCloser
 	stdout   *bufio.Reader
 	requests chan *request
-	mu       sync.Mutex
 }
 
 type request struct {
@@ -76,9 +74,7 @@ func (p *MCPProxy) processRequests() {
 		log.Printf("Sending to GitHub MCP: %s", string(req.msg))
 
 		// Write to stdio (newline-delimited JSON)
-		p.mu.Lock()
 		p.stdin.Write(append(req.msg, '\n'))
-		p.mu.Unlock()
 
 		// Only read response if this is a request (has ID), not a notification
 		if req.isRequest {
