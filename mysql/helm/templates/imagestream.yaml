@@ -1,0 +1,33 @@
+{{- if and .Values.enabled .Values.openshift.enabled .Values.openshift.imageStream.enabled }}
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: {{ .Values.imageName | default "mysql" }}
+  namespace: {{ include "mysql.namespace" . }}
+  labels:
+    app: {{ .Values.imageName | default "mysql" }}
+    {{- include "mysql.labels" . | nindent 4 }}
+spec:
+  lookupPolicy:
+    local: false
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStreamTag
+metadata:
+  name: {{ .Values.imageName | default "mysql" }}:{{ .Values.imageTag | default "latest" }}
+  namespace: {{ include "mysql.namespace" . }}
+  labels:
+    app: {{ .Values.imageName | default "mysql" }}
+    {{- include "mysql.labels" . | nindent 4 }}
+spec:
+  tag:
+    from:
+      kind: DockerImage
+      name: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+    importPolicy:
+      scheduled: true
+    referencePolicy:
+      type: Source
+{{- end }}
+

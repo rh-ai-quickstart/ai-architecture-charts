@@ -1,0 +1,19 @@
+apiVersion: v2
+name: model-registry
+description: A Helm chart for OpenDataHub Model Registry on Kubernetes/OpenShift
+type: application
+version: 0.1.0
+appVersion: "1.0"
+keywords:
+  - model-registry
+  - openshift-ai
+  - openshift
+home: https://github.com/rh-ai-quickstart/ai-architecture-charts
+maintainers:
+  - name: Red Hat AI Quickstart Team
+dependencies:
+  - name: mysql
+    version: ">=0.1.0"
+    repository: "file://../../mysql/helm"
+    condition: mysql.enabled
+

@@ -1,0 +1,79 @@
+# Default values for model-registry.
+
+# Enable/disable Model Registry deployment
+enabled: true
+
+# Create the ModelRegistry CR (requires model-registry-operator)
+createService: true
+
+# Model Registry name
+name: model-registry
+nameOverride: ""
+fullnameOverride: ""
+
+# Namespace override (defaults to release namespace)
+namespace: ""
+
+# Service ports
+grpcPort: 9090
+restPort: 8080
+
+# ==============================
+# MySQL subchart configuration
+# ==============================
+istio:
+  enabled: false
+  audiences:
+    - https://kubernetes.default.svc
+  authProvider: "https://kubernetes.default.svc"
+  gateway:
+    domain: ""  # Set to your OpenShift apps domain for external access
+    grpc:
+      gatewayRoute: enabled
+    rest:
+      gatewayRoute: enabled
+
+# ==============================
+# MySQL subchart configuration
+# ==============================
+mysql:
+  enabled: true
+  name: mysql-model-registry
+  namespace: rhoai-model-registries  # Defaults to release namespace
+  
+  image:
+    repository: quay.io/sclorg/mysql-80-c9s
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  # Database credentials
+  user: mysql_user
+  password: mysql_password
+  rootPassword: mysql_root_password
+  database: model_registry
+  
+  # Service configuration
+  port: 3306
+  
+  # Persistence configuration
+  persistence:
+    enabled: true
+    size: 1Gi
+    accessMode: ReadWriteOnce
+    storageClassName: ""
+  
+  # Resource limits
+  resources:
+    limits:
+      cpu: "1"
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  
+  # OpenShift-specific settings
+  openshift:
+    enabled: false
+    imageStream:
+      enabled: true
+
