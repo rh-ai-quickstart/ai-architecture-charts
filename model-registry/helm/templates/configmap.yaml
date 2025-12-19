@@ -1,0 +1,20 @@
+{{- if .Values.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "model-registry.resourceName" . }}-config
+  namespace: {{ include "model-registry.namespace" . }}
+  labels:
+    app: {{ include "model-registry.resourceName" . }}
+    {{- include "model-registry.labels" . | nindent 4 }}
+data:
+  registry-name: {{ include "model-registry.resourceName" . | quote }}
+  database-type: "mysql"
+  mysql-host: {{ include "model-registry.mysql.host" . | quote }}
+  mysql-port: {{ .Values.mysql.port | default 3306 | quote }}
+  mysql-database: {{ .Values.mysql.database | quote }}
+  grpc-port: {{ .Values.grpcPort | default 9090 | quote }}
+  rest-port: {{ .Values.restPort | default 8080 | quote }}
+{{- end }}
+

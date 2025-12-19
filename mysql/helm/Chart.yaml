@@ -1,0 +1,22 @@
+apiVersion: v2
+name: mysql
+description: A Helm chart for MySQL database on Kubernetes/OpenShift
+
+# Application chart for MySQL deployment
+type: application
+
+# Chart version - increment for changes to chart/templates
+version: 0.1.0
+
+# MySQL version being deployed
+appVersion: "8.0"
+
+keywords:
+  - mysql
+  - database
+  - openshift
+  - model-registry
+home: https://github.com/rh-ai-quickstart/ai-architecture-charts
+maintainers:
+  - name: Red Hat AI Quickstart Team
+

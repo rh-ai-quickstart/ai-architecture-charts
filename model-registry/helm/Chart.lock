@@ -1,0 +1,6 @@
+dependencies:
+- name: mysql
+  repository: file://../../mysql/helm
+  version: 0.1.0
+digest: sha256:2f5baa3cff1bd76ff357d6fa626a9c453f8abbd62087130b3e05f0b6f0d61578
+generated: "2025-12-19T12:38:51.414305-05:00"
