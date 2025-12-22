@@ -36,7 +36,6 @@ func NewMCPProxy() (*MCPProxy, error) {
 
 	log.Printf("Starting GitHub MCP Server at: %s", mcpPath)
 
-	// ✅ FIX: Add "stdio" so GitHub MCP runs in MCP mode
 	cmd := exec.Command(mcpPath, "stdio")
 
 	cmd.Env = append(os.Environ())
@@ -78,21 +77,68 @@ func (p *MCPProxy) processRequests() {
 
 		// Only read response if this is a request (has ID), not a notification
 		if req.isRequest {
-			line, err := p.stdout.ReadBytes('\n')
-			if err != nil {
-				log.Printf("Error reading from GitHub MCP: %v", err)
-				close(req.response)
-				continue
-			}
+			// Parse the request to get its ID
+			var reqMsg MCPMessage
+			json.Unmarshal(req.msg, &reqMsg)
+			requestID := reqMsg.ID
 
-			log.Printf("Received from GitHub MCP: %s", string(line[:len(line)-1]))
-			req.response <- line[:len(line)-1]
+			// Keep reading until we get a response matching our request ID
+			// (skip any notifications that come before the response)
+			for {
+				line, err := p.stdout.ReadBytes('\n')
+				if err != nil {
+					log.Printf("Error reading from GitHub MCP: %v", err)
+					close(req.response)
+					break
+				}
+
+				responseData := line[:len(line)-1]
+				log.Printf("Received from GitHub MCP: %s", string(responseData))
+
+				// Parse the response to check if it has an ID
+				var respMsg MCPMessage
+				json.Unmarshal(responseData, &respMsg)
+
+				// If this is a notification (no ID), log it and continue reading
+				if respMsg.ID == nil {
+					log.Printf("Received notification (ignoring while waiting for response): %s", string(responseData))
+					continue
+				}
+
+				// Check if response ID matches request ID
+				if respMsg.ID == requestID || (respMsg.ID != nil && requestID != nil && formatID(respMsg.ID) == formatID(requestID)) {
+					req.response <- responseData
+					break
+				}
+
+				// Mismatched ID - this shouldn't happen in normal operation
+				log.Printf("Warning: received response with unexpected ID %v (expected %v)", respMsg.ID, requestID)
+				req.response <- responseData
+				break
+			}
 		}
 		close(req.response)
 	}
 }
 
+// formatID converts an interface{} ID to a comparable string
+func formatID(id interface{}) string {
+	// JSON numbers are decoded as float64
+	data, _ := json.Marshal(id)
+	return string(data)
+}
+
 func (p *MCPProxy) Handle(w http.ResponseWriter, r *http.Request) {
+	// Handle CORS preflight
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	log.Printf("HTTP request from %s %s", r.RemoteAddr, r.URL.Path)
 
 	var msg json.RawMessage
@@ -134,79 +180,13 @@ func (p *MCPProxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (p *MCPProxy) HandleSSE(w http.ResponseWriter, r *http.Request) {
-	log.Printf("SSE connection from %s %s", r.RemoteAddr, r.URL.Path)
+// HandleSSEDeprecated returns a friendly message that SSE is deprecated
+func HandleSSEDeprecated(w http.ResponseWriter, r *http.Request) {
+	log.Printf("SSE request from %s - returning deprecation notice", r.RemoteAddr)
 
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
-		return
-	}
-
-	if r.Method == "POST" {
-		var msg json.RawMessage
-		if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
-			log.Printf("Failed to decode body: %v", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		log.Printf("Received SSE message: %s", string(msg))
-
-		var mcpMsg MCPMessage
-		json.Unmarshal(msg, &mcpMsg)
-		isRequest := mcpMsg.ID != nil
-
-		req := &request{
-			msg:       msg,
-			isRequest: isRequest,
-			response:  make(chan json.RawMessage, 1),
-		}
-		p.requests <- req
-
-		if isRequest {
-			response, ok := <-req.response
-			if !ok {
-				http.Error(w, "Failed to get response", http.StatusInternalServerError)
-				return
-			}
-
-			log.Printf("Sending SSE response: %s", string(response))
-
-			w.Write([]byte("data: "))
-			w.Write(response)
-			w.Write([]byte("\n\n"))
-			flusher.Flush()
-		} else {
-			<-req.response
-			log.Printf("SSE notification processed")
-			w.WriteHeader(http.StatusAccepted)
-		}
-		return
-	}
-
-	if r.Method == "GET" {
-		log.Printf("SSE stream opened")
-		w.Write([]byte(": connected\n\n"))
-		flusher.Flush()
-		<-r.Context().Done()
-		log.Printf("SSE stream closed")
-		return
-	}
-
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusGone)
+	w.Write([]byte(`{"jsonrpc":"2.0","error":{"code":-32000,"message":"SSE transport is deprecated. Please use Streamable HTTP transport instead. Send JSON-RPC requests via POST to the root endpoint (/)."}}`))
 }
 
 func main() {
@@ -222,11 +202,10 @@ func main() {
 		log.Fatalf("Failed to create proxy: %v", err)
 	}
 
-	http.HandleFunc("/sse", proxy.HandleSSE)
+	http.HandleFunc("/sse", HandleSSEDeprecated)
 	http.HandleFunc("/", proxy.Handle)
 
 	log.Printf("Listening on port %s", port)
-	log.Printf("SSE endpoint: http://localhost:%s/sse", port)
 	log.Printf("HTTP endpoint: http://localhost:%s/", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
