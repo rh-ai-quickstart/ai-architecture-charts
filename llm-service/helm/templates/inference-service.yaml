@@ -44,6 +44,13 @@ spec:
             {{- end }}
           {{- end }}
           {{- toYaml $customResources | nindent 8 }}
+        {{- else if eq $modelDevice "xeon" }}
+          {{- $customResources := $model.resources | deepCopy }}
+          {{- $_ := set $customResources.limits "cpu" $deviceConfig.resources.limits.cpu }}
+          {{- $_ := set $customResources.limits "memory" $deviceConfig.resources.limits.memory }}
+          {{- $_ := set $customResources.requests "cpu" $deviceConfig.resources.requests.cpu }}
+          {{- $_ := set $customResources.requests "memory" $deviceConfig.resources.requests.memory }}
+          {{- toYaml $customResources | nindent 8 }}
         {{- else }}
           {{- toYaml $model.resources | nindent 8 }}
         {{- end }}
@@ -66,6 +73,20 @@ spec:
           {{- if $acceleratorType }}
           {{ $acceleratorType }}: {{ $acceleratorCount | quote }}
           {{- end }}
+          {{- if $model.storageSize }}
+          ephemeral-storage: {{ $model.storageSize | default "50Gi" }}
+          {{- end }}
+      {{- else if eq $modelDevice "xeon" }}
+      resources:
+        limits:
+          cpu: {{ $deviceConfig.resources.limits.cpu }}
+          memory: {{ $deviceConfig.resources.limits.memory }}
+          {{- if $model.storageSize }}
+          ephemeral-storage: {{ $model.storageSize | default "50Gi" }}
+          {{- end }}
+        requests:
+          cpu: {{ $deviceConfig.resources.requests.cpu }}
+          memory: {{ $deviceConfig.resources.requests.memory }}
           {{- if $model.storageSize }}
           ephemeral-storage: {{ $model.storageSize | default "50Gi" }}
           {{- end }}
