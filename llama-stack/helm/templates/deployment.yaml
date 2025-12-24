@@ -79,6 +79,10 @@ spec:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.otelExporter }}
             {{- end }}
+            {{- if .Values.telemetrySinks }}
+            - name: TELEMETRY_SINKS
+              value: {{ .Values.telemetrySinks }}
+            {{- end }}
             {{- if .Values.pgvector.enabled }}
             - name: POSTGRES_USER
               valueFrom:
