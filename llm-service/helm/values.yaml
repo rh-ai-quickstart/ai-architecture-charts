@@ -49,12 +49,15 @@ deviceConfigs:
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
+    # Resource settings for Xeon deployments
+    # Ignores model-specific cpu and memory settings and uses these instead for all models on xeon for better performance
+    # Minimum recommended for inference: 16 vCPU and 64Gi memory
     resources:
       limits:
-        cpu: "16"
+        cpu: "32"
         memory: 64Gi
       requests:
-        cpu: "32"
+        cpu: "16"
         memory: 64Gi
 
 servingRuntime:
