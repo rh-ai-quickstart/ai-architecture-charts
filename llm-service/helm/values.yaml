@@ -51,10 +51,10 @@ deviceConfigs:
     recommendedAccelerators: []
     acceleratorType: null
     # By default, ignores resource settings specified under each model
-    # and uses these global settings instead for better overall performance
+    # and uses these global settings instead for better overall performance on Xeon
     ignoreModelSpecificResourceSettings: true
     # Resource settings for Xeon deployments
-    # Recommended at least: 16 vCPU and 64Gi memory for inference
+    # recommended at least: 16 vCPU and 64Gi memory for inference
     resources:
       limits:
         cpu: "32"
@@ -62,7 +62,9 @@ deviceConfigs:
       requests:
         cpu: "16"
         memory: 64Gi
-    # Environment variables for Xeon deployments
+    # Environment variables for ServingRuntime on Xeon,
+    # applies to all InferenceServices using this ServingRuntime,
+    # can be overridden by model-specific env vars
     env:
       # KV cache space in GiB, (do not add GiB suffix)
       - name: VLLM_CPU_KVCACHE_SPACE

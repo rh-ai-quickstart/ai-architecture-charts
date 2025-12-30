@@ -40,9 +40,16 @@ spec:
     - "8080"
     - --download-dir
     - /vllm/model
-    {{-  with $root.Values.servingRuntime.env }}
+    {{- $finalEnv := list }}
+    {{- if $deviceConfig.env }}
+      {{- $finalEnv = concat $finalEnv $deviceConfig.env }}
+    {{- end }}
+    {{- if $root.Values.servingRuntime.env }}
+      {{- $finalEnv = concat $finalEnv $root.Values.servingRuntime.env }}
+    {{- end }}
+    {{- if $finalEnv }}
     env:
-      {{- toYaml . | nindent 4 }}
+      {{- toYaml $finalEnv | nindent 4 }}
     {{- end }}
     image: {{ index $root.Values.deviceConfigs $device "image" }}
     name: kserve-container

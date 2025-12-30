@@ -114,16 +114,9 @@ spec:
       {{- with $model.args }}
         {{- toYaml . | nindent 6 }}
       {{- end }}
-      {{- $finalEnv := list }}
-      {{- if $deviceConfig.env }}
-        {{- $finalEnv = concat $finalEnv $deviceConfig.env }}
-      {{- end }}
-      {{- if $model.env }}
-        {{- $finalEnv = concat $finalEnv $model.env }}
-      {{- end }}
-      {{- if $finalEnv }}
+      {{- with $model.env }}
       env:
-        {{- toYaml $finalEnv | nindent 6 }}
+        {{- toYaml . | nindent 6 }}
       {{- end }}
     {{- $tolerations := list }}
     {{- if hasKey $model "tolerations" }}
