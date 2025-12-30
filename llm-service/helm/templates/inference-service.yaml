@@ -44,7 +44,7 @@ spec:
             {{- end }}
           {{- end }}
           {{- toYaml $customResources | nindent 8 }}
-        {{- else if eq $modelDevice "xeon" }}
+        {{- else if and (eq $modelDevice "xeon") (eq $deviceConfig.ignoreModelSpecificResourceSettings true) }}
           {{- $customResources := $model.resources | deepCopy }}
           {{- $_ := set $customResources.limits "cpu" $deviceConfig.resources.limits.cpu }}
           {{- $_ := set $customResources.limits "memory" $deviceConfig.resources.limits.memory }}
@@ -114,9 +114,16 @@ spec:
       {{- with $model.args }}
         {{- toYaml . | nindent 6 }}
       {{- end }}
-      {{- with $model.env }}
+      {{- $finalEnv := list }}
+      {{- if $deviceConfig.env }}
+        {{- $finalEnv = concat $finalEnv $deviceConfig.env }}
+      {{- end }}
+      {{- if $model.env }}
+        {{- $finalEnv = concat $finalEnv $model.env }}
+      {{- end }}
+      {{- if $finalEnv }}
       env:
-        {{- toYaml . | nindent 6 }}
+        {{- toYaml $finalEnv | nindent 6 }}
       {{- end }}
     {{- $tolerations := list }}
     {{- if hasKey $model "tolerations" }}

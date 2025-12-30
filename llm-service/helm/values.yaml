@@ -44,14 +44,17 @@ deviceConfigs:
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
-  xeon:  # Intel Xeon CPU configuration for optimized performance, Sapphire Rapids and later
+  # Intel Xeon CPU configuration for optimized performance; requires Sapphire Rapids and newer CPUs
+  xeon:
     image: opea/vllm-cpu-ubi:v0.12.0-ubi9
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
+    # By default, ignores resource settings specified under each model
+    # and uses these global settings instead for better overall performance
+    ignoreModelSpecificResourceSettings: true
     # Resource settings for Xeon deployments
-    # Ignores model-specific cpu and memory settings and uses these instead for all models on xeon for better performance
-    # Minimum recommended for inference: 16 vCPU and 64Gi memory
+    # Recommended at least: 16 vCPU and 64Gi memory for inference
     resources:
       limits:
         cpu: "32"
@@ -59,6 +62,11 @@ deviceConfigs:
       requests:
         cpu: "16"
         memory: 64Gi
+    # Environment variables for Xeon deployments
+    env:
+      # KV cache space in GiB, (do not add GiB suffix)
+      - name: VLLM_CPU_KVCACHE_SPACE
+        value: "16"
 
 servingRuntime:
   name: vllm-serving-runtime
