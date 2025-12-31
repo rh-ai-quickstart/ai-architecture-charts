@@ -98,7 +98,7 @@ helm install llm-service ./helm \
 | `servingRuntime.knativeTimeout` | Knative timeout for inference | `60m` |
 | `secret.enabled` | Enable HuggingFace secret creation | `true` |
 | `secret.hf_token` | HuggingFace access token | `""` |
-| `deviceConfigs.xeon.ignoreModelSpecificResourceSettings` | Ignore model specific resource settings, use values from deviceConfig.xeon | `true` |
+| `deviceConfigs.xeon.ignoreModelSpecificResourceSettings` | Ignore model specific resource settings, use values from `deviceConfigs.xeon` | `true` |
 
 ### Model Configuration
 
