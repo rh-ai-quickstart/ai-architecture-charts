@@ -627,7 +627,7 @@ models:
   # Balanced price-performance Xeon deployment
   llama-3-2-3b-instruct-xeon:
     id: meta-llama/Llama-3.2-3B-Instruct
-    device: cpu
+    device: xeon
     enabled: true
 
   # Performance-optimized NVIDIA GPU deployment
