@@ -598,7 +598,7 @@ deviceConfigs:
 
 Note:
 - Node selectors are not explicitly configurable in this chart; scheduling to GPU/HPU nodes is driven by resource requests and tolerations.
-- For Xeon deployments on heterogeneous clusters (with supported and unsupported nodes), use taints on supported Xeon nodes and matching tolerations in deviceConfigs.xeon.tolerations (mirroring GPU/HPU patterns) so pods schedule only onto supported Xeon generations and avoid unsupported nodes.
+- For Xeon deployments on heterogeneous clusters (with supported and unsupported nodes), use taints on supported Xeon nodes and matching tolerations in `deviceConfigs.xeon.tolerations` (mirroring GPU/HPU patterns) so pods schedule only onto supported Xeon generations and avoid unsupported nodes.
 
 ### Multiple ServingRuntimes
 
