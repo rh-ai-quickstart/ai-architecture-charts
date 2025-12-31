@@ -1,6 +1,6 @@
 # LLM Service Helm Chart
 
-This Helm chart deploys a comprehensive LLM (Large Language Model) serving infrastructure using vLLM runtime with support for any models compatible with vLLM, GPU/HPU/CPU deployment modes, and OpenShift AI integration.
+This Helm chart deploys a comprehensive LLM (Large Language Model) serving infrastructure using vLLM runtime with support for any models compatible with vLLM, GPU/HPU/CPU/Xeon deployment modes, and OpenShift AI integration.
 
 ## Overview
 
@@ -10,13 +10,15 @@ The llm-service chart creates:
 - ConfigMap for chat templates
 - Secret management for HuggingFace tokens
 - Support for multiple model configurations
-- GPU, HPU (Intel Gaudi), and CPU deployment modes
+- GPU, HPU (Intel Gaudi), CPU and Xeon deployment modes
 
 ## Prerequisites
 
 - OpenShift cluster with OpenShift AI/KServe installed
 - Helm 3.x
 - GPU (NVIDIA/AMD) or HPU (Intel Gaudi) nodes (recommended for optimal performance)
+- Xeon deployments: SPR/EMR/GNR instances with more than 16vCPU and 64Gi available memory in default configuration
+  - e.g. m8i.8xlarge (GNR), m7i.8xlarge (SPR), r7i.8xlarge, (SPR) etc.
 - HuggingFace account and token for model access
 - Sufficient storage for model downloads
 
@@ -44,6 +46,14 @@ helm install llm-service ./helm \
 helm install llm-service ./helm \
   --set device=cpu \
   --set models.llama-guard-3-1b.enabled=true
+```
+
+### Installation with Xeon support
+
+```bash
+helm install llm-service ./helm \
+  --set device=xeon \
+  --set models.llama-3-2-3b-instruct.enabled=true
 ```
 
 ### Installation with HPU (Intel Gaudi) Support
@@ -82,11 +92,13 @@ helm install llm-service ./helm \
 | `deviceConfigs.gpu.image` | NVIDIA GPU container image | `quay.io/ecosystem-appeng/vllm:openai-v0.9.2` |
 | `deviceConfigs.gpu-amd.image` | AMD GPU (ROCm) container image | `quay.io/modh/vllm:rhoai-2.25-rocm` |
 | `deviceConfigs.cpu.image` | CPU container image | `quay.io/ecosystem-appeng/vllm:cpu-v0.9.2` |
+| `deviceConfigs.xeon.image` | Xeon container image | `opea/vllm-cpu-ubi:v0.12.0-ubi9` |
 | `deviceConfigs.hpu.image` | HPU (Intel Gaudi) container image | `quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container` |
 | `servingRuntime.name` | Name of the serving runtime | `vllm-serving-runtime` |
 | `servingRuntime.knativeTimeout` | Knative timeout for inference | `60m` |
 | `secret.enabled` | Enable HuggingFace secret creation | `true` |
 | `secret.hf_token` | HuggingFace access token | `""` |
+| `deviceConfigs.xeon.ignoreModelSpecificResourceSettings` | Ignore model specific resource settings, use values from deviceConfig.xeon | `true` |
 
 ### Model Configuration
 
@@ -103,6 +115,12 @@ models:
     id: meta-llama/Llama-Guard-3-1B
     enabled: true
     device: cpu  # Explicitly run on CPU
+
+  # Example: Medium model on Xeon for balanced price-performance
+  llama-3-2-3b-instruct:
+    id: meta-llama/Llama-3.2-3B-Instruct
+    enabled: true
+    device: xeon
 
   # Example: Medium model on NVIDIA GPU
   llama-3-2-3b-instruct-gpu:
@@ -141,6 +159,23 @@ models:
       - llama3_json
       - --max-model-len
       - "30544"
+```
+
+#### Example: Llama 3.2 3B Instruct
+```yaml
+models:
+  llama-3-2-3b-instruct:
+    id: meta-llama/Llama-3.2-3B-Instruct
+    enabled: true
+    device: xeon
+    args:
+      - --enable-auto-tool-choice
+      - --chat-template
+      - /chat-templates/tool_chat_template_llama3.2_json.jinja
+      - --tool-call-parser
+      - llama3_json
+      - --max-model-len
+      - "14336"
 ```
 
 #### Example: Llama 3.1 8B Instruct
@@ -229,6 +264,22 @@ deviceConfigs:
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
+  xeon:
+    image: opea/vllm-cpu-ubi:v0.12.0-ubi9
+    tolerations: []
+    recommendedAccelerators: []
+    acceleratorType: null
+    ignoreModelSpecificResourceSettings: true
+    resources:
+      limits:
+        cpu: "32"
+        memory: 64Gi
+      requests:
+        cpu: "16"
+        memory: 64Gi
+    env:
+      - name: VLLM_CPU_KVCACHE_SPACE
+        value: "16"
 
 servingRuntime:
   name: vllm-serving-runtime
@@ -274,6 +325,22 @@ deviceConfigs:
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
+  xeon:
+    image: opea/vllm-cpu-ubi:v0.12.0-ubi9
+    tolerations: []
+    recommendedAccelerators: []
+    acceleratorType: null
+    ignoreModelSpecificResourceSettings: true
+    resources:
+      limits:
+        cpu: "32"
+        memory: 64Gi
+      requests:
+        cpu: "16"
+        memory: 64Gi
+    env:
+      - name: VLLM_CPU_KVCACHE_SPACE
+        value: "16"
 
 servingRuntime:
   name: vllm-serving-runtime
@@ -451,6 +518,9 @@ oc describe inferenceservice llama-3-2-3b-instruct
 
 ### Resource Requirements by Model Size
 
+#### Resource requirements on Xeon
+By default, Xeon deployments have `deviceConfigs.xeon.ignoreModelSpecificResourceSettings` set to `true` and use the resource settings defined globally under `deviceConfigs.xeon.resources` for better performance. This is because the default per-model values are often insufficient for workloads deployed solely on Xeon. If you want to deploy multiple models and set resources for each model specifically, set this flag to `false` and modify the `resources` section under each model. We recommend at least 16 vCPU and sufficient memory to fit the model and the desired KV cache (for example, 64Gi).
+
 #### Small Models (1B-3B parameters)
 ```yaml
 resources:
@@ -526,7 +596,9 @@ deviceConfigs:
         operator: Exists
 ```
 
-Note: Node selectors are not explicitly configurable in this chart; scheduling to GPU/HPU nodes is driven by resource requests and tolerations.
+Note:
+- Node selectors are not explicitly configurable in this chart; scheduling to GPU/HPU nodes is driven by resource requests and tolerations.
+- For Xeon deployments on heterogeneous clusters (with supported and unsupported nodes), use taints on supported Xeon nodes and matching tolerations in deviceConfigs.xeon.tolerations (mirroring GPU/HPU patterns) so pods schedule only onto supported Xeon generations and avoid unsupported nodes.
 
 ### Multiple ServingRuntimes
 
@@ -536,6 +608,7 @@ The chart automatically creates device-specific `ServingRuntime` resources based
 - `vllm-serving-runtime-gpu-amd` - for AMD GPU models (using `deviceConfigs.gpu-amd.image`)
 - `vllm-serving-runtime-hpu` - for HPU models (using `deviceConfigs.hpu.image`)
 - `vllm-serving-runtime-cpu` - for CPU models (using `deviceConfigs.cpu.image`)
+- `vllm-serving-runtime-xeon` - for Xeon models (using `deviceConfigs.xeon.image`)
 
 Only the runtimes needed for your enabled models are created.
 
@@ -547,6 +620,12 @@ You can run the same model on different devices with optimized configurations:
 models:
   # Cost-optimized CPU deployment
   llama-3-2-3b-instruct-cpu:
+    id: meta-llama/Llama-3.2-3B-Instruct
+    device: cpu
+    enabled: true
+
+  # Balanced price-performance Xeon deployment
+  llama-3-2-3b-instruct-xeon:
     id: meta-llama/Llama-3.2-3B-Instruct
     device: cpu
     enabled: true
