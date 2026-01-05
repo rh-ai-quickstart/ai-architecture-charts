@@ -1,8 +1,15 @@
 # Build Go proxy
 FROM golang:1.21 AS builder
 WORKDIR /build
-COPY proxy/go.mod proxy/main.go ./
-RUN go build -o mcp-proxy main.go
+
+# Copy shared mcpproxy library and oracle-sqlcl proxy
+# Structure must match go.mod replace directive: ../../mcpproxy
+COPY mcpproxy/ ./mcpproxy/
+COPY oracle-sqlcl/proxy/ ./oracle-sqlcl/proxy/
+
+# Build the proxy binary
+WORKDIR /build/oracle-sqlcl/proxy
+RUN go build -o mcp-proxy .
 
 # SQLcl MCP Server Docker Image
 FROM container-registry.oracle.com/database/sqlcl:latest
@@ -13,10 +20,10 @@ ENV JAVA_HOME=/usr/lib/jvm/jdk-17-oracle-x64
 ENV PATH=/opt/oracle/sqlcl/bin:$PATH
 
 # Copy Go proxy binary from builder
-COPY --from=builder /build/mcp-proxy /usr/local/bin/mcp-proxy
+COPY --from=builder /build/oracle-sqlcl/proxy/mcp-proxy /usr/local/bin/mcp-proxy
 
 # Copy maintained script and set entrypoint
-COPY scripts/start-mcp.sh /start-mcp.sh
+COPY oracle-sqlcl/scripts/start-mcp.sh /start-mcp.sh
 RUN chmod +x /start-mcp.sh
 
 # Start MCP proxy
