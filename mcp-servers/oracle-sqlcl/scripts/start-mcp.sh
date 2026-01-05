@@ -2,6 +2,16 @@
 set -e
 
 echo "Starting Oracle SQLcl MCP HTTP Proxy..."
+
+# Auto-detect JAVA_HOME based on architecture
+if [ -z "$JAVA_HOME" ]; then
+  if [ -d "/usr/lib/jvm/jdk-17-oracle-aarch64" ]; then
+    export JAVA_HOME=/usr/lib/jvm/jdk-17-oracle-aarch64
+  elif [ -d "/usr/lib/jvm/jdk-17-oracle-x64" ]; then
+    export JAVA_HOME=/usr/lib/jvm/jdk-17-oracle-x64
+  fi
+fi
+
 echo "ORACLE_HOME: $ORACLE_HOME"
 echo "JAVA_HOME: $JAVA_HOME"
 echo "PATH: $PATH"

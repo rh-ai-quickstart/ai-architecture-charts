@@ -15,8 +15,8 @@ RUN go build -o mcp-proxy .
 FROM container-registry.oracle.com/database/sqlcl:latest
 
 # Set environment variables for Oracle SQLcl
+# Auto-detect JAVA_HOME based on architecture (x64 vs aarch64)
 ENV ORACLE_HOME=/opt/oracle/sqlcl
-ENV JAVA_HOME=/usr/lib/jvm/jdk-17-oracle-x64
 ENV PATH=/opt/oracle/sqlcl/bin:$PATH
 
 # Copy Go proxy binary from builder
