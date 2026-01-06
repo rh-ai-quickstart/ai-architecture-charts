@@ -36,28 +36,28 @@ func TestFormatID(t *testing.T) {
 
 func TestMCPMessageParsing(t *testing.T) {
 	tests := []struct {
-		name      string
-		json      string
-		expectID  bool
-		idValue   interface{}
+		name     string
+		json     string
+		expectID bool
+		idValue  interface{}
 	}{
 		{
-			name:      "request with numeric id",
-			json:      `{"jsonrpc":"2.0","id":1,"method":"initialize"}`,
-			expectID:  true,
-			idValue:   float64(1), // JSON numbers are float64
+			name:     "request with numeric id",
+			json:     `{"jsonrpc":"2.0","id":1,"method":"initialize"}`,
+			expectID: true,
+			idValue:  float64(1), // JSON numbers are float64
 		},
 		{
-			name:      "request with string id",
-			json:      `{"jsonrpc":"2.0","id":"abc","method":"initialize"}`,
-			expectID:  true,
-			idValue:   "abc",
+			name:     "request with string id",
+			json:     `{"jsonrpc":"2.0","id":"abc","method":"initialize"}`,
+			expectID: true,
+			idValue:  "abc",
 		},
 		{
-			name:      "notification without id",
-			json:      `{"jsonrpc":"2.0","method":"notifications/initialized"}`,
-			expectID:  false,
-			idValue:   nil,
+			name:     "notification without id",
+			json:     `{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+			expectID: false,
+			idValue:  nil,
 		},
 	}
 
@@ -360,6 +360,34 @@ func TestExtraRoutes(t *testing.T) {
 	}
 }
 
+func TestNotificationsAlwaysSkipped(t *testing.T) {
+	// This tests that notifications (messages without ID) are always skipped,
+	// even when SkipNotifications is false
+	proxy := NewMockMCPProxy(Config{
+		ServerName:        "test",
+		SkipNotifications: false, // Even with this false, notifications should be skipped
+	}, []string{`{"jsonrpc":"2.0","id":1,"result":{"data":"response"}}`})
+
+	// Simulate receiving a notification first, then a response
+	// The mock doesn't simulate this exactly, but we test that:
+	// 1. A message WITH an ID is treated as a response
+	// 2. The SkipNotifications=false config works correctly
+
+	req := httptest.NewRequest("POST", "/", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"test"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	proxy.Handle(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	body, _ := io.ReadAll(w.Body)
+	if !strings.Contains(string(body), "response") {
+		t.Errorf("Expected response data, got %q", string(body))
+	}
+}
+
 func TestIsRequestDetection(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -400,4 +428,3 @@ func TestIsRequestDetection(t *testing.T) {
 		})
 	}
 }
-

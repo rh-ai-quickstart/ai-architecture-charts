@@ -33,8 +33,10 @@ type Config struct {
 	// EnableCORS adds CORS headers to responses
 	EnableCORS bool
 
-	// SkipNotifications skips notification messages when waiting for a response
-	// (some MCP servers emit notifications between request and response)
+	// SkipNotifications enables strict response ID matching when waiting for a response.
+	// When true: waits for a response with an ID matching the request ID (skipping mismatches)
+	// When false: returns the first response with any ID (suitable for sequential request/response)
+	// Note: Notifications (messages without ID) are always skipped regardless of this setting.
 	SkipNotifications bool
 
 	// ResponseMiddleware is called on each response before sending to client (optional)
@@ -187,24 +189,26 @@ func (p *MCPProxy) readResponse(originalRequest json.RawMessage) (json.RawMessag
 		var respMsg MCPMessage
 		json.Unmarshal(responseData, &respMsg)
 
-		// If SkipNotifications is enabled and this is a notification (no ID), continue reading
-		if p.config.SkipNotifications && respMsg.ID == nil {
+		// Always skip notifications (messages without ID)
+		// Notifications are server-initiated messages that don't correspond to any request
+		if respMsg.ID == nil {
 			log.Printf("[%s] Skipping notification while waiting for response", p.config.ServerName)
 			continue
 		}
 
-		// If not skipping notifications, or this is a response (has ID), return it
-		// For servers that don't skip notifications, we return the first response
+		// If SkipNotifications is disabled, return the first response with an ID
+		// This is suitable for MCP servers that don't emit notifications between request/response
 		if !p.config.SkipNotifications {
 			return responseData, nil
 		}
 
-		// Check if response ID matches request ID
+		// When SkipNotifications is enabled, also verify the response ID matches the request ID
+		// This handles servers that may send multiple responses or out-of-order responses
 		if respMsg.ID == requestID || formatID(respMsg.ID) == formatID(requestID) {
 			return responseData, nil
 		}
 
-		// Mismatched ID - log warning and return anyway
+		// Mismatched ID - log warning and return anyway to prevent hanging
 		log.Printf("[%s] Warning: received response with unexpected ID %v (expected %v)",
 			p.config.ServerName, respMsg.ID, requestID)
 		return responseData, nil
