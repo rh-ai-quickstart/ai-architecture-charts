@@ -152,7 +152,8 @@ func (p *MCPProxy) processRequests() {
 
 		// Only read response if this is a request (has ID), not a notification
 		if req.isRequest {
-			response, err := p.readResponse(req.msg)
+			// Use the potentially middleware-modified msg for ID matching
+			response, err := p.readResponse(msg)
 			if err != nil {
 				log.Printf("[%s] Error reading response: %v", p.config.ServerName, err)
 				close(req.response)
@@ -312,4 +313,3 @@ func Run(cfg Config) error {
 
 	return http.ListenAndServe(":"+cfg.Port, nil)
 }
-
