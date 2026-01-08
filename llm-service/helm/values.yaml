@@ -46,7 +46,7 @@ deviceConfigs:
     acceleratorType: null
   # Intel Xeon CPU configuration for optimized performance; requires Sapphire Rapids and newer CPUs
   xeon:
-    image: opea/vllm-cpu-ubi:v0.12.0-ubi9
+    image: docker.io/opea/vllm-cpu-ubi:v0.12.0-ubi9
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null

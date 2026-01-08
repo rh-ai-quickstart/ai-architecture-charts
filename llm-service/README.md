@@ -92,7 +92,7 @@ helm install llm-service ./helm \
 | `deviceConfigs.gpu.image` | NVIDIA GPU container image | `quay.io/ecosystem-appeng/vllm:openai-v0.9.2` |
 | `deviceConfigs.gpu-amd.image` | AMD GPU (ROCm) container image | `quay.io/modh/vllm:rhoai-2.25-rocm` |
 | `deviceConfigs.cpu.image` | CPU container image | `quay.io/ecosystem-appeng/vllm:cpu-v0.9.2` |
-| `deviceConfigs.xeon.image` | Xeon container image | `opea/vllm-cpu-ubi:v0.12.0-ubi9` |
+| `deviceConfigs.xeon.image` | Xeon container image | `docker.io/opea/vllm-cpu-ubi:v0.12.0-ubi9` |
 | `deviceConfigs.hpu.image` | HPU (Intel Gaudi) container image | `quay.io/modh/vllm:vllm-gaudi-v2-22-on-push-jgj5q-build-container` |
 | `servingRuntime.name` | Name of the serving runtime | `vllm-serving-runtime` |
 | `servingRuntime.knativeTimeout` | Knative timeout for inference | `60m` |
@@ -265,7 +265,7 @@ deviceConfigs:
     recommendedAccelerators: []
     acceleratorType: null
   xeon:
-    image: opea/vllm-cpu-ubi:v0.12.0-ubi9
+    image: docker.io/opea/vllm-cpu-ubi:v0.12.0-ubi9
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
@@ -326,7 +326,7 @@ deviceConfigs:
     recommendedAccelerators: []
     acceleratorType: null
   xeon:
-    image: opea/vllm-cpu-ubi:v0.12.0-ubi9
+    image: docker.io/opea/vllm-cpu-ubi:v0.12.0-ubi9
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
