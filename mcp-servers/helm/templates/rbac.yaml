@@ -1,0 +1,27 @@
+{{- $root := . }}
+{{- $servers := include "mcp-servers.mergeMcpServers" . | fromJson }}
+{{- range $key, $server := $servers }}
+{{- if and $server.enabled $server.serviceAccount }}
+{{- if and $server.serviceAccount.clusterRoleBinding $server.serviceAccount.clusterRoleBinding.enabled }}
+{{- $serverDict := dict "root" $root "key" $key "server" $server }}
+{{- $saName := $server.serviceAccount.name | default (printf "mcp-%s" $key) }}
+---
+# ClusterRoleBinding for {{ $key }} MCP server
+# Binds the service account to a ClusterRole for cluster-wide access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $root.Release.Name }}-{{ $key }}-{{ $server.serviceAccount.clusterRoleBinding.clusterRole }}
+  labels:
+    {{- include "mcp-servers.labels" $serverDict | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ $saName }}
+  namespace: {{ $root.Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ $server.serviceAccount.clusterRoleBinding.clusterRole }}
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- end }}
+{{- end }}
