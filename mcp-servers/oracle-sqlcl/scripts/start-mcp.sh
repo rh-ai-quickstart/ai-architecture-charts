@@ -2,6 +2,16 @@
 set -e
 
 echo "Starting Oracle SQLcl MCP HTTP Proxy..."
+
+# Auto-detect JAVA_HOME based on architecture
+if [ -z "$JAVA_HOME" ]; then
+  if [ -d "/usr/lib/jvm/jdk-17-oracle-aarch64" ]; then
+    export JAVA_HOME=/usr/lib/jvm/jdk-17-oracle-aarch64
+  elif [ -d "/usr/lib/jvm/jdk-17-oracle-x64" ]; then
+    export JAVA_HOME=/usr/lib/jvm/jdk-17-oracle-x64
+  fi
+fi
+
 echo "ORACLE_HOME: $ORACLE_HOME"
 echo "JAVA_HOME: $JAVA_HOME"
 echo "PATH: $PATH"
@@ -80,6 +90,11 @@ done
 
 echo "All saved connections created successfully"
 echo ""
+
+# Set environment variables for the MCP proxy
+export MCP_COMMAND="/opt/oracle/sqlcl/bin/sql"
+export MCP_ARGS="-mcp"
+export MCP_SERVER_NAME="oracle-sqlcl"
 
 # Start MCP HTTP Proxy (which will spawn sql -mcp)
 exec /usr/local/bin/mcp-proxy

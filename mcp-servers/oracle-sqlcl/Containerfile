@@ -1,21 +1,21 @@
-# Build Go proxy
-FROM golang:1.21 AS builder
-WORKDIR /build
-COPY proxy/go.mod proxy/main.go ./
-RUN go build -o mcp-proxy main.go
+# Oracle SQLcl MCP Server with HTTP Proxy
+#
+# Uses the pre-built mcp-proxy binary to wrap sqlcl's stdio-based MCP server
+# and expose it via streamable HTTP transport.
 
 # SQLcl MCP Server Docker Image
 FROM container-registry.oracle.com/database/sqlcl:latest
 
 # Set environment variables for Oracle SQLcl
+# JAVA_HOME is auto-detected at runtime based on architecture (x64 vs aarch64)
 ENV ORACLE_HOME=/opt/oracle/sqlcl
-ENV JAVA_HOME=/usr/lib/jvm/jdk-17-oracle-x64
 ENV PATH=/opt/oracle/sqlcl/bin:$PATH
 
-# Copy Go proxy binary from builder
-COPY --from=builder /build/mcp-proxy /usr/local/bin/mcp-proxy
+# Copy pre-built MCP proxy binary
+# Build mcp-proxy image first, then reference it here
+COPY --from=mcp-proxy:latest /mcp-proxy /usr/local/bin/mcp-proxy
 
-# Copy maintained script and set entrypoint
+# Copy startup script
 COPY scripts/start-mcp.sh /start-mcp.sh
 RUN chmod +x /start-mcp.sh
 
