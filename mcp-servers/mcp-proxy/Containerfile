@@ -1,0 +1,21 @@
+# MCP HTTP Proxy - Standalone binary for wrapping stdio-based MCP servers
+#
+# This image can be used in two ways:
+# 1. As a base image: FROM mcp-proxy:latest
+# 2. Via multi-stage copy: COPY --from=mcp-proxy:latest /mcp-proxy /usr/local/bin/mcp-proxy
+#
+# Environment Variables:
+#   MCP_COMMAND      - Command to run (required)
+#   MCP_ARGS         - Arguments (comma-separated)
+#   MCP_SERVER_NAME  - Name for logging (default: "mcp-server")
+#   PORT             - HTTP port (default: "8080")
+#   ENABLE_CORS      - Enable CORS headers ("true" or "1")
+
+FROM golang:1.21 AS builder
+WORKDIR /build
+COPY go.mod main.go ./
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o mcp-proxy .
+
+FROM scratch
+COPY --from=builder /build/mcp-proxy /mcp-proxy
+ENTRYPOINT ["/mcp-proxy"]

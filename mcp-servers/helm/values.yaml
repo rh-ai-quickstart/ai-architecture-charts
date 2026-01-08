@@ -32,3 +32,29 @@ mcp-servers:
     volumeMounts:
       - name: sqlcl-home
         mountPath: /sqlcl-home
+
+  # Official OpenShift/Kubernetes MCP Server
+  # https://github.com/openshift/openshift-mcp-server
+  openshift:
+    enabled: false
+    deploymentMode: deployment
+    image:
+      # Official image from containers project
+      repository: quay.io/containers/kubernetes_mcp_server
+      tag: latest
+    # Supports both sse and streamable-http via --port flag
+    transport: streamable-http
+    targetPort: 8080
+    # Command args for the server
+    args:
+      - "--port"
+      - "8080"
+      - "--read-only"  # Safe default - disable writes
+    # Service account with cluster permissions for K8s API access
+    serviceAccount:
+      create: true
+      name: openshift-mcp
+      # ClusterRole bindings for cluster-wide read access
+      clusterRoleBinding:
+        enabled: true
+        clusterRole: view  # Default view role for read-only access

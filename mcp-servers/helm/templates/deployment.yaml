@@ -28,6 +28,11 @@ spec:
       labels:
         {{- include "mcp-servers.selectorLabels" $serverDict | nindent 8 }}
     spec:
+      {{- if $server.serviceAccount }}
+      {{- if $server.serviceAccount.name }}
+      serviceAccountName: {{ $server.serviceAccount.name }}
+      {{- end }}
+      {{- end }}
       {{- with $server.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -49,7 +54,11 @@ spec:
       - name: {{ $key }}
         image: "{{ $server.image.repository }}:{{ $server.image.tag | default $root.Chart.Version }}"
         imagePullPolicy: {{ $server.imagePullPolicy | default "Always" }}
-        {{- if $server.port }}
+        {{- with $server.args }}
+        args:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- if or $server.port $server.targetPort }}
         ports:
         - name: http
           containerPort: {{ $server.targetPort | default $server.port }}
