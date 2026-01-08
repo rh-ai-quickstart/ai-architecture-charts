@@ -58,3 +58,39 @@ mcp-servers:
       clusterRoleBinding:
         enabled: true
         clusterRole: view  # Default view role for read-only access
+
+  # Slack MCP Server (korotovsky - most popular, 1.1k stars)
+  # https://github.com/korotovsky/slack-mcp-server
+  # Supports stealth mode (no Slack App needed), OAuth, and bot tokens
+  slack:
+    enabled: false
+    deploymentMode: deployment
+    image:
+      repository: ghcr.io/korotovsky/slack-mcp-server
+      tag: latest
+    # Supports stdio, sse, and http transports
+    transport: sse
+    targetPort: 13080
+    env:
+      SLACK_MCP_HOST: "0.0.0.0"
+      SLACK_MCP_PORT: "13080"
+    # Authentication - choose ONE option:
+    # Option 1: Stealth mode (extract xoxc + xoxd from browser cookies)
+    # Option 2: User OAuth token (xoxp)
+    # Option 3: Bot token (xoxb - limited to invited channels)
+    envSecrets:
+      # Stealth mode tokens (recommended - no Slack App needed)
+      SLACK_MCP_XOXC_TOKEN:
+        name: slack-mcp-credentials
+        key: xoxc-token
+      SLACK_MCP_XOXD_TOKEN:
+        name: slack-mcp-credentials
+        key: xoxd-token
+      # OR User OAuth token:
+      # SLACK_MCP_XOXP_TOKEN:
+      #   name: slack-mcp-credentials
+      #   key: xoxp-token
+      # OR Bot token (limited access):
+      # SLACK_MCP_XOXB_TOKEN:
+      #   name: slack-mcp-credentials
+      #   key: xoxb-token
