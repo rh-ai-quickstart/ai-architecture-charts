@@ -1,0 +1,19 @@
+FROM golang:1.21 AS builder
+
+WORKDIR /app
+
+# Copy the proxy source code
+COPY proxy/ .
+
+# Build the proxy binary
+RUN go build -o proxy .
+
+# Use the official GitHub MCP server as base
+FROM ghcr.io/github/github-mcp-server
+
+# Copy the proxy binary
+COPY --from=builder /app/proxy /usr/local/bin/proxy
+
+EXPOSE 8080
+
+ENTRYPOINT ["/usr/local/bin/proxy"]

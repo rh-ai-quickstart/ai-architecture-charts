@@ -5,3 +5,6 @@ builds:
   - name: oracle-sqlcl
     containerfile: oracle-sqlcl/Containerfile
     context: oracle-sqlcl
+  - name: github-mcp
+    containerfile: github-mcp/Containerfile
+    context: github-mcp
