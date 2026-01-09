@@ -1,7 +1,7 @@
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: pgvector-initsql
+  name: {{ include "pgvector.fullname" . }}-initsql
   labels:
     {{- include "pgvector.labels" . | nindent 4 }}
 data:

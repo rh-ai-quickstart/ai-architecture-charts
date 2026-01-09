@@ -19,7 +19,7 @@ grpcPort: 9090
 restPort: 8080
 
 # ==============================
-# MySQL subchart configuration
+# Istio configuration
 # ==============================
 istio:
   enabled: false
@@ -34,46 +34,80 @@ istio:
       gatewayRoute: enabled
 
 # ==============================
-# MySQL subchart configuration
+# PostgreSQL subchart configuration
 # ==============================
-mysql:
+postgres:
   enabled: true
-  name: mysql-model-registry
-  namespace: rhoai-model-registries  # Defaults to release namespace
-  
-  image:
-    repository: quay.io/sclorg/mysql-80-c9s
-    tag: latest
-    pullPolicy: IfNotPresent
+  name: pgvector-model-registry
+  namespace: ""  # Defaults to release namespace
   
   # Database credentials
-  user: mysql_user
-  password: mysql_password
-  rootPassword: mysql_root_password
+  user: postgres
+  password: model_registry_password
   database: model_registry
   
   # Service configuration
-  port: 3306
+  port: 5432
   
-  # Persistence configuration
-  persistence:
-    enabled: true
-    size: 1Gi
-    accessMode: ReadWriteOnce
-    storageClassName: ""
+  # Skip vector extension for model registry (not needed)
+  skipDBCreation: false
+
+# ==============================
+# pgvector subchart configuration
+# ==============================
+pgvector:
+  nameOverride: "pgvector-model-registry"
+  fullnameOverride: "pgvector-model-registry"
   
-  # Resource limits
-  resources:
-    limits:
-      cpu: "1"
-      memory: 512Mi
-    requests:
-      cpu: 100m
-      memory: 256Mi
-  
-  # OpenShift-specific settings
-  openshift:
-    enabled: false
-    imageStream:
-      enabled: true
+  image:
+    repository: docker.io/pgvector/pgvector
+    pullPolicy: IfNotPresent
+    tag: pg17
+
+  service:
+    type: ClusterIP
+    port: 5432
+
+  # Environment variables - must reference the correct secret name
+  env:
+    - name: POSTGRES_USER
+      valueFrom:
+        secretKeyRef:
+          key: user
+          name: pgvector-model-registry
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: pgvector-model-registry
+    - name: POSTGRES_PORT
+      valueFrom:
+        secretKeyRef:
+          key: port
+          name: pgvector-model-registry
+    - name: POSTGRES_DBNAME
+      valueFrom:
+        secretKeyRef:
+          key: dbname
+          name: pgvector-model-registry
+
+  secret:
+    create: true
+    user: postgres
+    password: model_registry_password
+    dbname: model_registry
+    host: pgvector-model-registry
+    port: "5432"
+
+  # No extra databases needed for model registry
+  extraDatabases: []
+
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
 

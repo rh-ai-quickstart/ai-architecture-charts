@@ -14,14 +14,15 @@ spec:
   rest:
     port: {{ .Values.restPort | default 8080 }}
     serviceRoute: enabled
-  mysql:
-    host: {{ include "model-registry.mysql.host" . }}
-    port: {{ .Values.mysql.port | default 3306 }}
-    database: {{ .Values.mysql.database }}
-    username: {{ .Values.mysql.user }}
+  postgres:
+    host: {{ include "model-registry.postgres.host" . }}
+    port: {{ .Values.postgres.port | default 5432 }}
+    database: {{ .Values.postgres.database }}
+    username: {{ .Values.postgres.user }}
     passwordSecret:
-      name: {{ include "model-registry.mysql.secretName" . }}
-      key: database-password
+      name: {{ include "model-registry.postgres.secretName" . }}
+      key: password
+    skipDBCreation: {{ .Values.postgres.skipDBCreation | default false }}
   {{- if .Values.istio.enabled }}
   istio:
     audiences:

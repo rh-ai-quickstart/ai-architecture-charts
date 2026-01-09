@@ -1,6 +1,6 @@
 dependencies:
-- name: mysql
-  repository: file://../../mysql/helm
-  version: 0.1.0
-digest: sha256:2f5baa3cff1bd76ff357d6fa626a9c453f8abbd62087130b3e05f0b6f0d61578
-generated: "2025-12-19T12:38:51.414305-05:00"
+- name: pgvector
+  repository: file://../../pgvector/helm
+  version: 0.5.2
+digest: sha256:9cc7f6296db4cfa9de06f68f9e367516c0717be5b86475a25e6c4928df1b54a3
+generated: "2026-01-09T09:37:29.704078-05:00"

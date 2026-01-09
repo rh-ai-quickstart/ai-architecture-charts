@@ -48,28 +48,28 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- .Values.namespace | default .Release.Namespace }}
 {{- end }}
 
-{{/* MySQL fullname - matches what the mysql subchart creates */}}
-{{- define "model-registry.mysql.fullname" -}}
-{{- .Values.mysql.name | default "mysql" }}
+{{/* PostgreSQL fullname - matches what the pgvector subchart creates */}}
+{{- define "model-registry.postgres.fullname" -}}
+{{- .Values.postgres.name | default "pgvector-model-registry" }}
 {{- end }}
 
-{{/* MySQL namespace */}}
-{{- define "model-registry.mysql.namespace" -}}
-{{- .Values.mysql.namespace | default .Release.Namespace }}
+{{/* PostgreSQL namespace */}}
+{{- define "model-registry.postgres.namespace" -}}
+{{- .Values.postgres.namespace | default .Release.Namespace }}
 {{- end }}
 
-{{/* MySQL host with namespace (FQDN for cross-namespace access) */}}
-{{- define "model-registry.mysql.host" -}}
-{{- printf "%s.%s.svc.cluster.local" (include "model-registry.mysql.fullname" .) (include "model-registry.mysql.namespace" .) }}
+{{/* PostgreSQL host with namespace (FQDN for cross-namespace access) */}}
+{{- define "model-registry.postgres.host" -}}
+{{- printf "%s.%s.svc.cluster.local" (include "model-registry.postgres.fullname" .) (include "model-registry.postgres.namespace" .) }}
 {{- end }}
 
-{{/* MySQL connection string */}}
-{{- define "model-registry.mysql.connectionString" -}}
-{{- printf "mysql://%s:%s@%s:%d/%s" .Values.mysql.user .Values.mysql.password (include "model-registry.mysql.host" .) (.Values.mysql.port | default 3306 | int) .Values.mysql.database }}
+{{/* PostgreSQL connection string */}}
+{{- define "model-registry.postgres.connectionString" -}}
+{{- printf "postgresql://%s:%s@%s:%d/%s" .Values.postgres.user .Values.postgres.password (include "model-registry.postgres.host" .) (.Values.postgres.port | default 5432 | int) .Values.postgres.database }}
 {{- end }}
 
-{{/* MySQL secret name */}}
-{{- define "model-registry.mysql.secretName" -}}
-{{- include "model-registry.mysql.fullname" . }}
+{{/* PostgreSQL secret name */}}
+{{- define "model-registry.postgres.secretName" -}}
+{{- include "model-registry.postgres.fullname" . }}
 {{- end }}
 

@@ -4,14 +4,14 @@ A Helm chart for deploying OpenDataHub Model Registry on OpenShift clusters.
 
 ## Overview
 
-This chart deploys a Model Registry instance with MySQL backend, providing a centralized repository for managing ML models. It integrates with OpenShift AI and supports Istio service mesh for advanced routing and security.
+This chart deploys a Model Registry instance with PostgreSQL backend, providing a centralized repository for managing ML models. It integrates with OpenShift AI and supports Istio service mesh for advanced routing and security.
 
 ## Prerequisites
 
 - Kubernetes 1.19+ or OpenShift 4.x
 - Helm 3.x
 - Model Registry Operator installed (for `createService: true`)
-- PV provisioner support (for MySQL persistence)
+- PV provisioner support (for PostgreSQL persistence)
 
 ## Installation
 
@@ -30,17 +30,15 @@ helm install model-registry ./model-registry/helm
 ```bash
 helm install model-registry ./model-registry/helm \
   --set name=my-model-registry \
-  --set mysql.password=secure_password \
-  --set mysql.database=my_registry
+  --set postgres.password=secure_password \
+  --set postgres.database=my_registry
 ```
 
 ### OpenShift AI Installation
 
 ```bash
 helm install model-registry ./model-registry/helm \
-  --set namespace=rhoai-model-registries \
-  --set mysql.openshift.enabled=true \
-  --set mysql.openshift.imageStream.enabled=true
+  --set namespace=rhoai-model-registries
 ```
 
 ### With Istio Service Mesh
@@ -75,32 +73,29 @@ helm install model-registry ./model-registry/helm \
 | `istio.gateway.grpc.gatewayRoute` | gRPC gateway route | `enabled` |
 | `istio.gateway.rest.gatewayRoute` | REST gateway route | `enabled` |
 
-### MySQL Subchart Configuration
+### PostgreSQL Subchart Configuration
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `mysql.enabled` | Enable MySQL subchart | `true` |
-| `mysql.name` | MySQL resource name | `mysql` |
-| `mysql.user` | MySQL user | `mysql_user` |
-| `mysql.password` | MySQL password | `mysql_password` |
-| `mysql.rootPassword` | MySQL root password | `mysql_root_password` |
-| `mysql.database` | Database name | `model_registry` |
-| `mysql.port` | MySQL port | `3306` |
-| `mysql.persistence.enabled` | Enable persistence | `true` |
-| `mysql.persistence.size` | PVC size | `1Gi` |
-| `mysql.openshift.enabled` | OpenShift features | `false` |
+| `postgres.enabled` | Enable PostgreSQL subchart | `true` |
+| `postgres.name` | PostgreSQL resource name | `pgvector-model-registry` |
+| `postgres.user` | PostgreSQL user | `postgres` |
+| `postgres.password` | PostgreSQL password | `model_registry_password` |
+| `postgres.database` | Database name | `model_registry` |
+| `postgres.port` | PostgreSQL port | `5432` |
+| `postgres.skipDBCreation` | Skip database creation | `false` |
 
-### Using External MySQL
+### Using External PostgreSQL
 
 ```yaml
-mysql:
+postgres:
   enabled: false
-  name: external-mysql
+  name: external-postgres
   namespace: databases
   user: registry_user
   password: external_password
   database: model_registry
-  port: 3306
+  port: 5432
 ```
 
 ## Architecture
@@ -116,9 +111,9 @@ mysql:
 │           └────────┬───────────┘                │
 │                    │                            │
 │           ┌────────▼────────┐                   │
-│           │     MySQL       │                   │
+│           │   PostgreSQL    │                   │
 │           │   Backend DB    │                   │
-│           │     :3306       │                   │
+│           │     :5432       │                   │
 │           └─────────────────┘                   │
 └─────────────────────────────────────────────────┘
 ```
@@ -171,7 +166,7 @@ helm uninstall model-registry
 
 Note: PVCs are not automatically deleted. Remove manually if needed:
 ```bash
-kubectl delete pvc mysql
+kubectl delete pvc pg-data-pgvector-model-registry-0
 ```
 
 ## Troubleshooting
@@ -182,16 +177,15 @@ If you see errors about the ModelRegistry CRD not found:
 1. Install the Model Registry Operator from OperatorHub
 2. Or set `createService: false` to skip creating the CR
 
-### MySQL Connection Issues
+### PostgreSQL Connection Issues
 
-Check MySQL pod status:
+Check PostgreSQL pod status:
 ```bash
-kubectl get pods -l app=mysql
-kubectl logs -l app=mysql
+kubectl get pods -l app.kubernetes.io/name=pgvector
+kubectl logs -l app.kubernetes.io/name=pgvector
 ```
 
-Verify MySQL is ready:
+Verify PostgreSQL is ready:
 ```bash
-kubectl exec -it deploy/mysql -- mysqladmin -u $MYSQL_USER -p ping
+kubectl exec -it sts/pgvector-model-registry -- psql -U postgres -c '\l'
 ```
-
