@@ -86,6 +86,7 @@ func main() {
 		CommandPath:        "/opt/oracle/sqlcl/bin/sql",
 		CommandArgs:        []string{"-mcp"},
 		PathEnvVar:         "SQL_PATH",
+		UsePTY:             true, // SQLcl (Java) buffers stdout, PTY forces line buffering
 		ResponseMiddleware: markOracleErrors,
 	}); err != nil {
 		log.Fatalf("Failed to run proxy: %v", err)
