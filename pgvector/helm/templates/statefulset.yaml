@@ -88,4 +88,4 @@ spec:
       volumes:
         - name: initdb-volume
           configMap:
-            name: pgvector-initsql
+            name: {{ include "pgvector.fullname" . }}-initsql

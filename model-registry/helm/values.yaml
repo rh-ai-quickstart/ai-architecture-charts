@@ -1,0 +1,113 @@
+# Default values for model-registry.
+
+# Enable/disable Model Registry deployment
+enabled: true
+
+# Create the ModelRegistry CR (requires model-registry-operator)
+createService: true
+
+# Model Registry name
+name: model-registry
+nameOverride: ""
+fullnameOverride: ""
+
+# Namespace override (defaults to release namespace)
+namespace: ""
+
+# Service ports
+grpcPort: 9090
+restPort: 8080
+
+# ==============================
+# Istio configuration
+# ==============================
+istio:
+  enabled: false
+  audiences:
+    - https://kubernetes.default.svc
+  authProvider: "https://kubernetes.default.svc"
+  gateway:
+    domain: ""  # Set to your OpenShift apps domain for external access
+    grpc:
+      gatewayRoute: enabled
+    rest:
+      gatewayRoute: enabled
+
+# ==============================
+# PostgreSQL subchart configuration
+# ==============================
+postgres:
+  enabled: true
+  name: pgvector-model-registry
+  namespace: ""  # Defaults to release namespace
+  
+  # Database credentials
+  user: postgres
+  password: model_registry_password
+  database: model_registry
+  
+  # Service configuration
+  port: 5432
+  
+  # Skip vector extension for model registry (not needed)
+  skipDBCreation: false
+
+# ==============================
+# pgvector subchart configuration
+# ==============================
+pgvector:
+  nameOverride: "pgvector-model-registry"
+  fullnameOverride: "pgvector-model-registry"
+  
+  image:
+    repository: docker.io/pgvector/pgvector
+    pullPolicy: IfNotPresent
+    tag: pg17
+
+  service:
+    type: ClusterIP
+    port: 5432
+
+  # Environment variables - must reference the correct secret name
+  env:
+    - name: POSTGRES_USER
+      valueFrom:
+        secretKeyRef:
+          key: user
+          name: pgvector-model-registry
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: pgvector-model-registry
+    - name: POSTGRES_PORT
+      valueFrom:
+        secretKeyRef:
+          key: port
+          name: pgvector-model-registry
+    - name: POSTGRES_DBNAME
+      valueFrom:
+        secretKeyRef:
+          key: dbname
+          name: pgvector-model-registry
+
+  secret:
+    create: true
+    user: postgres
+    password: model_registry_password
+    dbname: model_registry
+    host: pgvector-model-registry
+    port: "5432"
+
+  # No extra databases needed for model registry
+  extraDatabases: []
+
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+

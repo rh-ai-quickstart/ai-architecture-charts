@@ -1,0 +1,40 @@
+{{- if and .Values.enabled .Values.createService }}
+---
+apiVersion: modelregistry.opendatahub.io/v1alpha1
+kind: ModelRegistry
+metadata:
+  name: {{ include "model-registry.resourceName" . }}
+  namespace: {{ include "model-registry.namespace" . }}
+  labels:
+    app: {{ include "model-registry.resourceName" . }}
+    {{- include "model-registry.labels" . | nindent 4 }}
+spec:
+  grpc:
+    port: {{ .Values.grpcPort | default 9090 }}
+  rest:
+    port: {{ .Values.restPort | default 8080 }}
+    serviceRoute: enabled
+  postgres:
+    host: {{ include "model-registry.postgres.host" . }}
+    port: {{ .Values.postgres.port | default 5432 }}
+    database: {{ .Values.postgres.database }}
+    username: {{ .Values.postgres.user }}
+    passwordSecret:
+      name: {{ include "model-registry.postgres.secretName" . }}
+      key: password
+    skipDBCreation: {{ .Values.postgres.skipDBCreation | default false }}
+  {{- if .Values.istio.enabled }}
+  istio:
+    audiences:
+      {{- toYaml .Values.istio.audiences | nindent 6 }}
+    authProvider: {{ .Values.istio.authProvider | default "https://kubernetes.default.svc" }}
+    {{- if .Values.istio.gateway }}
+    gateway:
+      domain: {{ .Values.istio.gateway.domain }}
+      grpc:
+        gatewayRoute: {{ .Values.istio.gateway.grpc.gatewayRoute | default "enabled" }}
+      rest:
+        gatewayRoute: {{ .Values.istio.gateway.rest.gatewayRoute | default "enabled" }}
+    {{- end }}
+  {{- end }}
+{{- end }}
