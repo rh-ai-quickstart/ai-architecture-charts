@@ -11,9 +11,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-
-	"github.com/creack/pty"
-	"golang.org/x/term"
 )
 
 // Config defines the configuration for an MCP proxy server.
@@ -35,10 +32,6 @@ type Config struct {
 
 	// EnableCORS adds CORS headers to responses
 	EnableCORS bool
-
-	// UsePTY runs the MCP server in a pseudo-terminal to force line buffering.
-	// Enable this for MCP servers that buffer stdout (e.g., Java-based servers like SQLcl).
-	UsePTY bool
 
 	// SkipNotifications enables strict response ID matching when waiting for a response.
 	// When true: waits for a response with an ID matching the request ID (skipping mismatches)
@@ -64,7 +57,6 @@ type MCPProxy struct {
 	cmd      *exec.Cmd
 	stdin    io.WriteCloser
 	stdout   *bufio.Reader
-	ptyFile  *os.File // PTY master file (if UsePTY is enabled)
 	requests chan *request
 }
 
@@ -94,76 +86,45 @@ func NewMCPProxy(cfg Config) (*MCPProxy, error) {
 		}
 	}
 
-	log.Printf("[%s] Starting MCP server at: %s (PTY: %v)", cfg.ServerName, cmdPath, cfg.UsePTY)
+	log.Printf("[%s] Starting MCP server at: %s", cfg.ServerName, cmdPath)
 
 	cmd := exec.Command(cmdPath, cfg.CommandArgs...)
 	cmd.Env = append(os.Environ())
 
-	var stdin io.WriteCloser
-	var stdout io.Reader
-	var ptyFile *os.File
-
-	if cfg.UsePTY {
-		// Use PTY for stdin/stdout to force line buffering
-		var err error
-		ptyFile, err = pty.Start(cmd)
-		if err != nil {
-			return nil, fmt.Errorf("failed to start PTY: %w", err)
-		}
-
-		// Disable echo on PTY to prevent input from being echoed back
-		oldState, err := term.MakeRaw(int(ptyFile.Fd()))
-		if err != nil {
-			log.Printf("[%s] Warning: could not set raw mode on PTY: %v", cfg.ServerName, err)
-		} else {
-			// We don't restore the state since we want raw mode for the lifetime of the proxy
-			_ = oldState
-		}
-
-		// PTY master is used for both reading and writing
-		stdin = ptyFile
-		stdout = ptyFile
-
-		log.Printf("[%s] Started MCP server with PTY (PID: %d)", cfg.ServerName, cmd.Process.Pid)
-	} else {
-		// Use regular pipes
-		var err error
-		stdin, err = cmd.StdinPipe()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get stdin pipe: %w", err)
-		}
-
-		stdout, err = cmd.StdoutPipe()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get stdout pipe: %w", err)
-		}
-
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get stderr pipe: %w", err)
-		}
-
-		// Log stderr from the MCP server
-		go func() {
-			scanner := bufio.NewScanner(stderr)
-			for scanner.Scan() {
-				log.Printf("[%s stderr] %s", cfg.ServerName, scanner.Text())
-			}
-		}()
-
-		if err := cmd.Start(); err != nil {
-			return nil, fmt.Errorf("failed to start MCP server: %w", err)
-		}
-
-		log.Printf("[%s] Started MCP server (PID: %d)", cfg.ServerName, cmd.Process.Pid)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stdin pipe: %w", err)
 	}
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stdout pipe: %w", err)
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stderr pipe: %w", err)
+	}
+
+	// Log stderr from the MCP server
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			log.Printf("[%s stderr] %s", cfg.ServerName, scanner.Text())
+		}
+	}()
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start MCP server: %w", err)
+	}
+
+	log.Printf("[%s] Started MCP server (PID: %d)", cfg.ServerName, cmd.Process.Pid)
 
 	proxy := &MCPProxy{
 		config:   cfg,
 		cmd:      cmd,
 		stdin:    stdin,
 		stdout:   bufio.NewReader(stdout),
-		ptyFile:  ptyFile,
 		requests: make(chan *request, 100),
 	}
 
@@ -222,23 +183,7 @@ func (p *MCPProxy) readResponse(originalRequest json.RawMessage) (json.RawMessag
 			return nil, fmt.Errorf("error reading from MCP server: %w", err)
 		}
 
-		// Remove trailing newline and carriage return (PTY may add \r\n)
-		responseData := line
-		for len(responseData) > 0 && (responseData[len(responseData)-1] == '\n' || responseData[len(responseData)-1] == '\r') {
-			responseData = responseData[:len(responseData)-1]
-		}
-
-		// Skip empty lines
-		if len(responseData) == 0 {
-			continue
-		}
-
-		// Skip lines that don't look like JSON (e.g., PTY control sequences, log messages)
-		if responseData[0] != '{' {
-			log.Printf("[%s] Skipping non-JSON line: %s", p.config.ServerName, string(responseData))
-			continue
-		}
-
+		responseData := line[:len(line)-1]
 		log.Printf("[%s] Received: %s", p.config.ServerName, string(responseData))
 
 		// Parse the response to check if it has an ID

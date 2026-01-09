@@ -5,5 +5,3 @@ builds:
   - name: oracle-sqlcl
     containerfile: oracle-sqlcl/Containerfile
     context: oracle-sqlcl
-    # For local dev with replace directive, use context: .
-    # For production (fetching from upstream), context: oracle-sqlcl works

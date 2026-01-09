@@ -2,13 +2,9 @@
 FROM golang:1.21 AS builder
 WORKDIR /build
 
-# Copy proxy source - mcpproxy library is fetched via go mod download
-COPY oracle-sqlcl/proxy/ ./
-
-# For local development with replace directive, uncomment the following:
-# COPY mcpproxy/ ./mcpproxy/
-
-# Build the proxy binary
+# Copy proxy source and build
+# mcpproxy library is fetched from GitHub during go build
+COPY proxy/ ./
 RUN go mod download && go build -o mcp-proxy .
 
 # SQLcl MCP Server Docker Image
@@ -23,7 +19,7 @@ ENV PATH=/opt/oracle/sqlcl/bin:$PATH
 COPY --from=builder /build/mcp-proxy /usr/local/bin/mcp-proxy
 
 # Copy startup script
-COPY oracle-sqlcl/scripts/start-mcp.sh /start-mcp.sh
+COPY scripts/start-mcp.sh /start-mcp.sh
 RUN chmod +x /start-mcp.sh
 
 # Start MCP proxy
