@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"mcpproxy"
+	"github.com/rh-ai-kickstart/ai-architecture-charts/mcp-servers/mcpproxy"
 )
 
 // Oracle-specific types for error detection

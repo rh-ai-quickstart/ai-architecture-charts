@@ -4,4 +4,4 @@ builds:
     context: weather/src
   - name: oracle-sqlcl
     containerfile: oracle-sqlcl/Containerfile
-    context: .  # Needs access to mcpproxy/ shared library
+    context: oracle-sqlcl
