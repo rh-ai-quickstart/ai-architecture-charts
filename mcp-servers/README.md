@@ -231,9 +231,6 @@ mcp-servers:
     oracleUserSecrets:           # List of Oracle user secrets to mount
       - oracle-db-user-sales
       - oracle-db-user-sales-reader
-    env:
-      - name: MARK_SQL_ERRORS_AS_ERROR  # Optional: Mark SQL errors with isError flag
-        value: "true"
 ```
 
 **How it works:**
@@ -242,10 +239,6 @@ mcp-servers:
 3. The mcp-servers template mounts all specified secrets to `/user-secrets/<secret-name>`
 4. The startup script automatically creates saved connections for each mounted user
 5. Each connection uses the username as the connection alias
-
-**Error Handling:**
-- Set `MARK_SQL_ERRORS_AS_ERROR=true` to mark SQL errors (ORA-#### and SP2-####) with `isError: true` in MCP responses
-- Default behavior (without this variable) returns errors as normal content
 
 **No manual configuration required** - just list the secret names!
 

@@ -152,21 +152,6 @@ Notes:
 
 - On startup, the script scans `/user-secrets/` for mounted user secrets and creates a saved connection for each user found. Each connection uses the username as the connection alias.
 
-### Error Handling Configuration
-
-The proxy supports optional error marking via environment variable:
-
-- **`MARK_SQL_ERRORS_AS_ERROR`**: When set to `true` or `1`, SQL errors (ORA-#### and SP2-#### error codes) will be marked with `isError: true` in the MCP response
-- **Default behavior**: Without this variable set, errors are returned as normal content without the `isError` flag
-- **Error detection**: The proxy automatically detects Oracle database errors (ORA-####) and SQLcl errors (SP2-####) in response content
-
-Example:
-```yaml
-env:
-  - name: MARK_SQL_ERRORS_AS_ERROR
-    value: "true"
-```
-
 ## 🔍 **Troubleshooting**
 
 ### **Common Issues**
