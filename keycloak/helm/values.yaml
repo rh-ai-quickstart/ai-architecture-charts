@@ -1,0 +1,141 @@
+# Keycloak configuration
+image:
+  repository: quay.io/keycloak/keycloak
+  tag: "26.0.7"
+  pullPolicy: IfNotPresent
+
+# Number of Keycloak replicas
+replicas: 1
+
+# Admin credentials
+# Note: Keycloak 26 creates a TEMPORARY bootstrap admin for initial setup
+# Create a permanent admin via the UI after first login
+auth:
+  adminUser: admin
+  # Leave empty to auto-generate a secure password
+  # Password is stored in the keycloak secret
+  adminPassword: ""
+
+# Database configuration
+# Default: dev-file (H2) for standalone development
+# For production: override vendor to postgres/mysql and configure secret
+database:
+  vendor: dev-file  # dev-file (H2), postgres, mysql, mariadb
+  host: ""
+  port: 5432
+  database: keycloak
+  username: keycloak
+  password: ""
+  # Database credentials from existing secret (for postgres/mysql)
+  secret:
+    name: ""  # Set by parent chart when using external DB
+    hostKey: "host"
+    portKey: "port"
+    usernameKey: "user"
+    passwordKey: "password"
+
+# Hostname configuration
+hostname:
+  # Leave empty to auto-detect from OpenShift route
+  # Set to specific hostname for production (e.g., auth.example.com)
+  hostname: ""
+  # Only used when hostname is set
+  # Enable if you need dynamic backchannel URLs
+  backchannelDynamic: false
+
+# HTTP configuration
+http:
+  enabled: true
+  port: 8080
+
+# Health check probes
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 120
+  timeoutSeconds: 5
+  periodSeconds: 15
+  failureThreshold: 5
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  timeoutSeconds: 5
+  periodSeconds: 10
+  failureThreshold: 5
+
+# Resource limits
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+
+# Route configuration (OpenShift)
+route:
+  enabled: true
+  host: ""  # If empty, OpenShift generates hostname
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# OpenShift OAuth Integration
+# Enables OpenShift as an identity provider in Keycloak
+openshiftOAuth:
+  enabled: true
+
+# Realm Import
+# Realm configuration - imported on startup
+# Key is the realm name, value is the realm configuration
+realms: {}
+    # Example: Create an "ai-apps" realm
+    # ai-apps:
+    #   clients:
+    #   - clientId: llama-stack
+    #     protocol: openid-connect
+    #     publicClient: false
+    #     redirectUris:
+    #     - https://llama-stack.example.com/*
+    #     webOrigins:
+    #     - https://llama-stack.example.com
+    #     serviceAccountsEnabled: true
+    #     directAccessGrantsEnabled: true
+    #   - clientId: ingestion-pipeline
+    #     protocol: openid-connect
+    #     publicClient: false
+    #     serviceAccountsEnabled: true
+    #   roles:
+    #     realm:
+    #     - name: user
+    #     - name: admin
+    #     - name: ai-operator
+    #   users:
+    #   - username: demo
+    #     enabled: true
+    #     credentials:
+    #     - type: password
+    #       value: demo123
+    #       temporary: false
+    #     realmRoles:
+    #     - user
+
+# Extra environment variables
+extraEnv: []
+  # - name: KC_LOG_LEVEL
+  #   value: DEBUG
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}

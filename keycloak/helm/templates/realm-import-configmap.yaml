@@ -1,0 +1,41 @@
+{{- if .Values.realms }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "keycloak.fullname" . }}-realm-import
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+data:
+  {{- range $realmName, $realmConfig := .Values.realms }}
+  {{ $realmName }}.json: |
+    {{- $realmData := merge (dict "realm" $realmName) $realmConfig }}
+    {{- /* Inject client secrets from generated Secrets */ -}}
+    {{- if $realmData.clients }}
+    {{- range $idx, $client := $realmData.clients }}
+    {{- if and (not $client.publicClient) (eq $client.protocol "openid-connect") }}
+    {{- $secretName := printf "%s-kc-client-%s" $.Release.Name $client.clientId }}
+    {{- $clientSecret := lookup "v1" "Secret" $.Release.Namespace $secretName }}
+    {{- if $clientSecret }}
+    {{- $_ := set $client "secret" (index $clientSecret.data "client-secret" | b64dec) }}
+    {{- else if not $client.secret }}
+    {{- $_ := set $client "secret" (randAlphaNum 32) }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- /* Inject clientId and clientSecret for OpenShift identity providers */ -}}
+    {{- if $realmData.identityProviders }}
+    {{- range $idx, $idp := $realmData.identityProviders }}
+    {{- if eq $idp.providerId "openshift-v4" }}
+    {{- if not $idp.config.clientId }}
+    {{- $_ := set $idp.config "clientId" (include "keycloak.fullname" $) }}
+    {{- end }}
+    {{- if not $idp.config.clientSecret }}
+    {{- $_ := set $idp.config "clientSecret" $.Values.openshiftOAuth.clientSecret }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- $realmData | toJson | nindent 4 }}
+  {{- end }}
+{{- end }}

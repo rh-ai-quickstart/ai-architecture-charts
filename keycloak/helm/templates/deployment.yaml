@@ -1,0 +1,164 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "keycloak.fullname" . }}
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      {{- include "keycloak.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "keycloak.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: keycloak
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+        - start
+        {{- if eq .Values.database.vendor "dev-file" }}
+        - --db=dev-file
+        {{- else }}
+        - --db={{ .Values.database.vendor }}
+        {{- end }}
+        {{- if .Values.hostname.hostname }}
+        - --hostname={{ .Values.hostname.hostname }}
+        {{- if .Values.hostname.backchannelDynamic }}
+        - --hostname-backchannel-dynamic=true
+        {{- end }}
+        {{- else }}
+        - --hostname-strict=false
+        {{- end }}
+        {{- if .Values.http.enabled }}
+        - --http-enabled=true
+        {{- end }}
+        - --truststore-paths=/var/run/secrets/kubernetes.io/serviceaccount
+        - --health-enabled=true
+        {{- if .Values.realms }}
+        - --import-realm
+        {{- end }}
+        - --log-level=INFO,org.keycloak.broker:DEBUG,org.keycloak.services:DEBUG
+        env:
+        # Edge proxy termination - trust X-Forwarded headers
+        - name: KC_PROXY_HEADERS
+          value: "xforwarded"
+        # Use hostname from request (X-Forwarded-Host)
+        - name: KC_HOSTNAME_STRICT
+          value: "false"
+        # Bootstrap admin credentials (Keycloak 26+)
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.fullname" . }}
+              key: admin-username
+        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.fullname" . }}
+              key: admin-password
+        {{- if ne .Values.database.vendor "dev-file" }}
+        {{- if .Values.database.secret }}
+        # Fetch DB connection details from existing secret
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.secret.name }}
+              key: {{ .Values.database.secret.hostKey | default "host" }}
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.secret.name }}
+              key: {{ .Values.database.secret.portKey | default "port" }}
+        - name: KC_DB_URL
+          value: jdbc:postgresql://$(DB_HOST):$(DB_PORT)/{{ .Values.database.database }}
+        - name: KC_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.secret.name }}
+              key: {{ .Values.database.secret.usernameKey }}
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.secret.name }}
+              key: {{ .Values.database.secret.passwordKey }}
+        {{- else }}
+        - name: KC_DB_URL
+          value: {{ include "keycloak.databaseUrl" . | quote }}
+        - name: KC_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.fullname" . }}
+              key: db-username
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.fullname" . }}
+              key: db-password
+        {{- end }}
+        {{- end }}
+        {{- if .Values.hostname.hostname }}
+        - name: KC_HOSTNAME
+          value: {{ .Values.hostname.hostname | quote }}
+        {{- end }}
+        - name: KC_HTTP_PORT
+          value: {{ .Values.http.port | quote }}
+        {{- with .Values.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.http.port }}
+          protocol: TCP
+        - name: management
+          containerPort: 9000
+          protocol: TCP
+        {{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: management
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: management
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        {{- if .Values.realms }}
+        volumeMounts:
+        - name: realm-import
+          mountPath: /opt/keycloak/data/import
+          readOnly: true
+        {{- end }}
+      {{- if .Values.realms }}
+      volumes:
+      - name: realm-import
+        configMap:
+          name: {{ include "keycloak.fullname" . }}-realm-import
+      {{- end }}
