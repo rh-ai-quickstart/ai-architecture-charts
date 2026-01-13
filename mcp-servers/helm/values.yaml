@@ -48,3 +48,17 @@ mcp-servers:
     # Optional: Limit which tools are available
     # env:
     #   GITHUB_TOOLS: "get_file_contents,issue_read,create_pull_request"
+
+  openshift-mcp:
+    enabled: false
+    deploymentMode: deployment
+    image:
+      repository: quay.io/containers/kubernetes_mcp_server
+      tag: "latest"
+    transport: streamable-http
+    targetPort: 8080
+    # Optional: Specify a service account with appropriate RBAC
+    # serviceAccountName: openshift-mcp
+    # Optional: Limit which tools are available
+    # env:
+    #   ENABLED_TOOL_SETS: "base,helm"  # Options: base, helm, kiali, kubevirt
