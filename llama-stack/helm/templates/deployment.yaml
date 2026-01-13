@@ -38,15 +38,33 @@ spec:
       initContainers:
         - name: wait-for-models
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          envFrom:
+          - secretRef:
+              name: {{ .Chart.Name }}-env
+          {{- with .Values.extraSecretRefs }}
+          {{- range . }}
+          - secretRef:
+              name: {{ .name | default . }}
+          {{- end }}
+          {{- end }}
           command:
             - /bin/bash
             - -c
             - |
               set -e
+              # Function to resolve ${env.VAR} syntax to actual env var values
+              resolve_env_var() {
+                local val="$1"
+                if [[ "$val" =~ ^\$\{env\.([^}]+)\}$ ]]; then
+                  echo "${!BASH_REMATCH[1]}"
+                else
+                  echo "$val"
+                fi
+              }
               for url_data in {{ range $key, $model := $models }}{{- if $model.enabled }}{{ $model.url }}/models#{{ $model.apiToken }} {{ end }}{{ end }}; do
                 url_components=(${url_data//#/ })
                 url=${url_components[0]}
-                auth=${url_components[1]}
+                auth=$(resolve_env_var "${url_components[1]}")
                 echo "Waiting for $url..."
                 curl_options=("-ksf" "$url")
                 if [[ -n "$auth" ]]; then
@@ -113,6 +131,12 @@ spec:
           envFrom:
           - secretRef:
               name: {{ .Chart.Name }}-env
+          {{- with .Values.extraSecretRefs }}
+          {{- range . }}
+          - secretRef:
+              name: {{ .name | default . }}
+          {{- end }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

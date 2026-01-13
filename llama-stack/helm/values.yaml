@@ -90,6 +90,11 @@ vertexai:
   #location:
 
 secrets: {}
+
+# Extra secret references to mount as environment variables in init and main containers
+# Example: extraSecretRefs: [{ name: my-api-keys-secret }]
+extraSecretRefs: []
+
 mcp-servers: {}
 models:
   gpt-oss-20b:
