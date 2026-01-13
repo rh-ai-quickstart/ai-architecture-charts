@@ -48,3 +48,37 @@ mcp-servers:
     # Optional: Limit which tools are available
     # env:
     #   GITHUB_TOOLS: "get_file_contents,issue_read,create_pull_request"
+
+  # Slack MCP Server - https://github.com/korotovsky/slack-mcp-server
+  # WARNING: This is a community-maintained server (korotovsky/slack-mcp-server).
+  # An official Slack MCP server may be released in the future that would replace
+  # this implementation. Monitor https://github.com/modelcontextprotocol for updates.
+  slack-mcp:
+    enabled: false
+    deploymentMode: deployment
+    image:
+      repository: ghcr.io/korotovsky/slack-mcp-server
+      tag: "latest"  # Use upstream image directly (supports SSE/HTTP natively)
+    transport: sse
+    targetPort: 13080  # Default port for SSE transport
+    # Authentication - choose one method:
+    # Option 1: Stealth mode (xoxc + xoxd) - no bot installation required
+    # Option 2: User OAuth (xoxp) - requires OAuth app setup
+    # Option 3: Bot token (xoxb) - limited to invited channels
+    envSecrets:
+      # For stealth mode:
+      SLACK_MCP_XOXC_TOKEN:
+        name: slack-mcp-secret
+        key: SLACK_MCP_XOXC_TOKEN
+      SLACK_MCP_XOXD_TOKEN:
+        name: slack-mcp-secret
+        key: SLACK_MCP_XOXD_TOKEN
+      # Or for OAuth mode (comment out stealth mode above):
+      # SLACK_MCP_XOXP_TOKEN:
+      #   name: slack-mcp-secret
+      #   key: SLACK_MCP_XOXP_TOKEN
+    env:
+      SLACK_MCP_HOST: "0.0.0.0"  # Bind to all interfaces for Kubernetes
+      # Optional: Enable message posting and logging
+      # SLACK_MCP_ADD_MESSAGE_TOOL: "true"  # or channel list, or !channel to exclude
+      # SLACK_MCP_LOG_LEVEL: "info"  # debug, info, warn, error
