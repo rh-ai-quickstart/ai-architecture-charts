@@ -24,8 +24,15 @@ The chart creates:
    - No external proxy required
    - Go-based HTTP server manages stdio communication with SQLcl
 2. **Weather MCP**: External weather API integration
-3. **Secure Secret Management**: Credentials sourced from Kubernetes secrets
-4. **Standard Kubernetes Deployments**: Simple, operator-free architecture
+3. **GitHub MCP**: GitHub repository management and automation
+4. **OpenShift MCP**: Kubernetes/OpenShift cluster management capabilities
+   - Native SSE transport support (no proxy required)
+   - Full Kubernetes resource management (pods, deployments, services, etc.)
+   - Helm chart operations
+   - OpenShift-specific features (routes, builds, imagestreams)
+   - Optional Kiali service mesh and KubeVirt integrations
+5. **Secure Secret Management**: Credentials sourced from Kubernetes secrets
+6. **Standard Kubernetes Deployments**: Simple, operator-free architecture
 
 ### Deployment Architecture
 
@@ -45,6 +52,8 @@ HTTP Clients → Go Proxy (port 8080) → SQLcl (stdio) → Oracle DB
 | `helm/` | Helm chart for MCP servers deployment |
 | `oracle-sqlcl/` | Oracle SQLcl MCP container source |
 | `weather/` | Weather MCP container source code |
+| `github-mcp/` | GitHub MCP container source with HTTP proxy |
+| `openshift-mcp/` | OpenShift/Kubernetes MCP documentation (uses official image) |
 | `README.md` | This documentation |
 
 ## Prerequisites
@@ -76,6 +85,8 @@ oc get services -l app.kubernetes.io/component=mcp-server -n <your-namespace>
 **What gets deployed:**
 - ✅ Weather MCP server as Deployment + Service (enabled by default)
 - ⏸️ Oracle SQLcl MCP server (disabled by default)
+- ⏸️ GitHub MCP server (disabled by default)
+- ⏸️ OpenShift MCP server (disabled by default)
 
 ### Installation with Toolhive (Optional - Advanced Features)
 

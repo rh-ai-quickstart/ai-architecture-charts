@@ -28,6 +28,9 @@ spec:
       labels:
         {{- include "mcp-servers.selectorLabels" $serverDict | nindent 8 }}
     spec:
+      {{- if $server.serviceAccountName }}
+      serviceAccountName: {{ $server.serviceAccountName }}
+      {{- end }}
       {{- with $server.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
