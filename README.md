@@ -108,6 +108,18 @@ MCP server that exposes Oracle SQLcl capabilities to AI agents via Toolhive, ena
 - Integrates with Toolhive Operator v0.2.19 (CRDs v0.0.30 and operator managed as chart dependencies)
 - Orale connection managed via Kubernetes secrets and configurable service
 
+### 🔐 Security & Identity
+
+#### [Keycloak](./keycloak/README.md)
+Identity and access management solution providing authentication and authorization for AI applications. Supports OAuth2, OpenID Connect, and SAML protocols.
+
+**Key Features:**
+- Official Keycloak container images
+- Built-in PostgreSQL database (via pgvector subchart) or external database support
+- OpenShift Routes and Kubernetes Ingress support
+- Production-ready configuration with health checks and metrics
+- Flexible authentication and authorization policies
+
 ## Quick Start
 
 ### Prerequisites
@@ -278,6 +290,9 @@ Each chart can be deployed individually:
 helm install pgvector ./pgvector/helm
 helm install minio ./minio/helm
 helm install llm-service ./llm-service/helm
+helm install keycloak ./keycloak/helm \
+  --set admin.password=changeme \
+  --set pgvector.secret.password=changeme
 ```
 
 ### Chart Dependencies
@@ -292,11 +307,11 @@ version: 1.0.0
 
 dependencies:
   - name: pgvector
-    version: "0.1.0"
+    version: "0.5.1"
     repository: "file://../ai-architecture-charts/pgvector/helm"
   
   - name: minio
-    version: "0.1.0"
+    version: "0.5.0"
     repository: "file://../ai-architecture-charts/minio/helm"
   
   - name: llm-service
@@ -310,6 +325,10 @@ dependencies:
   - name: ingestion-pipeline
     version: "0.2.18"
     repository: "file://../ai-architecture-charts/ingestion-pipeline/helm"
+  
+  - name: keycloak
+    version: "1.0.0"
+    repository: "file://../ai-architecture-charts/keycloak/helm"
 ```
 
 ### Configuring Subcharts
@@ -355,6 +374,16 @@ ingestion-pipeline:
     S3:
       bucket_name: ai-documents
       endpoint_url: http://minio:9000
+
+keycloak:
+  admin:
+    password: "your-admin-password"
+  pgvector:
+    enabled: true
+    secret:
+      password: "your-db-password"
+  route:
+    enabled: true
 ```
 
 ### Shared Configuration with Global Values
