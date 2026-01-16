@@ -2,8 +2,23 @@ apiVersion: v1
 entries:
   configure-pipeline:
   - apiVersion: v2
+    appVersion: 0.5.6
+    created: "2026-01-16T16:52:12.554804981Z"
+    dependencies:
+    - condition: pipelineStorage.deployMinio
+      name: minio
+      repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+      version: 0.5.1
+    description: A Helm chart for Kubernetes
+    digest: 2dca4a672230c6601c15a22797a7810e5af61ace6dc03d0c960b62c73f487728
+    name: configure-pipeline
+    type: application
+    urls:
+    - https://rh-ai-quickstart.github.io/ai-architecture-charts/configure-pipeline-0.5.6.tgz
+    version: 0.5.6
+  - apiVersion: v2
     appVersion: 0.5.5
-    created: "2026-01-12T20:57:18.767151225Z"
+    created: "2026-01-16T16:52:12.554188735Z"
     dependencies:
     - condition: pipelineStorage.deployMinio
       name: minio
@@ -18,7 +33,7 @@ entries:
     version: 0.5.5
   - apiVersion: v2
     appVersion: 0.5.4
-    created: "2026-01-12T20:57:18.766559303Z"
+    created: "2026-01-16T16:52:12.553591624Z"
     dependencies:
     - condition: pipelineStorage.deployMinio
       name: minio
@@ -33,7 +48,7 @@ entries:
     version: 0.5.4
   - apiVersion: v2
     appVersion: 0.5.3
-    created: "2026-01-12T20:57:18.765938116Z"
+    created: "2026-01-16T16:52:12.552967994Z"
     dependencies:
     - condition: pipelineStorage.deployMinio
       name: minio
@@ -48,7 +63,7 @@ entries:
     version: 0.5.3
   - apiVersion: v2
     appVersion: 0.5.2
-    created: "2026-01-12T20:57:18.76533308Z"
+    created: "2026-01-16T16:52:12.552394307Z"
     dependencies:
     - condition: pipelineStorage.deployMinio
       name: minio
@@ -63,7 +78,7 @@ entries:
     version: 0.5.2
   - apiVersion: v2
     appVersion: 0.5.1
-    created: "2026-01-12T20:57:18.764719137Z"
+    created: "2026-01-16T16:52:12.551746061Z"
     dependencies:
     - condition: pipelineStorage.deployMinio
       name: minio
@@ -78,7 +93,7 @@ entries:
     version: 0.5.1
   - apiVersion: v2
     appVersion: 0.5.0
-    created: "2026-01-12T20:57:18.764018513Z"
+    created: "2026-01-16T16:52:12.551053483Z"
     description: A Helm chart for Kubernetes
     digest: 566ff28921e56ed63846db147811445013cdbf7b53af8b0ebf24d739310b69a4
     name: configure-pipeline
@@ -88,7 +103,7 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2026-01-12T20:57:18.763804714Z"
+    created: "2026-01-16T16:52:12.550837802Z"
     description: A Helm chart for Kubernetes
     digest: dd711c24f7f92e052e073eca961a223f7d04e9d4816c2aa4bc1718d1f81324ef
     name: configure-pipeline
@@ -98,8 +113,18 @@ entries:
     version: 0.1.0
   ingestion-pipeline:
   - apiVersion: v2
+    appVersion: 0.6.4
+    created: "2026-01-16T16:52:12.560896785Z"
+    description: A Helm chart for Kubernetes
+    digest: b514f847ca57ae0094ff3d574530bfe504617fcd18049a0d59c0b5ebf3489c30
+    name: ingestion-pipeline
+    type: application
+    urls:
+    - https://rh-ai-quickstart.github.io/ai-architecture-charts/ingestion-pipeline-0.6.4.tgz
+    version: 0.6.4
+  - apiVersion: v2
     appVersion: 0.6.3
-    created: "2026-01-12T20:57:18.773265455Z"
+    created: "2026-01-16T16:52:12.560475201Z"
     description: A Helm chart for Kubernetes
     digest: df159c239fcab3e267241801644c51af4dae59de4b0df8deb99917ec2d84fe44
     name: ingestion-pipeline
@@ -109,7 +134,7 @@ entries:
     version: 0.6.3
   - apiVersion: v2
     appVersion: 0.6.2
-    created: "2026-01-12T20:57:18.772832439Z"
+    created: "2026-01-16T16:52:12.560016919Z"
     description: A Helm chart for Kubernetes
     digest: ad071d176655f7f86f9dcb7f5cb9ea7469ef5e2565cf1c8f919c74755121a885
     name: ingestion-pipeline
@@ -119,7 +144,7 @@ entries:
     version: 0.6.2
   - apiVersion: v2
     appVersion: 0.6.1
-    created: "2026-01-12T20:57:18.772346404Z"
+    created: "2026-01-16T16:52:12.559583502Z"
     description: A Helm chart for Kubernetes
     digest: 9ccf6c36cd2a7cc86f55cf573816513c17fc3a3f9bd9fb98ee65a87de3ea14f4
     name: ingestion-pipeline
@@ -129,7 +154,7 @@ entries:
     version: 0.6.1
   - apiVersion: v2
     appVersion: 0.6.0
-    created: "2026-01-12T20:57:18.771917426Z"
+    created: "2026-01-16T16:52:12.559103249Z"
     description: A Helm chart for Kubernetes
     digest: 4a52ea92ce06b0f115664c4d44e953188e2d475f2b722b33f08ffa075183a39f
     name: ingestion-pipeline
@@ -139,7 +164,7 @@ entries:
     version: 0.6.0
   - apiVersion: v2
     appVersion: 0.5.1
-    created: "2026-01-12T20:57:18.771471645Z"
+    created: "2026-01-16T16:52:12.558679461Z"
     description: A Helm chart for Kubernetes
     digest: 3cad55ef5a680eb30e9fe0f49918549d3906408df24deb23cc0f999f54e8bfd0
     name: ingestion-pipeline
@@ -149,7 +174,7 @@ entries:
     version: 0.5.1
   - apiVersion: v2
     appVersion: 0.5.0
-    created: "2026-01-12T20:57:18.771003093Z"
+    created: "2026-01-16T16:52:12.558252337Z"
     description: A Helm chart for Kubernetes
     digest: b6c4f02629f9cb1f629a20ed795d9fe7cdd677f77424a70123b9488c5e9e7f5d
     name: ingestion-pipeline
@@ -159,7 +184,7 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: 0.2.22
-    created: "2026-01-12T20:57:18.769985218Z"
+    created: "2026-01-16T16:52:12.55730762Z"
     description: A Helm chart for Kubernetes
     digest: 686003308ec4367b544ef060d0687c52792cb7fd5c2f80e1924a2493c3cb2fbe
     name: ingestion-pipeline
@@ -169,7 +194,7 @@ entries:
     version: 0.2.22
   - apiVersion: v2
     appVersion: 0.2.18
-    created: "2026-01-12T20:57:18.769509923Z"
+    created: "2026-01-16T16:52:12.556939375Z"
     description: A Helm chart for Kubernetes
     digest: ec4ffc80c040447a0b93dc5d8883f7a860f236cc28ca3cd872f64a98100eef3b
     name: ingestion-pipeline
@@ -179,7 +204,7 @@ entries:
     version: 0.2.18
   - apiVersion: v2
     appVersion: 0.2.16
-    created: "2026-01-12T20:57:18.769056619Z"
+    created: "2026-01-16T16:52:12.556572993Z"
     description: A Helm chart for Kubernetes
     digest: 878d673c8e9e0f38efb3b50acf14619ddce5dd3958fa4e8e8bf630536428bcc3
     name: ingestion-pipeline
@@ -189,7 +214,7 @@ entries:
     version: 0.2.16
   - apiVersion: v2
     appVersion: 0.2.14
-    created: "2026-01-12T20:57:18.768622301Z"
+    created: "2026-01-16T16:52:12.556212883Z"
     description: A Helm chart for Kubernetes
     digest: 150a61359b0611a991725dcc40beb45306362b9fd65abeacbd2ff2fb3b0a6c00
     name: ingestion-pipeline
@@ -199,7 +224,7 @@ entries:
     version: 0.2.14
   - apiVersion: v2
     appVersion: 0.2.9
-    created: "2026-01-12T20:57:18.77062541Z"
+    created: "2026-01-16T16:52:12.557895353Z"
     description: A Helm chart for Kubernetes
     digest: 20abfdc13920b70924f9d4c6315ee0323b8649acc180c57a3bb1706680b6280c
     name: ingestion-pipeline
@@ -209,7 +234,7 @@ entries:
     version: 0.2.9
   - apiVersion: v2
     appVersion: 0.2.8
-    created: "2026-01-12T20:57:18.770288653Z"
+    created: "2026-01-16T16:52:12.557596407Z"
     description: A Helm chart for Kubernetes
     digest: 3757ec6f5edc4018465d3c14b37bbfd1e72e01feb62f05f26542592de647a6c8
     name: ingestion-pipeline
@@ -219,7 +244,7 @@ entries:
     version: 0.2.8
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2026-01-12T20:57:18.767722268Z"
+    created: "2026-01-16T16:52:12.555552441Z"
     description: A Helm chart for Kubernetes
     digest: b8f7286c86bf68e6a246e256611b81e1c400e6a2937fdcbc0d3cbde5396280ca
     name: ingestion-pipeline
@@ -229,8 +254,18 @@ entries:
     version: 0.1.0
   llama-stack:
   - apiVersion: v2
+    appVersion: 0.6.6
+    created: "2026-01-16T16:52:12.57299881Z"
+    description: A Helm chart for Kubernetes
+    digest: 5471b6843d0a712201e1169c3b498df0e4bf98cecfa456bb0d3834a5fadc3065
+    name: llama-stack
+    type: application
+    urls:
+    - https://rh-ai-quickstart.github.io/ai-architecture-charts/llama-stack-0.6.6.tgz
+    version: 0.6.6
+  - apiVersion: v2
     appVersion: 0.6.5
-    created: "2026-01-12T20:57:18.784287665Z"
+    created: "2026-01-16T16:52:12.57251464Z"
     description: A Helm chart for Kubernetes
     digest: 46fa96c3088b948288abba37d28641702b8cd6696d98afbc65df70956b3768dc
     name: llama-stack
@@ -240,7 +275,7 @@ entries:
     version: 0.6.5
   - apiVersion: v2
     appVersion: 0.6.4
-    created: "2026-01-12T20:57:18.783794107Z"
+    created: "2026-01-16T16:52:12.572024198Z"
     description: A Helm chart for Kubernetes
     digest: dd4d7cdb85f2d1554c85d6eb46f3a0e3baf7d20a09a33db43e6227aac4766f8d
     name: llama-stack
@@ -250,7 +285,7 @@ entries:
     version: 0.6.4
   - apiVersion: v2
     appVersion: 0.6.3
-    created: "2026-01-12T20:57:18.783264801Z"
+    created: "2026-01-16T16:52:12.571540227Z"
     description: A Helm chart for Kubernetes
     digest: 903f5d9b9b62c639a7b485cf87035851a076c5de9efc299d39a2e6352f27ca2e
     name: llama-stack
@@ -260,7 +295,7 @@ entries:
     version: 0.6.3
   - apiVersion: v2
     appVersion: 0.6.2
-    created: "2026-01-12T20:57:18.782779337Z"
+    created: "2026-01-16T16:52:12.571042361Z"
     description: A Helm chart for Kubernetes
     digest: f155fbd42afed0b6aa251331cb49a02935b8e6670c0de7b4968c75e8422541d6
     name: llama-stack
@@ -270,7 +305,7 @@ entries:
     version: 0.6.2
   - apiVersion: v2
     appVersion: 0.6.1
-    created: "2026-01-12T20:57:18.782278144Z"
+    created: "2026-01-16T16:52:12.570560636Z"
     description: A Helm chart for Kubernetes
     digest: d794c7c881069912a6c8c69a6cfa08808d6e133d9d85d8d16c8665655e29aec3
     name: llama-stack
@@ -280,7 +315,7 @@ entries:
     version: 0.6.1
   - apiVersion: v2
     appVersion: 0.6.0
-    created: "2026-01-12T20:57:18.781784105Z"
+    created: "2026-01-16T16:52:12.570049795Z"
     description: A Helm chart for Kubernetes
     digest: c0a88b9cf1ca96da53a54623c8f946c14d50e6db40cee1b9e66597a44fde6ba3
     name: llama-stack
@@ -290,7 +325,7 @@ entries:
     version: 0.6.0
   - apiVersion: v2
     appVersion: 0.5.4
-    created: "2026-01-12T20:57:18.781246804Z"
+    created: "2026-01-16T16:52:12.569549044Z"
     description: A Helm chart for Kubernetes
     digest: 121db5c00f9c419d053e8088a0fc842d084d81ad28fb6744d4b25c74b31b2a90
     name: llama-stack
@@ -300,7 +335,7 @@ entries:
     version: 0.5.4
   - apiVersion: v2
     appVersion: 0.5.3
-    created: "2026-01-12T20:57:18.779961677Z"
+    created: "2026-01-16T16:52:12.568964427Z"
     description: A Helm chart for Kubernetes
     digest: 3cf55b892a02b5e1a6f6fbb24a32b7d008fead584bc93ae431a4217b8f719161
     name: llama-stack
@@ -310,7 +345,7 @@ entries:
     version: 0.5.3
   - apiVersion: v2
     appVersion: 0.5.2
-    created: "2026-01-12T20:57:18.779351912Z"
+    created: "2026-01-16T16:52:12.567635984Z"
     description: A Helm chart for Kubernetes
     digest: ae54be2543dd9052aa60faf5d31fa23a897c6df8f087ba07683b3e7310e44533
     name: llama-stack
@@ -320,7 +355,7 @@ entries:
     version: 0.5.2
   - apiVersion: v2
     appVersion: 0.5.1
-    created: "2026-01-12T20:57:18.778826183Z"
+    created: "2026-01-16T16:52:12.567094307Z"
     description: A Helm chart for Kubernetes
     digest: 8d9df1b18b6b26db1da8d359943bf0775a83cee8ce0dfb737b60a5a25e84a815
     name: llama-stack
@@ -330,7 +365,7 @@ entries:
     version: 0.5.1
   - apiVersion: v2
     appVersion: 0.5.0
-    created: "2026-01-12T20:57:18.778277592Z"
+    created: "2026-01-16T16:52:12.56655298Z"
     description: A Helm chart for Kubernetes
     digest: 33c0526ea0595067124855bc49648dfe694b84811b964d78a9d9fcc8d5ea0b69
     name: llama-stack
@@ -340,7 +375,7 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: 0.2.22
-    created: "2026-01-12T20:57:18.776765336Z"
+    created: "2026-01-16T16:52:12.564710843Z"
     description: A Helm chart for Kubernetes
     digest: c156aae6fc2eee05d86c9cc51898dc17e85218d273679f1c257d40aa50855add
     name: llama-stack
@@ -350,7 +385,7 @@ entries:
     version: 0.2.22
   - apiVersion: v2
     appVersion: 0.2.18
-    created: "2026-01-12T20:57:18.776157294Z"
+    created: "2026-01-16T16:52:12.564072887Z"
     description: A Helm chart for Kubernetes
     digest: ec181d54f99161437bdb2a7aa942d2f7568d85db70d88c915b43958bef475e99
     name: llama-stack
@@ -360,7 +395,7 @@ entries:
     version: 0.2.18
   - apiVersion: v2
     appVersion: 0.2.16
-    created: "2026-01-12T20:57:18.775553761Z"
+    created: "2026-01-16T16:52:12.563470667Z"
     description: A Helm chart for Kubernetes
     digest: ceb8d9fcc4f1399b7ed64599c20eecbf868f24079838fa44673962671f8eb283
     name: llama-stack
@@ -370,7 +405,7 @@ entries:
     version: 0.2.16
   - apiVersion: v2
     appVersion: 0.2.14
-    created: "2026-01-12T20:57:18.774952772Z"
+    created: "2026-01-16T16:52:12.562883295Z"
     description: A Helm chart for Kubernetes
     digest: 14252043db5f571c4c58f6fc96ec236aee2befca737eb08eab541b12ea7b0bff
     name: llama-stack
@@ -380,7 +415,7 @@ entries:
     version: 0.2.14
   - apiVersion: v2
     appVersion: 0.2.9
-    created: "2026-01-12T20:57:18.777737857Z"
+    created: "2026-01-16T16:52:12.565970617Z"
     description: A Helm chart for Kubernetes
     digest: c0a85dd9ae92cb89e65eddd765761205d6459eb59269d5ad46fa9add98173541
     name: llama-stack
@@ -390,7 +425,7 @@ entries:
     version: 0.2.9
   - apiVersion: v2
     appVersion: 0.2.8
-    created: "2026-01-12T20:57:18.777254687Z"
+    created: "2026-01-16T16:52:12.565404283Z"
     description: A Helm chart for Kubernetes
     digest: 74d614de3bb741d59fb690dd27581509a750b8c64287d994dc32efd788e3a48b
     name: llama-stack
@@ -400,7 +435,7 @@ entries:
     version: 0.2.8
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2026-01-12T20:57:18.773776496Z"
+    created: "2026-01-16T16:52:12.562304087Z"
     description: A Helm chart for Kubernetes
     digest: d6fe8417acf13ef7598bd069fe70082540bed84355300fc67b4afab83204727b
     name: llama-stack
@@ -410,8 +445,18 @@ entries:
     version: 0.1.0
   llm-service:
   - apiVersion: v2
+    appVersion: 0.5.9
+    created: "2026-01-16T16:52:12.58313697Z"
+    description: A Helm chart for Kubernetes
+    digest: f837a3f940641fc2a3a2d95eadf17deba570fc6f58252e3c8c5aa41b1858ed0f
+    name: llm-service
+    type: application
+    urls:
+    - https://rh-ai-quickstart.github.io/ai-architecture-charts/llm-service-0.5.9.tgz
+    version: 0.5.9
+  - apiVersion: v2
     appVersion: 0.5.8
-    created: "2026-01-12T20:57:18.792651737Z"
+    created: "2026-01-16T16:52:12.582292991Z"
     description: A Helm chart for Kubernetes
     digest: a0416f914e12f6a9ccff4be57912680b4945c59c5834ece45bba6c5e1d7c1598
     name: llm-service
@@ -421,7 +466,7 @@ entries:
     version: 0.5.8
   - apiVersion: v2
     appVersion: 0.5.7
-    created: "2026-01-12T20:57:18.791816021Z"
+    created: "2026-01-16T16:52:12.580894676Z"
     description: A Helm chart for Kubernetes
     digest: 091fc13acff86879ccce30753775cef8a65c1d47946a7f9c67270c55e5f71a13
     name: llm-service
@@ -431,7 +476,7 @@ entries:
     version: 0.5.7
   - apiVersion: v2
     appVersion: 0.5.6
-    created: "2026-01-12T20:57:18.791032402Z"
+    created: "2026-01-16T16:52:12.579920044Z"
     description: A Helm chart for Kubernetes
     digest: 828468833f81ba0a988b7f980e02cb34d3543bbf14a7666cbd0550cedb3c583d
     name: llm-service
@@ -441,7 +486,7 @@ entries:
     version: 0.5.6
   - apiVersion: v2
     appVersion: 0.5.5
-    created: "2026-01-12T20:57:18.790251359Z"
+    created: "2026-01-16T16:52:12.579145012Z"
     description: A Helm chart for Kubernetes
     digest: 1f0517660f5954f2f6f818879b93f5c5762d5cc91915e21e9171fe1132a9d569
     name: llm-service
@@ -451,7 +496,7 @@ entries:
     version: 0.5.5
   - apiVersion: v2
     appVersion: 0.5.4
-    created: "2026-01-12T20:57:18.78947878Z"
+    created: "2026-01-16T16:52:12.578378246Z"
     description: A Helm chart for Kubernetes
     digest: 698a1ea5d2f1ce418b0c665529a896ab32b7a304bf94fc059dc34f4c70346d54
     name: llm-service
@@ -461,7 +506,7 @@ entries:
     version: 0.5.4
   - apiVersion: v2
     appVersion: 0.5.3
-    created: "2026-01-12T20:57:18.788690893Z"
+    created: "2026-01-16T16:52:12.577598986Z"
     description: A Helm chart for Kubernetes
     digest: 46e7cac855b4707d0f6daf949477f7345fb6f740559bfcce52d42095e1f1eecb
     name: llm-service
@@ -471,7 +516,7 @@ entries:
     version: 0.5.3
   - apiVersion: v2
     appVersion: 0.5.2
-    created: "2026-01-12T20:57:18.787895282Z"
+    created: "2026-01-16T16:52:12.576794049Z"
     description: A Helm chart for Kubernetes
     digest: a72f830aec22cd80906234afe638946210cb4fdb6cd49f880e40db197b192664
     name: llm-service
@@ -481,7 +526,7 @@ entries:
     version: 0.5.2
   - apiVersion: v2
     appVersion: 0.5.1
-    created: "2026-01-12T20:57:18.786992271Z"
+    created: "2026-01-16T16:52:12.576025861Z"
     description: A Helm chart for Kubernetes
     digest: 43b8f08c255d6f6aa82e1ce1da638173b6b2b91387fb4fcc2179f5cc104e4849
     name: llm-service
@@ -491,7 +536,7 @@ entries:
     version: 0.5.1
   - apiVersion: v2
     appVersion: 0.5.0
-    created: "2026-01-12T20:57:18.785722547Z"
+    created: "2026-01-16T16:52:12.575258904Z"
     description: A Helm chart for Kubernetes
     digest: 9f6872b112f930938140437d202d0036823d118c1044dfd35357fe59d0794eac
     name: llm-service
@@ -501,7 +546,7 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2026-01-12T20:57:18.785005081Z"
+    created: "2026-01-16T16:52:12.573785373Z"
     description: A Helm chart for Kubernetes
     digest: fdf73b5e2b601d112bad5c46df223b1e77bd896656125b633e53fb4b825c2670
     name: llm-service
@@ -511,8 +556,23 @@ entries:
     version: 0.1.0
   mcp-servers:
   - apiVersion: v2
+    appVersion: 0.5.15
+    created: "2026-01-16T16:52:12.586239541Z"
+    description: A Helm chart for deploying MCP (Model Context Protocol) servers using
+      the Toolhive operator
+    digest: 2574558771537ced7844eb6ac42317e6369f37d036c141bd74d7b674aaa0d311
+    keywords:
+    - mcp
+    - toolhive
+    - model-context-protocol
+    name: mcp-servers
+    type: application
+    urls:
+    - https://rh-ai-quickstart.github.io/ai-architecture-charts/mcp-servers-0.5.15.tgz
+    version: 0.5.15
+  - apiVersion: v2
     appVersion: 0.5.14
-    created: "2026-01-12T20:57:18.796170696Z"
+    created: "2026-01-16T16:52:12.585923804Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: d711378731f07a87607b8ed86ae8eb2bd6811167c53b83d36af8072843ec6d49
@@ -527,7 +587,7 @@ entries:
     version: 0.5.14
   - apiVersion: v2
     appVersion: 0.5.13
-    created: "2026-01-12T20:57:18.795862001Z"
+    created: "2026-01-16T16:52:12.585618717Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: 3fdd5da61c560a86830ef239d060c88e8b20d8f75b3c1276b39b24e06836b17e
@@ -542,7 +602,7 @@ entries:
     version: 0.5.13
   - apiVersion: v2
     appVersion: 0.5.12
-    created: "2026-01-12T20:57:18.795550632Z"
+    created: "2026-01-16T16:52:12.585304833Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: 1bd944de127fd6831304582b553f513c9a3a1994398653e6ebf6598455e09636
@@ -557,7 +617,7 @@ entries:
     version: 0.5.12
   - apiVersion: v2
     appVersion: 0.5.11
-    created: "2026-01-12T20:57:18.795252687Z"
+    created: "2026-01-16T16:52:12.585012359Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: 575b59e891c698c70acd1d4624677f04d78aaea70da77473395081e5274a3896
@@ -572,7 +632,7 @@ entries:
     version: 0.5.11
   - apiVersion: v2
     appVersion: 0.5.10
-    created: "2026-01-12T20:57:18.794967726Z"
+    created: "2026-01-16T16:52:12.584689629Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: 3251dc60fa49c23ec11bb2f085b55af4567a8dee2c510acc4d868afb70698302
@@ -587,7 +647,7 @@ entries:
     version: 0.5.10
   - apiVersion: v2
     appVersion: 0.5.9
-    created: "2026-01-12T20:57:18.799377136Z"
+    created: "2026-01-16T16:52:12.59049485Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: 922fbca10724a88816d9f21db35bc8e984d6531601ad393d79dbb04aecd2d11a
@@ -602,7 +662,7 @@ entries:
     version: 0.5.9
   - apiVersion: v2
     appVersion: 0.5.8
-    created: "2026-01-12T20:57:18.798994974Z"
+    created: "2026-01-16T16:52:12.590064791Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: 2dd1ae5f0c613a9a9d0b1fb07d61ca779d75e915399bdb9eb642be0079fad259
@@ -617,7 +677,7 @@ entries:
     version: 0.5.8
   - apiVersion: v2
     appVersion: 0.5.7
-    created: "2026-01-12T20:57:18.798608725Z"
+    created: "2026-01-16T16:52:12.589646332Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: b2101adc18963485f6fb1a09c15cab4af782553c17cac14fb1c24bb783172f33
@@ -632,7 +692,7 @@ entries:
     version: 0.5.7
   - apiVersion: v2
     appVersion: 0.5.6
-    created: "2026-01-12T20:57:18.798204933Z"
+    created: "2026-01-16T16:52:12.589174504Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: e6fadd9330e7f389c50353946e125c7ca7a6661e57dd89c3de04ebebdd254d3a
@@ -647,7 +707,7 @@ entries:
     version: 0.5.6
   - apiVersion: v2
     appVersion: 0.5.5
-    created: "2026-01-12T20:57:18.797823333Z"
+    created: "2026-01-16T16:52:12.588399088Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: ec6c3be5ffdafc1c4d35e954ef779c15ec790a763164f3aebd8b1c46d0d3d3f9
@@ -662,7 +722,7 @@ entries:
     version: 0.5.5
   - apiVersion: v2
     appVersion: 0.5.4
-    created: "2026-01-12T20:57:18.797401477Z"
+    created: "2026-01-16T16:52:12.587512539Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: c023ae86c26121b106e2f593a65818a488e34dcca2c8f1eef016ac4932cf1857
@@ -677,7 +737,7 @@ entries:
     version: 0.5.4
   - apiVersion: v2
     appVersion: 0.5.3
-    created: "2026-01-12T20:57:18.797004538Z"
+    created: "2026-01-16T16:52:12.587053185Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: 75f5fa534286e64f2836cfbe30d85829fb2773948b7770054d3e8ccc352a2707
@@ -692,7 +752,7 @@ entries:
     version: 0.5.3
   - apiVersion: v2
     appVersion: 0.5.2
-    created: "2026-01-12T20:57:18.796596539Z"
+    created: "2026-01-16T16:52:12.58664746Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: 47d69021b53a379bc2c876e7758a6f32a42040f9efa5ef5b16ce0d832dcdc969
@@ -707,7 +767,7 @@ entries:
     version: 0.5.2
   - apiVersion: v2
     appVersion: 0.5.1
-    created: "2026-01-12T20:57:18.794658751Z"
+    created: "2026-01-16T16:52:12.584406151Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: 6cda2b0c9f49241a5f070d0a0596a53d19ab7a13c0c85fdf4acd53de4da75506
@@ -722,7 +782,7 @@ entries:
     version: 0.5.1
   - apiVersion: v2
     appVersion: 0.5.0
-    created: "2026-01-12T20:57:18.794167947Z"
+    created: "2026-01-16T16:52:12.583982623Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: c3132b39ed55dade1929974ff3d4e330209c54c8abd551ee719f55ab65f895ad
@@ -737,7 +797,7 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: 0.1.0
-    created: "2026-01-12T20:57:18.793076318Z"
+    created: "2026-01-16T16:52:12.583570527Z"
     description: A Helm chart for deploying MCP (Model Context Protocol) servers using
       the Toolhive operator
     digest: 221332ff049fef879a0c523915a46aee1c8dfdc32bc73159c347ef9ece16ee6e
@@ -752,8 +812,18 @@ entries:
     version: 0.1.0
   minio:
   - apiVersion: v2
+    appVersion: 0.5.3
+    created: "2026-01-16T16:52:12.592261737Z"
+    description: A Helm chart for Kubernetes
+    digest: 6323c9310297c651b8b65998fb3a8fca824f578cefad07b2c3796a36035d5e5a
+    name: minio
+    type: application
+    urls:
+    - https://rh-ai-quickstart.github.io/ai-architecture-charts/minio-0.5.3.tgz
+    version: 0.5.3
+  - apiVersion: v2
     appVersion: 0.5.2
-    created: "2026-01-12T20:57:18.801873589Z"
+    created: "2026-01-16T16:52:12.591910403Z"
     description: A Helm chart for Kubernetes
     digest: 9a0b9e8951c2e806585a724e94a30820e38e626c0afa08850873cbbd93e2bf4b
     name: minio
@@ -763,7 +833,7 @@ entries:
     version: 0.5.2
   - apiVersion: v2
     appVersion: 0.5.1
-    created: "2026-01-12T20:57:18.801492479Z"
+    created: "2026-01-16T16:52:12.591568397Z"
     description: A Helm chart for Kubernetes
     digest: 1c3ef1a9cacaa9060964ad99c38373cba16ed70f3bc6128fc4946cb25e577452
     name: minio
@@ -773,7 +843,7 @@ entries:
     version: 0.5.1
   - apiVersion: v2
     appVersion: 0.5.0
-    created: "2026-01-12T20:57:18.801065124Z"
+    created: "2026-01-16T16:52:12.591195253Z"
     description: A Helm chart for Kubernetes
     digest: bc65c4e6db04e601a1574a7b414283773965258961c3e90cbdf38b7e21ffbecc
     name: minio
@@ -783,7 +853,7 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2026-01-12T20:57:18.800070765Z"
+    created: "2026-01-16T16:52:12.590847857Z"
     description: A Helm chart for Kubernetes
     digest: 25cb9fde69f83c3801c919bd6a61eb36550860997c233497b2fa2602c35df457
     name: minio
@@ -791,13 +861,58 @@ entries:
     urls:
     - https://rh-ai-quickstart.github.io/ai-architecture-charts/minio-0.1.0.tgz
     version: 0.1.0
+  model-registry:
+  - apiVersion: v2
+    appVersion: "1.0"
+    created: "2026-01-16T16:52:12.592968822Z"
+    dependencies:
+    - condition: postgres.enabled
+      name: pgvector
+      repository: file://../../pgvector/helm
+      version: '>=0.1.0'
+    description: A Helm chart for OpenDataHub Model Registry on Kubernetes/OpenShift
+    digest: 8a9bc4451d918dff77a762ef83f09b4ae52106690b0ac784103ed2ebe1654085
+    home: https://github.com/rh-ai-quickstart/ai-architecture-charts
+    keywords:
+    - model-registry
+    - openshift-ai
+    - openshift
+    maintainers:
+    - name: Red Hat AI Quickstart Team
+    name: model-registry
+    type: application
+    urls:
+    - https://rh-ai-quickstart.github.io/ai-architecture-charts/model-registry-0.2.0.tgz
+    version: 0.2.0
   oracle-db:
   - annotations:
       category: Database
       license: Oracle Free Use Terms and Conditions
     apiVersion: v2
+    appVersion: 0.5.4
+    created: "2026-01-16T16:52:12.596819766Z"
+    description: A Helm chart for Oracle 23ai Database with TPC-DS data loading
+    digest: 2ed316301f421347012a2bc112c8b05e0024eb4363898ab6647ec17157b36ae0
+    keywords:
+    - oracle
+    - database
+    - ai
+    - tpc-ds
+    - benchmark
+    maintainers:
+    - email: support@oracle.com
+      name: Oracle 23ai Team
+    name: oracle-db
+    type: application
+    urls:
+    - https://rh-ai-quickstart.github.io/ai-architecture-charts/oracle-db-0.5.4.tgz
+    version: 0.5.4
+  - annotations:
+      category: Database
+      license: Oracle Free Use Terms and Conditions
+    apiVersion: v2
     appVersion: 0.5.3
-    created: "2026-01-12T20:57:18.804406674Z"
+    created: "2026-01-16T16:52:12.596190025Z"
     description: A Helm chart for Oracle 23ai Database with TPC-DS data loading
     digest: 466e58988da21636007eec950dc4da460a451bb00205ca81cc3925264f5d7374
     keywords:
@@ -819,7 +934,7 @@ entries:
       license: Oracle Free Use Terms and Conditions
     apiVersion: v2
     appVersion: 0.5.2
-    created: "2026-01-12T20:57:18.803827396Z"
+    created: "2026-01-16T16:52:12.594835684Z"
     description: A Helm chart for Oracle 23ai Database with TPC-DS data loading
     digest: 5c87a418142932251d6c8f0990ff9095fd92386e69a45660b7c6312ab7cada49
     keywords:
@@ -841,7 +956,7 @@ entries:
       license: Oracle Free Use Terms and Conditions
     apiVersion: v2
     appVersion: 0.5.1
-    created: "2026-01-12T20:57:18.803234623Z"
+    created: "2026-01-16T16:52:12.594265033Z"
     description: A Helm chart for Oracle 23ai Database with TPC-DS data loading
     digest: cb5b35410db04c8bf33edf52e7761ab93631383dabba62fadb4d9d4404f27434
     keywords:
@@ -863,7 +978,7 @@ entries:
       license: Oracle Free Use Terms and Conditions
     apiVersion: v2
     appVersion: 0.5.0
-    created: "2026-01-12T20:57:18.802643973Z"
+    created: "2026-01-16T16:52:12.59367249Z"
     description: A Helm chart for Oracle 23ai Database with TPC-DS data loading
     digest: 1a141d8ac1526d790120103883bfd7f984f7376cbfd334932c0032075c3cbdf7
     keywords:
@@ -882,8 +997,18 @@ entries:
     version: 0.5.0
   pgvector:
   - apiVersion: v2
+    appVersion: 0.5.3
+    created: "2026-01-16T16:52:12.598469595Z"
+    description: A Helm chart for Kubernetes
+    digest: f03da8e1c3a3ed4cdaecd7e86508cdda0ff5e3a367892e4677bf73f53a8bfcc9
+    name: pgvector
+    type: application
+    urls:
+    - https://rh-ai-quickstart.github.io/ai-architecture-charts/pgvector-0.5.3.tgz
+    version: 0.5.3
+  - apiVersion: v2
     appVersion: 0.5.2
-    created: "2026-01-12T20:57:18.805725089Z"
+    created: "2026-01-16T16:52:12.598118842Z"
     description: A Helm chart for Kubernetes
     digest: 01611f5fef6f9a9ef20f2f481e72b91f38ef39c40c31deea9ffc035683bfc30a
     name: pgvector
@@ -893,7 +1018,7 @@ entries:
     version: 0.5.2
   - apiVersion: v2
     appVersion: 0.5.1
-    created: "2026-01-12T20:57:18.805390506Z"
+    created: "2026-01-16T16:52:12.597807002Z"
     description: A Helm chart for Kubernetes
     digest: 2ff08e98d8bd89a135288c064d669671194e46a90deeaaf8a6201e33925de325
     name: pgvector
@@ -903,7 +1028,7 @@ entries:
     version: 0.5.1
   - apiVersion: v2
     appVersion: 0.5.0
-    created: "2026-01-12T20:57:18.805070991Z"
+    created: "2026-01-16T16:52:12.59748312Z"
     description: A Helm chart for Kubernetes
     digest: 25328b80ba4c41e3c52040cbf208919d5495441db5824e9f534549fd2fe58295
     name: pgvector
@@ -913,7 +1038,7 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2026-01-12T20:57:18.80474811Z"
+    created: "2026-01-16T16:52:12.597145923Z"
     description: A Helm chart for Kubernetes
     digest: 8cf044a412088bb2864e359e01d61dcc003e1d015104a45dccf341f3f83fe1d8
     name: pgvector
@@ -921,4 +1046,4 @@ entries:
     urls:
     - https://rh-ai-quickstart.github.io/ai-architecture-charts/pgvector-0.1.0.tgz
     version: 0.1.0
-generated: "2026-01-12T20:57:18.76339389Z"
+generated: "2026-01-16T16:52:12.550480598Z"
