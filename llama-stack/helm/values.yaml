@@ -8,7 +8,7 @@ rawDeploymentMode: true
 image:
   repository: llamastack/distribution-starter
   pullPolicy: IfNotPresent
-  tag: "0.3.3"
+  tag: "0.3.5"
 
 imagePullSecrets: []
 nameOverride: "llamastack"
@@ -137,6 +137,24 @@ models:
 vectorIOKvstore:
   namespace: vector_io::pgvector
   backend: kv_default
+
+# Optional: Override storage backends (defaults to SQLite if not provided)
+# storage:
+#   backends:
+#     kv_default:
+#       type: kv_postgres
+#       host: pgvector
+#       port: 5432
+#       db: llama_agents
+#       user: postgres
+#       password: rag_password
+#     sql_default:
+#       type: sql_postgres
+#       host: pgvector
+#       port: 5432
+#       db: llama_responses
+#       user: postgres
+#       password: rag_password
 
 providers:
   agents:

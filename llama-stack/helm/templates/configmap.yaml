@@ -137,12 +137,16 @@ data:
             backend: kv_default
     storage:
       backends:
+        {{- if .Values.storage.backends }}
+        {{- toYaml .Values.storage.backends | nindent 8 }}
+        {{- else }}
         kv_default:
           type: kv_sqlite
           db_path: ${env.SQLITE_STORE_DIR:=~/.llama/distributions/starter}/kvstore.db
         sql_default:
           type: sql_sqlite
           db_path: ${env.SQLITE_STORE_DIR:=~/.llama/distributions/starter}/sql_store.db
+        {{- end }}
       stores:
         metadata:
           namespace: registry
