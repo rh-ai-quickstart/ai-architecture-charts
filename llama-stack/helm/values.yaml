@@ -50,6 +50,24 @@ pgvector:
 
 resources: {}
 
+livenessProbe:
+  httpGet:
+    path: /v1/health
+    port: 8321
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /v1/health
+    port: 8321
+  initialDelaySeconds: 15
+  periodSeconds: 15
+  timeoutSeconds: 10
+  failureThreshold: 3
+
 autoscaling:
   enabled: false
 
