@@ -1,10 +1,8 @@
-# Default values for keycloak.
 replicaCount: 1
 
 image:
   repository: quay.io/keycloak/keycloak
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
   tag: "25.0.6"
 
 imagePullSecrets: []
@@ -27,15 +25,10 @@ service:
   port: 8080
   httpsPort: 8443
 
-# Keycloak start command arguments
-# For development without external DB, use 'start-dev' with proxy configuration
-# For production with external DB, use 'start' with --optimized and full hostname config
 args:
   - start-dev
   - --proxy-headers=xforwarded
 
-# Environment variables for Keycloak configuration
-# Note: When dbEnabled is false, additional DB env vars will be added via templates
 env:
   - name: KEYCLOAK_ADMIN
     valueFrom:
@@ -52,9 +45,6 @@ env:
   - name: KC_METRICS_ENABLED
     value: "true"
 
-# Health check probes
-# Note: In dev mode, health endpoints are on management port 9000
-# In production mode with --optimized, they are on the main port 8080
 livenessProbe:
   httpGet:
     path: /health/live
@@ -81,7 +71,6 @@ resources:
     cpu: 500m
     memory: 1Gi
 
-# Persistent volume for Keycloak data (themes, providers, etc.)
 persistence:
   enabled: false
   storageClass: ""
@@ -97,17 +86,14 @@ tolerations: []
 
 affinity: {}
 
-# Admin credentials stored in secret
 secret:
   adminUser: admin
   adminPassword: admin
-  # Database connection (optional - can use external DB)
   dbEnabled: false
   dbUrl: "jdbc:postgresql://postgres:5432/keycloak"
   dbUsername: keycloak
   dbPassword: keycloak
 
-# OpenShift Route configuration
 route:
   enabled: true
   host: ""
@@ -116,20 +102,15 @@ route:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
 
-# Realm import configuration
-# Keycloak will import these realms on startup using --import-realm
-# This eliminates the need for a separate Job to configure realms/users/clients
 realmImport:
   enabled: true
   realms:
     - realm: "ryans-realm"
       enabled: true
       displayName: "Ryan's Realm"
-      # SSO Session and Token Lifespans (in seconds)
       ssoSessionIdleTimeout: 1800
       ssoSessionMaxLifespan: 36000
       accessTokenLifespan: 300
-      # Clients
       clients:
         - clientId: "ryans-app"
           enabled: true
@@ -143,23 +124,12 @@ realmImport:
             - "https://ryans-app.example.com"
           protocol: "openid-connect"
           standardFlowEnabled: true
-        # Example confidential client (e.g. backend service)
-        # - clientId: "my-backend"
-        #   enabled: true
-        #   publicClient: false
-        #   clientAuthenticatorType: "client-secret"
-        #   secret: "change-me"
-        #   serviceAccountsEnabled: true
-        #   directAccessGrantsEnabled: true
-        #   protocol: "openid-connect"
-      # Realm Roles
       roles:
         realm:
           - name: "admin"
             description: "Administrator role"
           - name: "user"
             description: "Regular user role"
-      # Users
       users:
         - username: "testuser"
           enabled: true
@@ -173,16 +143,3 @@ realmImport:
               temporary: false
           realmRoles:
             - "user"
-        # - username: "admin-user"
-        #   enabled: true
-        #   emailVerified: true
-        #   firstName: "Admin"
-        #   lastName: "User"
-        #   email: "admin@example.com"
-        #   credentials:
-        #     - type: "password"
-        #       value: "adminpassword"
-        #       temporary: false
-        #   realmRoles:
-        #     - "admin"
-        #     - "user"
