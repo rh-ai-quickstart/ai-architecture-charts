@@ -148,9 +148,136 @@ helm install keycloak ./helm -n keycloak -f production-values.yaml
 | `resources.limits.cpu` | CPU limit | `2000m` |
 | `resources.limits.memory` | Memory limit | `2Gi` |
 
+### Realm Import Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `realmImport.enabled` | Enable realm import at startup | `false` |
+| `realmImport.realms` | List of realm configurations to import | `[]` |
+| `realmImport.realms[].realm` | Realm name (required) | - |
+| `realmImport.realms[].displayName` | Display name for the realm | realm name |
+| `realmImport.realms[].clients` | List of OAuth/OIDC clients | `[]` |
+| `realmImport.realms[].roles.realm` | List of realm-level roles | `[]` |
+| `realmImport.realms[].users` | List of users with credentials and roles | `[]` |
+
 ### Advanced Configuration
 
 For a complete list of configuration options, see the `values.yaml` file.
+
+## Realm Import (Pre-configured Realms, Users, and Clients)
+
+Keycloak supports importing realm configurations at startup using the `--import-realm` flag. This chart leverages that feature to let you define realms, clients, roles, and users entirely in your `values.yaml` -- **no separate Job or post-deploy script needed**.
+
+### How It Works
+
+When `realmImport.enabled: true`:
+1. A ConfigMap is created for each realm containing the realm JSON configuration
+2. The ConfigMaps are mounted into the Keycloak container at `/opt/keycloak/data/import/`
+3. The `--import-realm` flag is automatically appended to the Keycloak startup args
+4. Keycloak reads and imports the realm(s) during startup
+
+### Example: Single Realm with Users and Clients
+
+```yaml
+realmImport:
+  enabled: true
+  realms:
+    - realm: "my-app"
+      enabled: true
+      displayName: "My Application"
+      ssoSessionIdleTimeout: 1800
+      accessTokenLifespan: 300
+      clients:
+        - clientId: "frontend-app"
+          enabled: true
+          publicClient: true
+          directAccessGrantsEnabled: true
+          redirectUris:
+            - "https://my-app.example.com/*"
+          webOrigins:
+            - "https://my-app.example.com"
+          protocol: "openid-connect"
+          standardFlowEnabled: true
+        - clientId: "backend-service"
+          enabled: true
+          publicClient: false
+          clientAuthenticatorType: "client-secret"
+          secret: "change-me-in-production"
+          serviceAccountsEnabled: true
+          protocol: "openid-connect"
+      roles:
+        realm:
+          - name: "admin"
+            description: "Administrator role"
+          - name: "user"
+            description: "Regular user role"
+      users:
+        - username: "admin-user"
+          enabled: true
+          emailVerified: true
+          firstName: "Admin"
+          lastName: "User"
+          email: "admin@example.com"
+          credentials:
+            - type: "password"
+              value: "change-me"
+              temporary: true
+          realmRoles:
+            - "admin"
+            - "user"
+        - username: "test-user"
+          enabled: true
+          firstName: "Test"
+          lastName: "User"
+          email: "test@example.com"
+          credentials:
+            - type: "password"
+              value: "testpassword"
+              temporary: false
+          realmRoles:
+            - "user"
+```
+
+### Example: Multiple Realms
+
+You can define multiple realms -- each gets its own ConfigMap:
+
+```yaml
+realmImport:
+  enabled: true
+  realms:
+    - realm: "internal"
+      enabled: true
+      displayName: "Internal Applications"
+      clients:
+        - clientId: "intranet"
+          enabled: true
+          publicClient: true
+          redirectUris: ["https://intranet.example.com/*"]
+      users:
+        - username: "employee1"
+          enabled: true
+          credentials:
+            - type: "password"
+              value: "welcome123"
+              temporary: true
+          realmRoles: ["user"]
+    - realm: "external"
+      enabled: true
+      displayName: "External Partners"
+      clients:
+        - clientId: "partner-portal"
+          enabled: true
+          publicClient: true
+          redirectUris: ["https://partners.example.com/*"]
+```
+
+### Important Notes
+
+- **Import behavior**: Keycloak will **skip** importing a realm if it already exists. It does **not** overwrite existing realms. To re-import, delete the realm first via the admin console.
+- **Temporary passwords**: Set `temporary: true` on user credentials to force a password change on first login (recommended for production).
+- **Client secrets**: For confidential clients, set `publicClient: false` and provide a `secret`. Rotate these in production.
+- **Startup time**: Importing large realm configurations may increase initial startup time slightly.
 
 ## Accessing Keycloak
 

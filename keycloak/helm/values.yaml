@@ -115,3 +115,74 @@ route:
     enabled: true
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
+
+# Realm import configuration
+# Keycloak will import these realms on startup using --import-realm
+# This eliminates the need for a separate Job to configure realms/users/clients
+realmImport:
+  enabled: true
+  realms:
+    - realm: "ryans-realm"
+      enabled: true
+      displayName: "Ryan's Realm"
+      # SSO Session and Token Lifespans (in seconds)
+      ssoSessionIdleTimeout: 1800
+      ssoSessionMaxLifespan: 36000
+      accessTokenLifespan: 300
+      # Clients
+      clients:
+        - clientId: "ryans-app"
+          enabled: true
+          publicClient: true
+          directAccessGrantsEnabled: true
+          redirectUris:
+            - "http://localhost:3000/*"
+            - "https://ryans-app.example.com/*"
+          webOrigins:
+            - "http://localhost:3000"
+            - "https://ryans-app.example.com"
+          protocol: "openid-connect"
+          standardFlowEnabled: true
+        # Example confidential client (e.g. backend service)
+        # - clientId: "my-backend"
+        #   enabled: true
+        #   publicClient: false
+        #   clientAuthenticatorType: "client-secret"
+        #   secret: "change-me"
+        #   serviceAccountsEnabled: true
+        #   directAccessGrantsEnabled: true
+        #   protocol: "openid-connect"
+      # Realm Roles
+      roles:
+        realm:
+          - name: "admin"
+            description: "Administrator role"
+          - name: "user"
+            description: "Regular user role"
+      # Users
+      users:
+        - username: "testuser"
+          enabled: true
+          emailVerified: true
+          firstName: "Test"
+          lastName: "User"
+          email: "testuser@example.com"
+          credentials:
+            - type: "password"
+              value: "testpassword"
+              temporary: false
+          realmRoles:
+            - "user"
+        # - username: "admin-user"
+        #   enabled: true
+        #   emailVerified: true
+        #   firstName: "Admin"
+        #   lastName: "User"
+        #   email: "admin@example.com"
+        #   credentials:
+        #     - type: "password"
+        #       value: "adminpassword"
+        #       temporary: false
+        #   realmRoles:
+        #     - "admin"
+        #     - "user"

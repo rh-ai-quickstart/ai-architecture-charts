@@ -1,0 +1,38 @@
+{{- if .Values.realmImport.enabled }}
+{{- range $index, $realm := .Values.realmImport.realms }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "keycloak.fullname" $ }}-realm-{{ $realm.realm }}
+  labels:
+    {{- include "keycloak.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: realm-import
+data:
+  {{ $realm.realm }}-realm.json: |
+    {{- $realmConfig := dict
+      "realm" $realm.realm
+      "enabled" (default true $realm.enabled)
+      "displayName" (default $realm.realm $realm.displayName)
+    }}
+    {{- if $realm.ssoSessionIdleTimeout }}
+      {{- $_ := set $realmConfig "ssoSessionIdleTimeout" $realm.ssoSessionIdleTimeout }}
+    {{- end }}
+    {{- if $realm.ssoSessionMaxLifespan }}
+      {{- $_ := set $realmConfig "ssoSessionMaxLifespan" $realm.ssoSessionMaxLifespan }}
+    {{- end }}
+    {{- if $realm.accessTokenLifespan }}
+      {{- $_ := set $realmConfig "accessTokenLifespan" $realm.accessTokenLifespan }}
+    {{- end }}
+    {{- if $realm.clients }}
+      {{- $_ := set $realmConfig "clients" $realm.clients }}
+    {{- end }}
+    {{- if $realm.roles }}
+      {{- $_ := set $realmConfig "roles" $realm.roles }}
+    {{- end }}
+    {{- if $realm.users }}
+      {{- $_ := set $realmConfig "users" $realm.users }}
+    {{- end }}
+    {{ $realmConfig | toJson | nindent 4 }}
+{{- end }}
+{{- end }}

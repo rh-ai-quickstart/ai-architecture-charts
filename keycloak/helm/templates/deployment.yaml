@@ -38,9 +38,14 @@ spec:
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- with .Values.args }}
+          {{- if or .Values.args .Values.realmImport.enabled }}
           args:
+            {{- with .Values.args }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.realmImport.enabled }}
+            - --import-realm
+            {{- end }}
           {{- end }}
           env:
             {{- toYaml .Values.env | nindent 12 }}
@@ -85,21 +90,38 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if or .Values.persistence.enabled .Values.volumeMounts }}
+          {{- if or .Values.persistence.enabled .Values.realmImport.enabled .Values.volumeMounts }}
           volumeMounts:
           {{- if .Values.persistence.enabled }}
             - name: keycloak-data
               mountPath: {{ .Values.persistence.mountPath }}
           {{- end }}
+          {{- if .Values.realmImport.enabled }}
+          {{- range .Values.realmImport.realms }}
+            - name: realm-import-{{ .realm }}
+              mountPath: /opt/keycloak/data/import/{{ .realm }}-realm.json
+              subPath: {{ .realm }}-realm.json
+              readOnly: true
+          {{- end }}
+          {{- end }}
           {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- end }}
-      {{- if .Values.persistence.enabled }}
+      {{- if or .Values.persistence.enabled .Values.realmImport.enabled }}
       volumes:
+        {{- if .Values.persistence.enabled }}
         - name: keycloak-data
           persistentVolumeClaim:
             claimName: {{ include "keycloak.fullname" . }}-data
+        {{- end }}
+        {{- if .Values.realmImport.enabled }}
+        {{- range .Values.realmImport.realms }}
+        - name: realm-import-{{ .realm }}
+          configMap:
+            name: {{ include "keycloak.fullname" $ }}-realm-{{ .realm }}
+        {{- end }}
+        {{- end }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
