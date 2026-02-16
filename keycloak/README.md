@@ -100,74 +100,19 @@ helm install keycloak ./helm -n keycloak --create-namespace -f production-values
 | `resources.limits.cpu` | CPU limit | `2000m` |
 | `resources.limits.memory` | Memory limit | `2Gi` |
 
-### Realm Import Parameters
+### Realm Import
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `realmImport.enabled` | Enable realm import at startup | `false` |
-| `realmImport.realms` | List of realm configurations | `[]` |
-| `realmImport.realms[].realm` | Realm name (required) | - |
-| `realmImport.realms[].displayName` | Display name | realm name |
-| `realmImport.realms[].clients` | OAuth/OIDC clients | `[]` |
-| `realmImport.realms[].roles.realm` | Realm-level roles | `[]` |
-| `realmImport.realms[].users` | Users with credentials and roles | `[]` |
+| `realmImport.enabled` | Enable realm import at startup | `true` |
 
-## Realm Import
+When enabled, the chart loads `realm.json` from the chart directory into a ConfigMap, mounts it at `/opt/keycloak/data/import/`, and appends `--import-realm` to the startup args. Keycloak imports the realm on first startup.
 
-Define realms, clients, roles, and users in `values.yaml` -- no separate Job needed. Keycloak imports them at startup via `--import-realm`.
-
-When `realmImport.enabled: true`:
-1. A ConfigMap is created per realm with the JSON configuration
-2. Mounted into the container at `/opt/keycloak/data/import/`
-3. `--import-realm` is appended to the startup args
-
-### Example
-
-```yaml
-realmImport:
-  enabled: true
-  realms:
-    - realm: "my-app"
-      enabled: true
-      displayName: "My Application"
-      ssoSessionIdleTimeout: 1800
-      accessTokenLifespan: 300
-      clients:
-        - clientId: "frontend-app"
-          enabled: true
-          publicClient: true
-          directAccessGrantsEnabled: true
-          redirectUris:
-            - "https://my-app.example.com/*"
-          webOrigins:
-            - "https://my-app.example.com"
-          protocol: "openid-connect"
-          standardFlowEnabled: true
-      roles:
-        realm:
-          - name: "admin"
-            description: "Administrator role"
-          - name: "user"
-            description: "Regular user role"
-      users:
-        - username: "testuser"
-          enabled: true
-          emailVerified: true
-          firstName: "Test"
-          lastName: "User"
-          email: "test@example.com"
-          credentials:
-            - type: "password"
-              value: "testpassword"
-              temporary: false
-          realmRoles:
-            - "user"
-```
+Edit `helm/realm.json` to define your realm, clients, roles, and users. See the [Keycloak Server Administration Guide](https://www.keycloak.org/docs/latest/server_admin/#_export_import) for the full JSON schema.
 
 **Notes:**
 - Keycloak skips importing a realm if it already exists. Delete the realm via the admin console to re-import.
-- Set `temporary: true` on credentials to force a password change on first login.
-- For confidential clients, set `publicClient: false` and provide a `secret`.
+- Set `temporary: true` on user credentials to force a password change on first login.
 
 ## Accessing Keycloak
 

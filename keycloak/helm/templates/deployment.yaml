@@ -97,12 +97,10 @@ spec:
               mountPath: {{ .Values.persistence.mountPath }}
           {{- end }}
           {{- if .Values.realmImport.enabled }}
-          {{- range .Values.realmImport.realms }}
-            - name: realm-import-{{ .realm }}
-              mountPath: /opt/keycloak/data/import/{{ .realm }}-realm.json
-              subPath: {{ .realm }}-realm.json
+            - name: realm-import
+              mountPath: /opt/keycloak/data/import/realm.json
+              subPath: realm.json
               readOnly: true
-          {{- end }}
           {{- end }}
           {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
@@ -116,11 +114,9 @@ spec:
             claimName: {{ include "keycloak.fullname" . }}-data
         {{- end }}
         {{- if .Values.realmImport.enabled }}
-        {{- range .Values.realmImport.realms }}
-        - name: realm-import-{{ .realm }}
+        - name: realm-import
           configMap:
-            name: {{ include "keycloak.fullname" $ }}-realm-{{ .realm }}
-        {{- end }}
+            name: {{ include "keycloak.fullname" . }}-realm-import
         {{- end }}
       {{- end }}
       {{- with .Values.nodeSelector }}

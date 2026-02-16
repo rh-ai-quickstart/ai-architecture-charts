@@ -103,43 +103,4 @@ route:
     insecureEdgeTerminationPolicy: Redirect
 
 realmImport:
-  enabled: false
-  realms:
-    - realm: "ryans-realm"
-      enabled: true
-      displayName: "Ryan's Realm"
-      ssoSessionIdleTimeout: 1800
-      ssoSessionMaxLifespan: 36000
-      accessTokenLifespan: 300
-      clients:
-        - clientId: "ryans-app"
-          enabled: true
-          publicClient: true
-          directAccessGrantsEnabled: true
-          redirectUris:
-            - "http://localhost:3000/*"
-            - "https://ryans-app.example.com/*"
-          webOrigins:
-            - "http://localhost:3000"
-            - "https://ryans-app.example.com"
-          protocol: "openid-connect"
-          standardFlowEnabled: true
-      roles:
-        realm:
-          - name: "admin"
-            description: "Administrator role"
-          - name: "user"
-            description: "Regular user role"
-      users:
-        - username: "testuser"
-          enabled: true
-          emailVerified: true
-          firstName: "Test"
-          lastName: "User"
-          email: "testuser@example.com"
-          credentials:
-            - type: "password"
-              value: "testpassword"
-              temporary: false
-          realmRoles:
-            - "user"
+  enabled: true
