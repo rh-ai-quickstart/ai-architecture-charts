@@ -1,0 +1,117 @@
+# Default values for keycloak.
+replicaCount: 1
+
+image:
+  repository: quay.io/keycloak/keycloak
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "25.0.6"
+
+imagePullSecrets: []
+
+nameOverride: "keycloak"
+fullnameOverride: "keycloak"
+
+serviceAccount:
+  create: false
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+  httpsPort: 8443
+
+# Keycloak start command arguments
+# For development without external DB, use 'start-dev' with proxy configuration
+# For production with external DB, use 'start' with --optimized and full hostname config
+args:
+  - start-dev
+  - --proxy-headers=xforwarded
+
+# Environment variables for Keycloak configuration
+# Note: When dbEnabled is false, additional DB env vars will be added via templates
+env:
+  - name: KEYCLOAK_ADMIN
+    valueFrom:
+      secretKeyRef:
+        key: admin-user
+        name: keycloak-admin
+  - name: KEYCLOAK_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        key: admin-password
+        name: keycloak-admin
+  - name: KC_HEALTH_ENABLED
+    value: "true"
+  - name: KC_METRICS_ENABLED
+    value: "true"
+
+# Health check probes
+# Note: In dev mode, health endpoints are on management port 9000
+# In production mode with --optimized, they are on the main port 8080
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 9000
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 9000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Persistent volume for Keycloak data (themes, providers, etc.)
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  mountPath: /opt/keycloak/data
+
+volumeMounts: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Admin credentials stored in secret
+secret:
+  adminUser: admin
+  adminPassword: admin
+  # Database connection (optional - can use external DB)
+  dbEnabled: false
+  dbUrl: "jdbc:postgresql://postgres:5432/keycloak"
+  dbUsername: keycloak
+  dbPassword: keycloak
+
+# OpenShift Route configuration
+route:
+  enabled: true
+  host: ""
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
