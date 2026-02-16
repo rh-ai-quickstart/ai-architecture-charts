@@ -103,7 +103,7 @@ route:
     insecureEdgeTerminationPolicy: Redirect
 
 realmImport:
-  enabled: true
+  enabled: false
   realms:
     - realm: "ryans-realm"
       enabled: true
