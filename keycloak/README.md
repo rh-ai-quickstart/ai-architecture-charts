@@ -175,7 +175,21 @@ oc get secret keycloak-admin -n keycloak -o jsonpath='{.data.admin-password}' | 
 
 ## Production Considerations
 
-### Database
+### Production Requirements Overview
+
+To run Keycloak in production mode, several key changes are required:
+
+| Aspect | Development Mode | Production Mode |
+|--------|------------------|-----------------|
+| **Command** | `start-dev` | `start --optimized` |
+| **Database** | H2 (in-memory) | PostgreSQL (persistent) |
+| **Health Probe Port** | 9000 (management) | 8080 (main) |
+| **Data Persistence** | Lost on restart | Persisted to database |
+| **Admin Credentials** | admin/admin | **Must be changed** |
+| **Replicas** | 1 | 2-3+ recommended |
+| **Performance** | Not optimized | Pre-built & optimized |
+
+### 1. Database Setup (Required)
 
 For production deployments, use an external PostgreSQL database:
 
@@ -186,22 +200,67 @@ For production deployments, use an external PostgreSQL database:
    CREATE USER keycloak WITH ENCRYPTED PASSWORD 'secure-password';
    GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
    ```
-3. Enable database configuration in values:
-   ```yaml
-   secret:
-     dbEnabled: true
-     dbUrl: "jdbc:postgresql://postgres-host:5432/keycloak"
-     dbUsername: keycloak
-     dbPassword: secure-password
-   ```
 
-### High Availability
+### 2. Production Values Configuration
 
-For HA deployments:
+Create a complete `production-values.yaml` file with all required changes:
 
 ```yaml
+# Production replica count
 replicaCount: 3
 
+# Production startup arguments
+args:
+  - start                          # Use 'start' instead of 'start-dev'
+  - --optimized                    # Use pre-built optimized configuration
+  - --http-enabled=true
+  - --http-port=8080
+  - --hostname-strict=false
+  - --proxy-headers=xforwarded     # Required for OpenShift routes
+
+# Admin credentials (CHANGE THESE!)
+secret:
+  adminUser: your-admin-username
+  adminPassword: YourSecurePassword123!
+  dbEnabled: true
+  dbUrl: "jdbc:postgresql://postgres-host:5432/keycloak"
+  dbUsername: keycloak
+  dbPassword: your-secure-db-password
+
+# CRITICAL: Health probes must use port 8080 in production mode
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 8080                     # Port 8080 for production (NOT 9000!)
+  initialDelaySeconds: 120
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 8080                     # Port 8080 for production (NOT 9000!)
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Production resource limits
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 1000m
+    memory: 1Gi
+
+# Optional: Enable persistence for custom themes/providers
+persistence:
+  enabled: true
+  size: 5Gi
+
+# High availability pod distribution
 affinity:
   podAntiAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
@@ -215,6 +274,39 @@ affinity:
                   - keycloak
           topologyKey: kubernetes.io/hostname
 ```
+
+### 3. Deploy Production Instance
+
+```bash
+helm install keycloak ./helm -n keycloak \
+  --create-namespace \
+  -f production-values.yaml
+```
+
+### Critical Production Notes
+
+⚠️ **Health Probe Port Configuration**
+- **Development mode**: Health endpoints are on port 9000 (management interface)
+- **Production mode**: Health endpoints are on port 8080 (main application port)
+- Failing to change this will cause pods to fail readiness checks!
+
+⚠️ **Security Requirements**
+- Always change default admin credentials (admin/admin)
+- Use strong, unique passwords for database access
+- Consider using Kubernetes Secrets or External Secrets Operator for credential management
+
+⚠️ **Database Requirement**
+- Production mode (`start --optimized`) requires an external database
+- H2 in-memory database is not available in production mode
+- Ensure database is created and accessible before deploying
+
+### 4. Additional Production Enhancements
+
+**High Availability**: The production configuration above includes pod anti-affinity rules to distribute Keycloak pods across different nodes for improved resilience.
+
+**Persistence**: Enabling persistent storage allows you to store custom themes, providers, and extensions that survive pod restarts.
+
+**Resource Limits**: Adjust CPU and memory limits based on your expected load and usage patterns.
 
 ### Security Best Practices
 
