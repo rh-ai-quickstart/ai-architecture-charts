@@ -1,0 +1,134 @@
+🚀 Keycloak has been deployed successfully!
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+## 📋 Access Information
+
+{{- if .Values.route.enabled }}
+Keycloak Admin Console:
+  {{- if .Values.route.host }}
+  URL: https://{{ .Values.route.host }}/admin
+  {{- else }}
+  Get the route hostname:
+    oc get route {{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}'
+  Then access: https://<HOSTNAME>/admin
+  {{- end }}
+{{- else }}
+Keycloak is accessible via the service:
+  Service: {{ include "keycloak.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+
+To create a route manually:
+  oc expose svc/{{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }}
+{{- end }}
+
+Admin Credentials (TEMPORARY - see note below):
+  Username: {{ .Values.auth.adminUser }}
+
+  To retrieve password from secret:
+    echo "Username: $(oc get secret {{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }} -o jsonpath='{.data.admin-username}' | base64 -d)"
+    echo "Password: $(oc get secret {{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }} -o jsonpath='{.data.admin-password}' | base64 -d)"
+
+⚠️  IMPORTANT: The bootstrap admin is TEMPORARY (Keycloak 26 security feature)
+   To create a permanent admin:
+   1. Login with the temporary admin
+   2. Go to Users → Add user → Create new admin user
+   3. Set credentials (temporary=false) and assign 'admin' role
+   4. Logout and login with permanent admin
+   5. Delete the temporary admin user
+
+## 🔍 Monitoring Commands
+
+Check deployment status:
+  oc get deployment {{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }}
+
+Check pod status:
+  oc get pods -l app.kubernetes.io/name={{ include "keycloak.name" . }} -n {{ .Release.Namespace }}
+
+View logs:
+  oc logs -l app.kubernetes.io/name={{ include "keycloak.name" . }} -n {{ .Release.Namespace }} -f
+
+Check health endpoints:
+  oc exec -it deployment/{{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }} -- curl http://localhost:{{ .Values.http.port }}/health
+  oc exec -it deployment/{{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }} -- curl http://localhost:{{ .Values.http.port }}/health/live
+  oc exec -it deployment/{{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }} -- curl http://localhost:{{ .Values.http.port }}/health/ready
+
+## 🗄️ Database Configuration
+
+{{- if eq .Values.database.vendor "dev-file" }}
+⚠️  Using embedded H2 database (dev-file mode)
+   This is NOT recommended for production use.
+   Configure an external PostgreSQL database for production.
+{{- else }}
+Database: {{ .Values.database.vendor }}
+Host: {{ include "keycloak.databaseHost" . }}
+Port: {{ .Values.database.port }}
+Database: {{ .Values.database.database }}
+{{- end }}
+
+## 🛠️ Troubleshooting
+
+If pods are not starting:
+1. Check pod events:
+     oc describe pod -l app.kubernetes.io/name={{ include "keycloak.name" . }} -n {{ .Release.Namespace }}
+
+2. Verify database connectivity (if using external DB):
+     oc logs -l app.kubernetes.io/name={{ include "keycloak.name" . }} -n {{ .Release.Namespace }} | grep -i "database\|connection"
+
+3. Check secret existence:
+     oc get secret {{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }}
+
+4. Verify resource limits:
+     oc get pods -l app.kubernetes.io/name={{ include "keycloak.name" . }} -n {{ .Release.Namespace }} -o jsonpath='{.items[0].status.containerStatuses[0].state}'
+
+{{- if .Values.openshiftOAuth.enabled }}
+
+## 🔐 OpenShift OAuth Integration
+
+OpenShift OAuth integration is enabled. Follow these steps to configure OpenShift as an Identity Provider in Keycloak:
+
+1. **Get the ServiceAccount OAuth token**:
+     TOKEN=$(oc serviceaccounts get-token {{ include "keycloak.fullname" . }}-oauth -n {{ .Release.Namespace }})
+     echo $TOKEN
+
+2. **Get the OpenShift API server URL**:
+     OPENSHIFT_URL=$(oc whoami --show-server)
+     echo $OPENSHIFT_URL
+
+3. **Login to Keycloak admin console** (see above for URL and credentials)
+
+4. **Configure OpenShift as Identity Provider**:
+   a. Navigate to: Identity Providers > Add provider > OpenID Connect v1.0
+   b. Use these settings:
+      - Alias: openshift
+      - Display name: OpenShift
+      - Authorization URL: ${OPENSHIFT_URL}/oauth/authorize
+      - Token URL: ${OPENSHIFT_URL}/oauth/token
+      - Client Authentication: Client secret sent as post
+      - Client ID: system:serviceaccount:{{ .Release.Namespace }}:{{ include "keycloak.fullname" . }}-oauth
+      - Client Secret: <paste the TOKEN from step 1>
+   c. Click Save
+
+5. **Test the integration**:
+   - Logout of Keycloak admin console
+   - You should see "OpenShift" as a login option
+   - Click it to login with your OpenShift credentials
+
+For more details, see: https://blog.stderr.at/openshift/2025/05/step-by-step-using-keycloak-authentication-in-openshift/
+{{- end }}
+
+## 📚 Next Steps
+
+1. Login to the admin console
+2. Create your first realm
+{{- if .Values.openshiftOAuth.enabled }}
+3. Configure OpenShift OAuth integration (see above)
+4. Set up clients for your applications
+5. Configure realm settings and themes
+{{- else }}
+3. Configure identity providers (LDAP, SAML, OIDC, OpenShift OAuth)
+4. Set up clients for your applications
+5. Configure realm settings and themes
+{{- end }}
+
+For more information, see the README.md file.
