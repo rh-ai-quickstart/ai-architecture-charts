@@ -1,0 +1,73 @@
+# Default values for chromadb.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Namespace override - allows cross-namespace deployment when used as subchart
+namespace: ""
+
+replicaCount: 1
+
+image:
+  repository: docker.io/chromadb/chroma
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: latest
+
+imagePullSecrets: []
+
+nameOverride: "chromadb"
+fullnameOverride: "chromadb"
+
+serviceAccount:
+  create: false
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8000
+
+env: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+
+volumeClaimTemplates:
+  - metadata:
+      name: chroma-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+
+volumeMounts:
+  - mountPath: /chroma/chroma
+    name: chroma-data
+
+nodeSelector: {}
+affinity: {}
+
+# Secret configuration for chromadb
+# These values can be overridden from a parent chart or via --set flags
+secret:
+  create: true
+  host: chromadb
+  port: "8000"
+
+# Optional authentication
+# When enabled, clients must send credentials via the Authorization header
+auth:
+  enabled: false
+  # Auth provider: chromadb.auth.token.TokenAuthServerProvider
+  provider: "chromadb.auth.token.TokenAuthServerProvider"
+  # Credentials configuration type: chromadb.auth.token.TokenConfigServerProvider
+  credentialsProvider: "chromadb.auth.token.TokenConfigServerProvider"
+  # Token for authentication
+  token: ""
