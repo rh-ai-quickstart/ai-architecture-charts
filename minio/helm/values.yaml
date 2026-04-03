@@ -68,6 +68,7 @@ nodeSelector: {}
 affinity: {}
 
 secret:
+  create: true
   user: minio_rag_user
   password: minio_rag_password
   host: minio
