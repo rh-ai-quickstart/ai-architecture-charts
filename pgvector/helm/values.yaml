@@ -1,94 +1,39 @@
-# Default values for pgvector.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# pgvector is a thin wrapper around the postgres chart.
+# All configuration is passed through to the postgres subchart.
+# See ../postgres/helm/values.yaml for the full list of options.
 
-# Namespace override - allows cross-namespace deployment when used as subchart
-namespace: ""
+postgres:
+  image:
+    repository: docker.io/pgvector/pgvector
+    tag: pg17
 
-replicaCount: 1
+  nameOverride: "pgvector"
+  fullnameOverride: "pgvector"
 
-image:
-  repository: docker.io/pgvector/pgvector
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: pg17
+  service:
+    portName: postgresql
 
-imagePullSecrets: []
+  # The pgvector image stores data at /var/lib/postgresql/data by default
+  pgdata: /var/lib/postgresql/data
 
-nameOverride: "pgvector"
-fullnameOverride: "pgvector"
-
-serviceAccount:
-  create: false
-
-podAnnotations: {}
-podLabels: {}
-
-podSecurityContext: {}
-securityContext: {}
-
-service:
-  type: ClusterIP
-  port: 5432
-
-env:
-  - name: POSTGRES_USER
-    valueFrom:
-      secretKeyRef:
-        key: user
-        name: pgvector
-  - name: POSTGRES_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        key: password
-        name: pgvector
-  - name: POSTGRES_PORT
-    valueFrom:
-      secretKeyRef:
-        key: port
-        name: pgvector
-  - name: POSTGRES_DBNAME
-    valueFrom:
-      secretKeyRef:
-        key: dbname
-        name: pgvector
-
-resources: {}
-
-autoscaling:
-  enabled: false
-
-volumeClaimTemplates:
-  - metadata:
+  volumeMounts:
+    - mountPath: /var/lib/postgresql
       name: pg-data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 5Gi
 
-volumeMounts:
-  - mountPath: /docker-entrypoint-initdb.d
-    name: initdb-volume
-  - mountPath: /var/lib/postgresql
-    name: pg-data
+  secret:
+    host: pgvector
+    dbname: rag_blueprint
 
-nodeSelector: {}
-affinity: {}
+  # Enable the vector extension on the default database
+  initScripts:
+    init-vector.sh: |
+      #!/bin/bash
+      set -e
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
-# Secret configuration for pgvector
-# These values can be overridden from a parent chart or via --set flags
-# Example: helm install ... 
-# --set pgvector.secret.user=myuser -
-# --set pgvector.secret.password=mypass
-secret:
-  create: true
-  user: postgres
-  password: rag_password
-  dbname: rag_blueprint
-  host: pgvector
-  port: "5432"
-
-extraDatabases: []
-  #- name: test_db
-  #  vectordb: false
+  # Extra databases can also have the vector extension:
+  #   extraDatabases:
+  #     - name: embeddings_db
+  #       extensions:
+  #         - vector
+  extraDatabases: []
