@@ -104,6 +104,3 @@ mcp-servers:
       # Optional: Enable message posting and logging
       # SLACK_MCP_ADD_MESSAGE_TOOL: "true"  # or channel list, or !channel to exclude
       # SLACK_MCP_LOG_LEVEL: "info"  # debug, info, warn, error
-
-  # Optional extraContainers: list of standard Kubernetes container maps, appended in
-  # Deployment pods only (not used for Toolhive MCPServer resources).
