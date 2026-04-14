@@ -1,0 +1,102 @@
+# Example values file for deploying llama-stack using the operator mode
+# This demonstrates operator-specific features like network controls, workers, and PDB
+
+# Enable operator mode
+useLlamaStackOperator: true
+
+# Replica configuration
+replicaCount: 2
+
+# Network configuration (operator-specific)
+network:
+  # Create external route for public access
+  exposeRoute: false
+  # Control which namespaces can access the service
+  allowedFrom:
+    # List specific namespaces
+    namespaces:
+      - default
+      - data-science
+    # Or use namespace labels
+    # labels:
+    #   - team/authorized
+    #   - project/ml-enabled
+
+# Uvicorn workers for better concurrency (operator-specific)
+# CPU requests will be set to match worker count
+workers: 4
+
+# Pod disruption budget for high availability (operator-specific)
+podDisruptionBudget:
+  minAvailable: 1
+
+# Image configuration
+image:
+  repository: llamastack/distribution-starter
+  tag: "0.6.0"
+  pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8321
+
+# Enable autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 75
+
+# Resource limits
+resources:
+  requests:
+    memory: "4Gi"
+    cpu: "4"  # Matches workers count
+  limits:
+    memory: "8Gi"
+    cpu: "8"
+
+# Enable models
+models:
+  llama-3-2-3b-instruct:
+    id: meta-llama/Llama-3.2-3B-Instruct
+    enabled: true
+
+  llama-guard-3-8b:
+    id: meta-llama/Llama-Guard-3-8B
+    enabled: true
+    registerShield: true  # Register as safety shield
+
+# Enable PGVector for vector storage
+pgvector:
+  enabled: true
+
+# Provider configuration
+providers:
+  agents:
+    - provider_id: meta-reference
+      provider_type: inline::meta-reference
+      config:
+        persistence:
+          agent_state:
+            namespace: agents
+            backend: kv_default
+          responses:
+            table_name: responses
+            backend: sql_default
+            max_write_queue_size: 10000
+            num_writers: 4
+
+# Optional: VertexAI configuration
+# vertexai:
+#   enabled: true
+#   projectId: my-gcp-project
+#   location: us-central1
+
+# Optional: Custom TLS certificates
+# tlsConfig:
+#   caBundle:
+#     configMapName: custom-ca-bundle
+#     configMapKeys:
+#       - ca-bundle.crt

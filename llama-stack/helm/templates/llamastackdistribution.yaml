@@ -1,0 +1,193 @@
+{{- if .Values.useLlamaStackOperator }}
+---
+apiVersion: llamastack.io/v1alpha1
+kind: LlamaStackDistribution
+metadata:
+  name: {{ include "llama-stack.fullname" . }}
+  labels:
+    {{- include "llama-stack.labels" . | nindent 4 }}
+spec:
+  # Number of replicas
+  replicas: {{ .Values.replicaCount }}
+
+  # Network configuration
+  network:
+    # Expose route for external access (creates Ingress/Route)
+    exposeRoute: {{ .Values.network.exposeRoute | default false }}
+    {{- with .Values.network.allowedFrom }}
+    allowedFrom:
+      {{- with .namespaces }}
+      namespaces:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .labels }}
+      labels:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+
+  # Server configuration
+  server:
+    # Distribution configuration - specify either name or image
+    distribution:
+      {{- if .Values.image.repository }}
+      image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+      {{- else if .Values.distribution.name }}
+      name: {{ .Values.distribution.name }}
+      {{- else }}
+      # Default to using the image from values
+      image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+      {{- end }}
+
+    # Container specification
+    containerSpec:
+      name: llama-stack
+      port: {{ .Values.service.port }}
+
+      {{- with .Values.command }}
+      command:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.args }}
+      args:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      # Environment variables
+      env:
+        {{- toYaml .Values.env | nindent 8 }}
+        {{- if .Values.otelExporter }}
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: {{ .Values.otelExporter }}
+        {{- end }}
+        {{- if .Values.telemetrySinks }}
+        - name: TELEMETRY_SINKS
+          value: {{ .Values.telemetrySinks }}
+        {{- end }}
+        {{- if .Values.pgvector.enabled }}
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              key: user
+              name: pgvector
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: pgvector
+        - name: POSTGRES_HOST
+          valueFrom:
+            secretKeyRef:
+              key: host
+              name: pgvector
+        - name: POSTGRES_PORT
+          valueFrom:
+            secretKeyRef:
+              key: port
+              name: pgvector
+        - name: POSTGRES_DBNAME
+          valueFrom:
+            secretKeyRef:
+              key: dbname
+              name: pgvector
+        {{- end }}
+        {{- if .Values.gcpServiceAccountFile }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: {{ .Values.gcpServiceAccount.mountPath }}
+        {{- end }}
+        # Add environment variables from secrets
+        {{- range $key, $value := .Values.secrets }}
+        - name: {{ $key }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Chart.Name }}-env
+              key: {{ $key }}
+        {{- end }}
+
+      {{- with .Values.resources }}
+      resources:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+    # User configuration - references the ConfigMap containing llama-stack config
+    userConfig:
+      configMapName: run-config
+      {{- if .Values.userConfig.configMapNamespace }}
+      configMapNamespace: {{ .Values.userConfig.configMapNamespace }}
+      {{- end }}
+
+    # Autoscaling configuration
+    {{- if .Values.autoscaling.enabled }}
+    autoscaling:
+      maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+      {{- with .Values.autoscaling.minReplicas }}
+      minReplicas: {{ . }}
+      {{- end }}
+      {{- with .Values.autoscaling.targetCPUUtilizationPercentage }}
+      targetCPUUtilizationPercentage: {{ . }}
+      {{- end }}
+      {{- with .Values.autoscaling.targetMemoryUtilizationPercentage }}
+      targetMemoryUtilizationPercentage: {{ . }}
+      {{- end }}
+    {{- end }}
+
+    # Pod disruption budget
+    {{- if .Values.podDisruptionBudget }}
+    podDisruptionBudget:
+      {{- with .Values.podDisruptionBudget.minAvailable }}
+      minAvailable: {{ . }}
+      {{- end }}
+      {{- with .Values.podDisruptionBudget.maxUnavailable }}
+      maxUnavailable: {{ . }}
+      {{- end }}
+    {{- end }}
+
+    # Pod-level overrides
+    podOverrides:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "llama-stack.serviceAccountName" . }}
+      {{- else if .Values.serviceAccount.name }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- end }}
+
+      # Volumes
+      volumes:
+        {{- toYaml .Values.volumes | nindent 8 }}
+        {{- if .Values.gcpServiceAccountFile }}
+        - name: {{ .Values.gcpServiceAccount.name }}
+          secret:
+            secretName: {{ .Values.gcpServiceAccount.name }}
+        {{- end }}
+
+      # Volume mounts
+      volumeMounts:
+        {{- toYaml .Values.volumeMounts | nindent 8 }}
+        {{- if .Values.gcpServiceAccountFile }}
+        - name: {{ .Values.gcpServiceAccount.name }}
+          mountPath: {{ .Values.gcpServiceAccount.mountPath }}
+          subPath: gcp-service-account.json
+        {{- end }}
+
+    # TLS configuration (if needed for custom certificates)
+    {{- if .Values.tlsConfig }}
+    tlsConfig:
+      {{- with .Values.tlsConfig.caBundle }}
+      caBundle:
+        configMapName: {{ .configMapName }}
+        {{- with .configMapNamespace }}
+        configMapNamespace: {{ . }}
+        {{- end }}
+        {{- with .configMapKeys }}
+        configMapKeys:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+
+    # Uvicorn workers configuration
+    {{- if .Values.workers }}
+    workers: {{ .Values.workers }}
+    {{- end }}
+
+{{- end }}

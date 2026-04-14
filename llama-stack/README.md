@@ -14,6 +14,7 @@ The llama-stack chart creates:
 
 ## Prerequisites
 
+### Standard Mode
 - OpenShift cluster
 - Helm 3.x
 - Access to model repositories (HuggingFace, etc.)
@@ -21,13 +22,62 @@ The llama-stack chart creates:
   - PGVector database for vector storage
   - LLM Service deployment for model inference (if using local models)
 
+### Operator Mode
+All of the above, plus:
+- **llama-stack operator** installed in the cluster
+- CRD `llamastackdistributions.llamastack.io` registered (API: `llamastack.io/v1alpha1`)
+
+To install the llama-stack operator:
+```bash
+# Verify CRD is registered
+kubectl get crd llamastackdistributions.llamastack.io
+
+# Verify operator is running
+kubectl get deployment -n llama-stack-operator-system
+
+# Check operator version
+kubectl get deployment -n llama-stack-operator-system -o jsonpath='{.items[0].spec.template.spec.containers[0].image}'
+```
+
+**Note**: The llama-stack operator is typically installed as part of OpenDataHub or via a standalone operator deployment. Consult your platform documentation for specific installation steps.
+
+## Deployment Modes
+
+This chart supports two deployment modes:
+
+1. **Standard Helm Deployment** (default): Deploys traditional Kubernetes resources (Deployment, Service, ConfigMap, etc.)
+2. **Operator-based Deployment**: Deploys a LlamaStackDistribution custom resource managed by the llama-stack operator
+
+### Choosing a Deployment Mode
+
+Use standard Helm deployment when:
+- You want direct control over Kubernetes resources
+- You don't have the llama-stack operator installed
+- You're deploying in environments without CRD support
+
+Use operator-based deployment when:
+- You have the llama-stack operator installed in your cluster
+- You want operator-managed lifecycle and reconciliation
+- You prefer declarative CRD-based configuration
+
 ## Installation
 
-### Basic Installation
+### Basic Installation (Standard Mode)
 
 ```bash
 helm install llama-stack ./helm
 ```
+
+### Installation with Operator Mode
+
+**Prerequisites**: The llama-stack operator must be installed in your cluster.
+
+```bash
+helm install llama-stack ./helm \
+  --set useLlamaStackOperator=true
+```
+
+This will create a LlamaStackDistribution custom resource instead of traditional Kubernetes resources. The operator will then create and manage the underlying Deployment, Service, and ConfigMap.
 
 ### Installation with VertexAI Support
 
@@ -45,8 +95,17 @@ The service account file will be mounted at `/var/secrets/gcp-service-account.js
 
 ### Installation with Local Models
 
+**Standard Mode:**
 ```bash
 helm install llama-stack ./helm \
+  --set models.llama-3-2-3b-instruct.enabled=true \
+  --set models.llama-guard-3-8b.enabled=true
+```
+
+**Operator Mode:**
+```bash
+helm install llama-stack ./helm \
+  --set useLlamaStackOperator=true \
   --set models.llama-3-2-3b-instruct.enabled=true \
   --set models.llama-guard-3-8b.enabled=true
 ```
@@ -59,13 +118,20 @@ helm install llama-stack ./helm \
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
+| `useLlamaStackOperator` | Deploy using LlamaStackDistribution CRD via operator | `false` |
+| `network.exposeRoute` | (Operator only) Create Ingress/Route for external access | `false` |
+| `network.allowedFrom.namespaces` | (Operator only) List of namespaces allowed to access service | `[]` |
+| `network.allowedFrom.labels` | (Operator only) List of namespace labels allowed to access service | `[]` |
+| `workers` | (Operator only) Number of uvicorn worker processes | `unset` |
+| `podDisruptionBudget` | (Operator only) PDB configuration | `{}` |
+| `tlsConfig` | (Operator only) Custom CA bundle configuration | `{}` |
 | `replicaCount` | Number of replicas | `1` |
-| `rawDeploymentMode` | Use raw Deployment instead of other controllers | `true` |
+| `rawDeploymentMode` | Use raw Deployment instead of other controllers (standard mode) | `true` |
 | `image.repository` | Container image repository | `llamastack/distribution-starter` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `service.port` | Service port | `8321` |
-| `progressDeadlineSeconds` | Deployment progress deadline | `3600` |
-| `strategy.type` | Deployment strategy | `Recreate` |
+| `progressDeadlineSeconds` | Deployment progress deadline (standard mode) | `3600` |
+| `strategy.type` | Deployment strategy (standard mode) | `Recreate` |
 | `vertexai.enabled` | Enable VertexAI provider | `false` |
 | `vertexai.projectId` | Google Cloud project ID for VertexAI | `""` |
 | `vertexai.location` | Google Cloud region/location for VertexAI | `""` |
@@ -195,7 +261,170 @@ volumeMounts:
     name: cache
 ```
 
-### Complete Example values.yaml
+### Operator Mode Deployment
+
+When `useLlamaStackOperator: true`, the chart creates:
+1. A **ConfigMap** (`run-config`) containing the llama-stack configuration (models, providers, etc.)
+2. A **LlamaStackDistribution** custom resource that references this ConfigMap and defines the deployment characteristics
+3. **Secrets** for environment variables and credentials
+
+The llama-stack operator then reconciles the LlamaStackDistribution CRD to create and manage:
+- Deployment
+- Service  
+- NetworkPolicy (if network access controls are specified)
+- Ingress/Route (if `network.exposeRoute` is true)
+- HorizontalPodAutoscaler (if autoscaling is enabled)
+- PodDisruptionBudget (if configured)
+
+#### Operator Mode Benefits
+
+- **Declarative Management**: Entire stack configuration in a single CRD
+- **Automatic Reconciliation**: Operator ensures desired state is maintained
+- **Simplified Operations**: Operator handles complex lifecycle operations
+- **Consistent Configuration**: CRD schema validates configuration at admission time
+
+#### Operator Mode Example
+
+```yaml
+# values-operator.yaml
+useLlamaStackOperator: true
+
+replicaCount: 3
+
+# Operator-specific features
+network:
+  # Expose externally via Ingress/Route
+  exposeRoute: true
+  # Allow access from specific namespaces
+  allowedFrom:
+    namespaces:
+      - data-science-project
+      - ml-workloads
+    labels:
+      - team/authorized
+
+# Configure uvicorn workers for better performance
+workers: 4
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  minAvailable: 2
+
+# Autoscaling configuration
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+image:
+  repository: llamastack/distribution-starter
+  tag: "0.6.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8321
+
+# Enable VertexAI
+vertexai:
+  enabled: true
+  projectId: my-gcp-project
+  location: us-central1
+
+# Enable specific models
+models:
+  llama-3-2-3b-instruct:
+    enabled: true
+  llama-guard-3-8b:
+    enabled: true
+    registerShield: true
+
+# Resource limits
+resources:
+  requests:
+    memory: "4Gi"
+    cpu: "4"  # Matches workers count
+  limits:
+    memory: "8Gi"
+    cpu: "8"
+
+# Agent provider configuration
+providers:
+  agents:
+    - provider_id: meta-reference
+      provider_type: inline::meta-reference
+      config:
+        persistence:
+          agent_state:
+            namespace: agents
+            backend: kv_default
+```
+
+Deploy with operator mode:
+```bash
+helm install llama-stack ./helm -f values-operator.yaml
+```
+
+#### Minimal Operator Mode Example
+
+```yaml
+# Minimal configuration using operator mode
+useLlamaStackOperator: true
+
+models:
+  llama-3-2-3b-instruct:
+    enabled: true
+```
+
+The operator will use default settings and create all necessary resources.
+
+#### Example Values File
+
+A complete example configuration for operator mode is provided in `values-operator-example.yaml`:
+
+```bash
+# Deploy using the example operator configuration
+helm install llama-stack ./helm -f helm/values-operator-example.yaml
+
+# Or customize it for your needs
+cp helm/values-operator-example.yaml my-values.yaml
+# Edit my-values.yaml
+helm install llama-stack ./helm -f my-values.yaml
+```
+
+#### Viewing the Created Resources
+
+```bash
+# Get the LlamaStackDistribution resource (shortname: llsd)
+kubectl get llamastackdistribution
+# or
+kubectl get llsd
+
+# View detailed status including phase, versions, and available replicas
+kubectl get llsd llama-stack -o wide
+
+# Describe the resource to see conditions and events
+kubectl describe llsd llama-stack
+
+# View the full CRD specification
+kubectl get llsd llama-stack -o yaml
+
+# View the ConfigMap referenced by the CRD
+kubectl get configmap run-config -o yaml
+
+# Check the service URL
+kubectl get llsd llama-stack -o jsonpath='{.status.serviceURL}'
+
+# Check the external route URL (if exposeRoute is true)
+kubectl get llsd llama-stack -o jsonpath='{.status.routeURL}'
+
+# View provider health status
+kubectl get llsd llama-stack -o jsonpath='{.status.distributionConfig.providers}'
+```
+
+### Complete Example values.yaml (Standard Mode)
 
 ```yaml
 replicaCount: 1
@@ -309,15 +538,57 @@ oc exec -it deployment/llama-stack -- env | grep POSTGRES
 
 ### Checking Service Health
 
+**Standard Mode:**
 ```bash
 # Check pod status
 oc get pods -l app.kubernetes.io/name=llama-stack
+
+# Check deployment
+oc get deployment llama-stack
 
 # Check service
 oc get svc llama-stack
 
 # Test health endpoint
 oc exec -it deployment/llama-stack -- curl localhost:8321/health
+```
+
+**Operator Mode:**
+```bash
+# Check LlamaStackDistribution resource and its phase
+kubectl get llsd llama-stack -o wide
+
+# Check resource status, conditions, and events
+kubectl describe llsd llama-stack
+
+# View detailed status information
+kubectl get llsd llama-stack -o jsonpath='{.status}' | jq
+
+# Check pods created by the operator
+kubectl get pods -l app.kubernetes.io/managed-by=llama-stack-operator
+
+# Check deployment created by operator
+kubectl get deployment -l app.kubernetes.io/managed-by=llama-stack-operator
+
+# Check service created by operator
+kubectl get svc -l app.kubernetes.io/managed-by=llama-stack-operator
+
+# Check operator logs for reconciliation errors
+kubectl logs -n llama-stack-operator-system -l app.kubernetes.io/name=llama-stack-operator --tail=100 -f
+
+# Check the ConfigMap referenced by the CRD
+kubectl get configmap run-config
+
+# Test health endpoint (once pods are running)
+kubectl exec -it deployment/llama-stack -- curl localhost:8321/v1/health
+
+# Check network policies (if allowedFrom is configured)
+kubectl get networkpolicy
+
+# Check ingress/route (if exposeRoute is true)
+kubectl get ingress
+# or on OpenShift
+oc get route
 ```
 
 ### Viewing Logs
@@ -364,6 +635,17 @@ oc logs deployment/llama-stack -c llama-stack -f
    - Verify model predictor services are running
    - Check if model URLs are accessible
    - Validate model configuration in LLM Service
+
+6. **Operator Mode Issues**:
+   - Verify llama-stack operator is installed: `kubectl get deployment -n llama-stack-operator-system`
+   - Check if CRD is registered: `kubectl get crd llamastackdistributions.llamastack.io`
+   - Review operator logs for reconciliation errors: `kubectl logs -n llama-stack-operator-system -l app.kubernetes.io/name=llama-stack-operator`
+   - Check LlamaStackDistribution status and phase: `kubectl get llsd -o wide`
+   - View conditions for error details: `kubectl get llsd llama-stack -o jsonpath='{.status.conditions}' | jq`
+   - Ensure operator has proper RBAC permissions
+   - Verify the ConfigMap exists: `kubectl get configmap run-config`
+   - Check for admission webhook errors in events: `kubectl get events --sort-by='.lastTimestamp'`
+   - Verify distribution image is accessible: `kubectl describe llsd llama-stack | grep -A5 distribution`
 
 ### Resource Requirements
 
@@ -413,6 +695,8 @@ The chart creates minimal RBAC permissions:
 
 ## Upgrading
 
+### Upgrading in Standard Mode
+
 ```bash
 # Upgrade with new image version
 helm upgrade llama-stack ./helm \
@@ -420,6 +704,58 @@ helm upgrade llama-stack ./helm \
 
 # Check rollout status
 oc rollout status deployment/llama-stack
+```
+
+### Upgrading in Operator Mode
+
+```bash
+# Upgrade the Helm release (updates the CRD)
+helm upgrade llama-stack ./helm \
+  --set useLlamaStackOperator=true \
+  --set image.tag=v0.3.0
+
+# Watch the operator reconcile the changes
+kubectl get llamastackdistribution llama-stack -w
+
+# Check operator-created deployment status
+oc rollout status deployment/llama-stack
+```
+
+### Switching Between Modes
+
+**Important**: Switching between standard and operator modes requires careful consideration:
+
+**From Standard to Operator Mode:**
+```bash
+# 1. Ensure operator is installed
+kubectl get crd llamastackdistributions.llama.meta.com
+
+# 2. Backup current configuration
+kubectl get deployment llama-stack -o yaml > llama-stack-backup.yaml
+
+# 3. Upgrade to operator mode
+helm upgrade llama-stack ./helm \
+  --set useLlamaStackOperator=true \
+  --reuse-values
+
+# Note: This will delete the existing Deployment/Service/ConfigMap
+# and create a LlamaStackDistribution CRD. The operator will then
+# recreate these resources. Expect brief downtime during transition.
+```
+
+**From Operator to Standard Mode:**
+```bash
+# 1. Backup the CRD
+kubectl get llamastackdistribution llama-stack -o yaml > llama-stack-crd-backup.yaml
+
+# 2. Upgrade to standard mode
+helm upgrade llama-stack ./helm \
+  --set useLlamaStackOperator=false \
+  --reuse-values
+
+# Note: This will delete the LlamaStackDistribution CRD
+# and create standard Kubernetes resources directly.
+# Expect brief downtime during transition.
 ```
 
 ## Uninstalling
