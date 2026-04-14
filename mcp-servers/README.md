@@ -410,4 +410,3 @@ For issues and questions:
 - Check Toolhive operator documentation
 - Review MCPServer CRD specifications
 - Verify OpenShift security requirements
-
