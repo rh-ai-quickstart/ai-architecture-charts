@@ -74,7 +74,7 @@ helm install llama-stack ./helm
 
 ```bash
 helm install llama-stack ./helm \
-  --set useLlamaStackOperator=true
+  --set managedByOperator=true
 ```
 
 This will create a LlamaStackDistribution custom resource instead of traditional Kubernetes resources. The operator will then create and manage the underlying Deployment, Service, and ConfigMap.
@@ -105,7 +105,7 @@ helm install llama-stack ./helm \
 **Operator Mode:**
 ```bash
 helm install llama-stack ./helm \
-  --set useLlamaStackOperator=true \
+  --set managedByOperator=true \
   --set models.llama-3-2-3b-instruct.enabled=true \
   --set models.llama-guard-3-8b.enabled=true
 ```
@@ -118,7 +118,7 @@ helm install llama-stack ./helm \
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `useLlamaStackOperator` | Deploy using LlamaStackDistribution CRD via operator | `false` |
+| `managedByOperator` | Deploy using LlamaStackDistribution CRD via operator | `false` |
 | `network.exposeRoute` | (Operator only) Create Ingress/Route for external access | `false` |
 | `network.allowedFrom.namespaces` | (Operator only) List of namespaces allowed to access service | `[]` |
 | `network.allowedFrom.labels` | (Operator only) List of namespace labels allowed to access service | `[]` |
@@ -263,7 +263,7 @@ volumeMounts:
 
 ### Operator Mode Deployment
 
-When `useLlamaStackOperator: true`, the chart creates:
+When `managedByOperator: true`, the chart creates:
 1. A **ConfigMap** (`run-config`) containing the llama-stack configuration (models, providers, etc.)
 2. A **LlamaStackDistribution** custom resource that references this ConfigMap and defines the deployment characteristics
 3. **Secrets** for environment variables and credentials
@@ -287,7 +287,7 @@ The llama-stack operator then reconciles the LlamaStackDistribution CRD to creat
 
 ```yaml
 # values-operator.yaml
-useLlamaStackOperator: true
+managedByOperator: true
 
 replicaCount: 3
 
@@ -371,7 +371,7 @@ helm install llama-stack ./helm -f values-operator.yaml
 
 ```yaml
 # Minimal configuration using operator mode
-useLlamaStackOperator: true
+managedByOperator: true
 
 models:
   llama-3-2-3b-instruct:
@@ -711,7 +711,7 @@ oc rollout status deployment/llama-stack
 ```bash
 # Upgrade the Helm release (updates the CRD)
 helm upgrade llama-stack ./helm \
-  --set useLlamaStackOperator=true \
+  --set managedByOperator=true \
   --set image.tag=v0.3.0
 
 # Watch the operator reconcile the changes
@@ -735,7 +735,7 @@ kubectl get deployment llama-stack -o yaml > llama-stack-backup.yaml
 
 # 3. Upgrade to operator mode
 helm upgrade llama-stack ./helm \
-  --set useLlamaStackOperator=true \
+  --set managedByOperator=true \
   --reuse-values
 
 # Note: This will delete the existing Deployment/Service/ConfigMap
@@ -750,7 +750,7 @@ kubectl get llamastackdistribution llama-stack -o yaml > llama-stack-crd-backup.
 
 # 2. Upgrade to standard mode
 helm upgrade llama-stack ./helm \
-  --set useLlamaStackOperator=false \
+  --set managedByOperator=false \
   --reuse-values
 
 # Note: This will delete the LlamaStackDistribution CRD

@@ -1,4 +1,4 @@
-{{- if not .Values.useLlamaStackOperator }}
+{{- if not .Values.managedByOperator }}
 {{- $models := include "llama-stack.mergeModels" . | fromJson }}
 ---
 apiVersion: apps/v1

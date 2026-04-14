@@ -1,4 +1,4 @@
-{{- if not .Values.useLlamaStackOperator }}
+{{- if not .Values.managedByOperator }}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:

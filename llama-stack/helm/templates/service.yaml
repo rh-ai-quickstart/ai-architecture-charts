@@ -1,4 +1,4 @@
-{{- if not .Values.useLlamaStackOperator }}
+{{- if not .Values.managedByOperator }}
 apiVersion: v1
 kind: Service
 metadata:

@@ -2,7 +2,7 @@
 # This demonstrates operator-specific features like network controls, workers, and PDB
 
 # Enable operator mode
-useLlamaStackOperator: true
+managedByOperator: true
 
 # Replica configuration
 replicaCount: 2

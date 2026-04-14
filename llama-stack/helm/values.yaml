@@ -11,7 +11,7 @@ rawDeploymentMode: true
 # traditional Kubernetes resources (Deployment, Service)
 # The ConfigMap containing llama-stack configuration is still created and referenced by the CRD
 # Requires the llama-stack operator to be installed in the cluster
-useLlamaStackOperator: false
+managedByOperator: false
 
 # Network configuration (operator mode only)
 # Controls network access and external exposure
