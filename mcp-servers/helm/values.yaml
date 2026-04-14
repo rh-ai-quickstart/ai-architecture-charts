@@ -48,6 +48,14 @@ mcp-servers:
     # Optional: Limit which tools are available
     # env:
     #   GITHUB_TOOLS: "get_file_contents,issue_read,create_pull_request"
+    #
+    # Optional extraContainers: extra containers in the same pod (standard
+    # Kubernetes container maps). Only rendered for Deployment mode, not for
+    # Toolhive MCPServer resources.
+    # extraContainers:
+    #   - name: example-sidecar
+    #     image: registry.example/sidecar:tag
+    #     imagePullPolicy: IfNotPresent
 
   openshift-mcp:
     enabled: false
@@ -96,3 +104,6 @@ mcp-servers:
       # Optional: Enable message posting and logging
       # SLACK_MCP_ADD_MESSAGE_TOOL: "true"  # or channel list, or !channel to exclude
       # SLACK_MCP_LOG_LEVEL: "info"  # debug, info, warn, error
+
+  # Optional extraContainers: list of standard Kubernetes container maps, appended in
+  # Deployment pods only (not used for Toolhive MCPServer resources).

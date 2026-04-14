@@ -99,5 +99,8 @@ spec:
         resources:
           {{- toYaml . | nindent 10 }}
         {{- end }}
+      {{- with $server.extraContainers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
 {{- end }}
 {{- end }}
