@@ -267,6 +267,7 @@ When `managedByOperator: true`, the chart creates:
 1. A **ConfigMap** (`run-config`) containing the llama-stack configuration (models, providers, etc.)
 2. A **LlamaStackDistribution** custom resource that references this ConfigMap and defines the deployment characteristics
 3. **Secrets** for environment variables and credentials
+4. A **PersistentVolumeClaim** (`llama-stack-data`) for model storage and cache
 
 The llama-stack operator then reconciles the LlamaStackDistribution CRD to create and manage:
 - Deployment
