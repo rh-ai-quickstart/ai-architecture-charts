@@ -55,61 +55,40 @@ postgres:
 # ==============================
 # pgvector subchart configuration
 # ==============================
+# pgvector is a thin wrapper around the postgres chart.
+# All values are passed through to the postgres subchart via the postgres: key.
 pgvector:
-  # Namespace override - should match the parent model-registry namespace
-  namespace: ""
-  nameOverride: "pgvector-model-registry"
-  fullnameOverride: "pgvector-model-registry"
-  
-  image:
-    repository: docker.io/pgvector/pgvector
-    pullPolicy: IfNotPresent
-    tag: pg17
+  postgres:
+    namespace: ""
+    nameOverride: "pgvector-model-registry"
+    fullnameOverride: "pgvector-model-registry"
 
-  service:
-    type: ClusterIP
-    port: 5432
+    image:
+      repository: docker.io/pgvector/pgvector
+      pullPolicy: IfNotPresent
+      tag: pg17
 
-  # Environment variables - must reference the correct secret name
-  env:
-    - name: POSTGRES_USER
-      valueFrom:
-        secretKeyRef:
-          key: user
-          name: pgvector-model-registry
-    - name: POSTGRES_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          key: password
-          name: pgvector-model-registry
-    - name: POSTGRES_PORT
-      valueFrom:
-        secretKeyRef:
-          key: port
-          name: pgvector-model-registry
-    - name: POSTGRES_DBNAME
-      valueFrom:
-        secretKeyRef:
-          key: dbname
-          name: pgvector-model-registry
+    service:
+      type: ClusterIP
+      port: 5432
+      portName: postgresql
 
-  secret:
-    create: true
-    user: postgres
-    password: model_registry_password
-    dbname: model_registry
-    host: pgvector-model-registry
-    port: "5432"
+    secret:
+      create: true
+      user: postgres
+      password: model_registry_password
+      dbname: model_registry
+      host: pgvector-model-registry
+      port: "5432"
 
-  # No extra databases needed for model registry
-  extraDatabases: []
+    extraDatabases: []
 
-  volumeClaimTemplates:
-    - metadata:
-        name: pg-data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 1Gi
+    volumeClaimTemplates:
+      - metadata:
+          name: pg-data
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
 
