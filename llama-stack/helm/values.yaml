@@ -5,6 +5,53 @@
 replicaCount: 1
 rawDeploymentMode: true
 
+# Operator Mode Configuration
+# Set to true to deploy using LlamaStackDistribution CRD via the llama-stack operator
+# When enabled, a LlamaStackDistribution custom resource will be created instead of
+# traditional Kubernetes resources (Deployment, Service)
+# The ConfigMap containing llama-stack configuration is still created and referenced by the CRD
+# Requires the llama-stack operator to be installed in the cluster
+managedByOperator: false
+
+# Network configuration (operator mode only)
+# Controls network access and external exposure
+network:
+  # ExposeRoute creates an Ingress/Route for external access
+  exposeRoute: false
+  # AllowedFrom defines which namespaces can access the service
+  # By default, only the namespace containing the LlamaStackDistribution and the operator namespace are allowed
+  # allowedFrom:
+  #   namespaces:
+  #     - "namespace1"
+  #     - "namespace2"
+  #   labels:
+  #     - "myproject/lls-allowed"
+
+# User configuration (operator mode only)
+# Specifies the ConfigMap containing llama-stack configuration
+# userConfig:
+#   configMapNamespace: ""  # Defaults to the same namespace as the CRD
+
+# TLS configuration (operator mode only)
+# Configures custom CA bundles for TLS
+# tlsConfig:
+#   caBundle:
+#     configMapName: custom-ca-bundle
+#     configMapNamespace: ""  # Defaults to the same namespace
+#     configMapKeys:
+#       - ca-bundle.crt
+
+# Uvicorn workers (operator mode only)
+# Number of uvicorn worker processes to run
+# CPU requests are set to the number of workers when set
+# workers: 4
+
+# Pod disruption budget (operator mode only)
+# podDisruptionBudget:
+#   minAvailable: 1
+#   # OR
+#   maxUnavailable: 1
+
 image:
   repository: llamastack/distribution-starter
   pullPolicy: IfNotPresent
