@@ -1,3 +1,4 @@
+{{- if include "llama-stack.shouldCreatePvc" . }}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -9,3 +10,4 @@ spec:
     requests:
       storage: 2Gi
   volumeMode: Filesystem
+{{- end }}

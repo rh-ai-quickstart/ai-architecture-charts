@@ -97,3 +97,16 @@ Create the name of the service account to use
   {{- end }}
   {{- if $found }}true{{- end }}
 {{- end }}
+
+{{/*
+Check if llama-stack-data PVC should be created based on volumes configuration
+*/}}
+{{- define "llama-stack.shouldCreatePvc" -}}
+  {{- $shouldCreate := false }}
+  {{- range .Values.volumes }}
+    {{- if and (hasKey . "persistentVolumeClaim") (eq .persistentVolumeClaim.claimName "llama-stack-data") }}
+      {{- $shouldCreate = true }}
+    {{- end }}
+  {{- end }}
+  {{- if $shouldCreate }}true{{- end }}
+{{- end }}
