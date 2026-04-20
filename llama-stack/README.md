@@ -287,10 +287,9 @@ The llama-stack operator then reconciles the LlamaStackDistribution CRD to creat
 #### Operator Mode Example
 
 ```yaml
-# values-operator.yaml
 managedByOperator: true
 
-replicaCount: 3
+replicaCount: 1
 
 # Operator-specific features
 network:
@@ -363,11 +362,6 @@ providers:
             backend: kv_default
 ```
 
-Deploy with operator mode:
-```bash
-helm install llama-stack ./helm -f values-operator.yaml
-```
-
 #### Minimal Operator Mode Example
 
 ```yaml
@@ -380,20 +374,6 @@ models:
 ```
 
 The operator will use default settings and create all necessary resources.
-
-#### Example Values File
-
-A complete example configuration for operator mode is provided in `values-operator-example.yaml`:
-
-```bash
-# Deploy using the example operator configuration
-helm install llama-stack ./helm -f helm/values-operator-example.yaml
-
-# Or customize it for your needs
-cp helm/values-operator-example.yaml my-values.yaml
-# Edit my-values.yaml
-helm install llama-stack ./helm -f my-values.yaml
-```
 
 #### Viewing the Created Resources
 
