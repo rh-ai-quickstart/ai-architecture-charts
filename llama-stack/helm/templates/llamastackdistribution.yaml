@@ -28,16 +28,9 @@ spec:
 
   # Server configuration
   server:
-    # Distribution configuration - specify either name or image
+    # Distribution configuration
     distribution:
-      {{- if .Values.image.repository }}
       image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
-      {{- else if .Values.distribution.name }}
-      name: {{ .Values.distribution.name }}
-      {{- else }}
-      # Default to using the image from values
-      image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
-      {{- end }}
 
     # Container specification
     containerSpec:
@@ -113,35 +106,6 @@ spec:
     # User configuration - references the ConfigMap containing llama-stack config
     userConfig:
       configMapName: run-config
-      {{- if .Values.userConfig.configMapNamespace }}
-      configMapNamespace: {{ .Values.userConfig.configMapNamespace }}
-      {{- end }}
-
-    # Autoscaling configuration
-    {{- if .Values.autoscaling.enabled }}
-    autoscaling:
-      maxReplicas: {{ .Values.autoscaling.maxReplicas }}
-      {{- with .Values.autoscaling.minReplicas }}
-      minReplicas: {{ . }}
-      {{- end }}
-      {{- with .Values.autoscaling.targetCPUUtilizationPercentage }}
-      targetCPUUtilizationPercentage: {{ . }}
-      {{- end }}
-      {{- with .Values.autoscaling.targetMemoryUtilizationPercentage }}
-      targetMemoryUtilizationPercentage: {{ . }}
-      {{- end }}
-    {{- end }}
-
-    # Pod disruption budget
-    {{- if .Values.podDisruptionBudget }}
-    podDisruptionBudget:
-      {{- with .Values.podDisruptionBudget.minAvailable }}
-      minAvailable: {{ . }}
-      {{- end }}
-      {{- with .Values.podDisruptionBudget.maxUnavailable }}
-      maxUnavailable: {{ . }}
-      {{- end }}
-    {{- end }}
 
     # Pod-level overrides
     podOverrides:
@@ -168,26 +132,5 @@ spec:
           mountPath: {{ .Values.gcpServiceAccount.mountPath }}
           subPath: gcp-service-account.json
         {{- end }}
-
-    # TLS configuration (if needed for custom certificates)
-    {{- if .Values.tlsConfig }}
-    tlsConfig:
-      {{- with .Values.tlsConfig.caBundle }}
-      caBundle:
-        configMapName: {{ .configMapName }}
-        {{- with .configMapNamespace }}
-        configMapNamespace: {{ . }}
-        {{- end }}
-        {{- with .configMapKeys }}
-        configMapKeys:
-          {{- toYaml . | nindent 10 }}
-        {{- end }}
-      {{- end }}
-    {{- end }}
-
-    # Uvicorn workers configuration
-    {{- if .Values.workers }}
-    workers: {{ .Values.workers }}
-    {{- end }}
 
 {{- end }}
