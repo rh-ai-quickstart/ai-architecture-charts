@@ -1,6 +1,7 @@
 import logging
 import os
 import tempfile
+import threading
 import time
 
 from kfp import Client, compiler
@@ -8,6 +9,11 @@ from kfp import Client, compiler
 from . import pipelines
 
 logger = logging.getLogger(__name__)
+
+# KFP @dsl.pipeline compilation uses process-wide pipeline context; concurrent
+# add_pipeline calls (e.g. parallel Helm Jobs POST /add) raise "Nested pipelines
+# are not allowed." Serialize registration to avoid that race.
+_add_pipeline_lock = threading.Lock()
 
 pipeline_dict = {
     "S3": pipelines.s3_pipeline,
@@ -29,52 +35,53 @@ def add_pipeline(pipeline_name: str, source: str):
         "sign_db": os.getenv("SIGN_DATABASE", "false")
     }
 
-    with tempfile.NamedTemporaryFile(suffix=".yaml") as tmp:
-        compiler.Compiler().compile(
-            pipeline_func=pipeline_dict[source](**pipeline_params),
-            package_path=tmp.name,
+    with _add_pipeline_lock:
+        with tempfile.NamedTemporaryFile(suffix=".yaml") as tmp:
+            compiler.Compiler().compile(
+                pipeline_func=pipeline_dict[source](**pipeline_params),
+                package_path=tmp.name,
+            )
+
+            tmp.flush()
+
+            # 2. Connect to KFP
+            client = Client(
+                host=os.environ["DS_PIPELINE_URL"],
+                verify_ssl=False
+            )
+
+            # 3. Upload pipeline
+            pipeline_id = client.get_pipeline_id(pipeline_name)
+
+            experiments = client.list_experiments()
+            experiment_id = experiments.experiments[0].experiment_id
+
+            if pipeline_id is None:
+                uploaded_pipeline = client.upload_pipeline(
+                    pipeline_package_path=tmp.name,
+                    pipeline_name=pipeline_name,
+                )
+                pipeline_id = uploaded_pipeline.pipeline_id
+                versions = client.list_pipeline_versions(pipeline_id)
+                version_id = [v.pipeline_version_id for v in versions.pipeline_versions if v.display_name == pipeline_name][0]
+            else:
+                version_name = f"{pipeline_name}-{time.strftime('%Y%m%d-%H%M%S')}"
+                uploaded_pipeline = client.upload_pipeline_version(
+                    pipeline_package_path=tmp.name,
+                    pipeline_id=pipeline_id,
+                    pipeline_version_name=version_name,
+                )
+                version_id = uploaded_pipeline.pipeline_version_id
+
+        run = client.run_pipeline(
+            pipeline_id=pipeline_id,
+            version_id=version_id,
+            experiment_id=experiment_id,
+            job_name=f"{pipeline_name}-run"
         )
 
-        tmp.flush()
-
-        # 2. Connect to KFP
-        client = Client(
-            host=os.environ["DS_PIPELINE_URL"],
-            verify_ssl=False
-        )
-
-        # 3. Upload pipeline
-        pipeline_id = client.get_pipeline_id(pipeline_name)
-
-        experiments = client.list_experiments()
-        experiment_id = experiments.experiments[0].experiment_id
-
-        if pipeline_id is None:
-            uploaded_pipeline = client.upload_pipeline(
-                pipeline_package_path=tmp.name,
-                pipeline_name=pipeline_name,
-            )
-            pipeline_id = uploaded_pipeline.pipeline_id
-            versions = client.list_pipeline_versions(pipeline_id)
-            version_id = [v.pipeline_version_id for v in versions.pipeline_versions if v.display_name == pipeline_name][0]
-        else:
-            version_name = f"{pipeline_name}-{time.strftime('%Y%m%d-%H%M%S')}"
-            uploaded_pipeline = client.upload_pipeline_version(
-                pipeline_package_path=tmp.name,
-                pipeline_id=pipeline_id,
-                pipeline_version_name=version_name,
-            )
-            version_id = uploaded_pipeline.pipeline_version_id
-
-    run = client.run_pipeline(
-        pipeline_id=pipeline_id,
-        version_id=version_id,
-        experiment_id=experiment_id,
-        job_name=f"{pipeline_name}-run"
-    )
-
-    logger.info(f"Pipeline submitted! Run ID: {run.run_id}")
-    return pipeline_id
+        logger.info(f"Pipeline submitted! Run ID: {run.run_id}")
+        return pipeline_id
 
 
 def get_pipeline_runs(client: Client, pipeline_name: str):
