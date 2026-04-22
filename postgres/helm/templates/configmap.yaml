@@ -1,0 +1,25 @@
+{{- if or .Values.initScripts .Values.extraDatabases }}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ include "postgres.fullname" . }}-initsql
+  namespace: {{ include "postgres.namespace" . }}
+  labels:
+    {{- include "postgres.labels" . | nindent 4 }}
+data:
+  {{- range $filename, $content := .Values.initScripts }}
+  {{ $filename }}: |
+    {{- $content | nindent 4 }}
+  {{- end }}
+  {{- if .Values.extraDatabases }}
+  init-extra-dbs.sh: |
+    #!/bin/bash
+    set -e
+    {{- range $db := .Values.extraDatabases }}
+    psql -U "$POSTGRES_USER" -c "CREATE DATABASE {{ $db.name }};"
+    {{- range ($db.extensions | default list) }}
+    psql -U "$POSTGRES_USER" -d "{{ $db.name }}" -c "CREATE EXTENSION IF NOT EXISTS {{ . }};"
+    {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
