@@ -1,3 +1,4 @@
+{{- if not .Values.managedByOperator }}
 {{- $models := include "llama-stack.mergeModels" . | fromJson }}
 ---
 apiVersion: apps/v1
@@ -179,3 +180,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}
