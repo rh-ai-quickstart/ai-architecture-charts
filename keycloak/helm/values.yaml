@@ -1,0 +1,106 @@
+replicaCount: 1
+
+image:
+  repository: quay.io/keycloak/keycloak
+  pullPolicy: IfNotPresent
+  tag: "25.0.6"
+
+imagePullSecrets: []
+
+nameOverride: "keycloak"
+fullnameOverride: "keycloak"
+
+serviceAccount:
+  create: false
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+  httpsPort: 8443
+
+args:
+  - start-dev
+  - --proxy-headers=xforwarded
+
+env:
+  - name: KEYCLOAK_ADMIN
+    valueFrom:
+      secretKeyRef:
+        key: admin-user
+        name: keycloak-admin
+  - name: KEYCLOAK_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        key: admin-password
+        name: keycloak-admin
+  - name: KC_HEALTH_ENABLED
+    value: "true"
+  - name: KC_METRICS_ENABLED
+    value: "true"
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 9000
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 9000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  mountPath: /opt/keycloak/data
+
+volumeMounts: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+secret:
+  adminUser: admin
+  adminPassword: admin
+  dbEnabled: false
+  dbUrl: "jdbc:postgresql://postgres:5432/keycloak"
+  dbUsername: keycloak
+  dbPassword: keycloak
+
+route:
+  enabled: true
+  host: ""
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+realmImport:
+  enabled: true
