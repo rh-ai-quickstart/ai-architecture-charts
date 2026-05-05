@@ -40,13 +40,13 @@ deviceConfigs:
       - amd.com/gpu
     acceleratorType: amd.com/gpu
   cpu:
-    image: quay.io/vllm/automation-vllm:0.18.0rc1.dev7_rhaiv.0.ge974742fb.cpu
+    image: quay.io/vllm/automation-vllm:0.18.0_rhaiv.5.cpu
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
   # Intel Xeon CPU configuration for optimized performance; requires Sapphire Rapids and newer CPUs
   xeon:
-    image: quay.io/vllm/automation-vllm:0.18.0rc1.dev7_rhaiv.0.ge974742fb.cpu
+    image: quay.io/vllm/automation-vllm:0.18.0_rhaiv.5.cpu
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
