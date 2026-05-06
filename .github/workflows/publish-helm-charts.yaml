@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   detect-changes:
-    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts' && github.actor != 'github-actions[bot]'
+    if: github.repository == 'alexsin368/ai-architecture-charts' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     outputs:
       changed-components: ${{ steps.changes.outputs.changed-components }}
@@ -236,7 +236,7 @@ jobs:
 
   build-and-push:
     needs: [construct-build-matrix, update-versions-and-tag]
-    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts' && needs.construct-build-matrix.outputs.has-builds == 'true'
+    if: github.repository == 'alexsin368/ai-architecture-charts' && needs.construct-build-matrix.outputs.has-builds == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJson(needs.construct-build-matrix.outputs.build-matrix) }}
@@ -289,7 +289,7 @@ jobs:
 
   package-helm-charts:
     needs: [detect-changes, update-versions-and-tag]
-    if: github.repository == 'rh-ai-quickstart/ai-architecture-charts' && needs.detect-changes.outputs.changed-components != ''
+    if: github.repository == 'alexsin368/ai-architecture-charts' && needs.detect-changes.outputs.changed-components != ''
     runs-on: ubuntu-latest
     steps:
       - name: Checkout tagged commit

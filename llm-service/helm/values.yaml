@@ -308,3 +308,4 @@ models:
       - /chat-templates/tool_chat_template_qwen.jinja
       - --tool-call-parser
       - llama3_json
+      
