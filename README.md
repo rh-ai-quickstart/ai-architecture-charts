@@ -1,6 +1,6 @@
 # AI Architecture Charts
 
-A comprehensive collection of Helm charts for deploying end-to-end AI/ML infrastructure on OpenShift, featuring LlamaStack orchestration, model serving, vector databases, and supporting services.
+A comprehensive collection of Helm charts for deploying end-to-end AI/ML infrastructure on OpenShift, featuring OGX orchestration, model serving, vector databases, and supporting services.
 
 ## Overview
 
@@ -10,7 +10,7 @@ This repository provides production-ready Helm charts for building AI applicatio
 
 ### 🧠 Core AI Services
 
-#### [LlamaStack](./llama-stack/README.md)
+#### [OGX](./ogx/README.md)
 Comprehensive AI orchestration platform that provides a unified API for multiple model providers, safety shields, and AI agent capabilities. Supports local models (via LLM Service), remote vLLM endpoints, and VertexAI integration.
 
 **Key Features:**
@@ -98,10 +98,10 @@ Model Context Protocol servers that provide external tools and capabilities to A
 - Weather information services
 - Server-Sent Events (SSE) endpoints
 - Custom tool development framework
-- Integration with LlamaStack agents
+- Integration with OGX agents
 
 #### [Oracle SQLcl MCP](./oracle-sqlcl/helm/README.md)
-MCP server that exposes Oracle SQLcl capabilities to AI agents via Toolhive, enabling database tooling and interactions from LlamaStack and compatible clients.
+MCP server that exposes Oracle SQLcl capabilities to AI agents via Toolhive, enabling database tooling and interactions from OGX and compatible clients.
 
 **Key Features:**
 - Execute SQL/PLSQL against Oracle databases via Model Context Protocol
@@ -132,8 +132,8 @@ helm install minio ./minio/helm
 helm install llm-service ./llm-service/helm \
   --set models.llama-3-2-3b-instruct.enabled=true
 
-# 4. Deploy LlamaStack orchestration
-helm install llama-stack ./llama-stack/helm \
+# 4. Deploy ogx orchestration
+helm install ogx ./ogx/helm \
   --set models.llama-3-2-3b-instruct.enabled=true
 
 # 5. Deploy ingestion pipeline
@@ -161,17 +161,17 @@ helm install ingestion-pipeline ./ingestion-pipeline/helm \
 # Deploy model serving and orchestration
 helm install llm-service ./llm-service/helm \
   --set models.llama-3-2-3b-instruct.enabled=true
-helm install llama-stack ./llama-stack/helm \
+helm install ogx ./ogx/helm \
   --set models.llama-3-2-3b-instruct.enabled=true
 ```
 
 ## Integration Patterns
 
-### LlamaStack + LLM Service
-LlamaStack provides orchestration while LLM Service handles model inference:
+### OGX + LLM Service
+OGX provides orchestration while LLM Service handles model inference:
 - LLM Service deploys models as InferenceServices
-- LlamaStack automatically discovers and configures model endpoints
-- Unified API access through LlamaStack
+- OGX automatically discovers and configures model endpoints
+- Unified API access through OGX
 
 ### Vector Storage Integration
 Both PGVector and Oracle 23ai can serve as vector databases:
@@ -189,7 +189,7 @@ Ingestion Pipeline supports various data sources:
 
 ```mermaid
 graph TB
-    LS[LlamaStack] --> LLM[LLM Service]
+    LS[OGX] --> LLM[LLM Service]
     LS --> PG[PGVector]
     LS --> MCP[MCP Servers]
     
@@ -216,7 +216,7 @@ graph TB
 ## Monitoring and Observability
 
 - **Prometheus Integration**: Many components support Prometheus metrics
-- **OpenTelemetry**: LlamaStack supports distributed tracing
+- **OpenTelemetry**: OGX supports distributed tracing
 - **Logging**: All components provide structured logging
 - **Health Checks**: Kubernetes-native health and readiness probes
 
@@ -303,9 +303,9 @@ dependencies:
     version: "0.1.0"
     repository: "file://../ai-architecture-charts/llm-service/helm"
   
-  - name: llama-stack
+  - name: ogx
     version: "0.2.18"
-    repository: "file://../ai-architecture-charts/llama-stack/helm"
+    repository: "file://../ai-architecture-charts/ogx/helm"
   
   - name: ingestion-pipeline
     version: "0.2.18"
@@ -340,7 +340,7 @@ llm-service:
     llama-guard-3-8b:
       enabled: true
 
-llama-stack:
+ogx:
   models:
     llama-3-2-3b-instruct:
       enabled: true
@@ -424,7 +424,7 @@ minio:
     bucket: "ai-documents"
 
 # Global models will be merged with local configurations
-# Both llm-service and llama-stack will use the global.models settings
+# Both llm-service and ogx will use the global.models settings
 ```
 
 ### Deployment Workflow
@@ -554,7 +554,7 @@ Where:
 
 Examples:
 - `ingestion-pipeline-0.2.18`
-- `llama-stack-0.3.0`
+- `ogx-0.3.0`
 - `mcp-servers-0.1.0`
 
 ### Container Image Tags

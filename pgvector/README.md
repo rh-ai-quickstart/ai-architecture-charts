@@ -552,7 +552,7 @@ spec:
   - from:
     - podSelector:
         matchLabels:
-          app: llama-stack
+          app: ogx
     - podSelector:
         matchLabels:
           app: ingestion-pipeline

@@ -447,7 +447,7 @@ spec:
           app: ingestion-pipeline
     - podSelector:
         matchLabels:
-          app: llama-stack
+          app: ogx
     ports:
     - protocol: TCP
       port: 9000

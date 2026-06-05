@@ -341,7 +341,7 @@ This chart has the following subchart dependency:
 This chart works well with other components in the AI architecture:
 
 - **ingestion-pipeline**: For data processing workflows
-- **llama-stack**: For LLM inference capabilities  
+- **ogx**: For LLM inference capabilities  
 - **pgvector**: For vector storage
 - **minio**: For object storage
 
