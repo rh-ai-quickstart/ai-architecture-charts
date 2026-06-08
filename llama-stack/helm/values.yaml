@@ -30,7 +30,7 @@ network:
 image:
   repository: ogxai/distribution-starter
   pullPolicy: IfNotPresent
-  tag: "0.5.2"
+  tag: "0.6.1"
 
 imagePullSecrets: []
 nameOverride: "llamastack"
