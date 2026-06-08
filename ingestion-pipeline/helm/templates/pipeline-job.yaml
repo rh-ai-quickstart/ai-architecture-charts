@@ -1,28 +1,18 @@
 {{- $root := . -}}
 {{- $enabledPipelines := include "ingestion-pipeline.enabledPipelines" . | fromJson -}}
-
-{{/* Create jobs for enabled pipelines */}}
-{{- range $pipelineKey, $pipelineConfig := $enabledPipelines }}
-{{- $jobName := include "ingestion-pipeline.pipelineJobName" (dict "pipelineKey" $pipelineKey) -}}
-{{- $pipelineDict := dict "root" $root "pipelineKey" $pipelineKey "pipelineConfig" $pipelineConfig "pipelineName" $pipelineKey -}}
-{{- $pipelineData := include "ingestion-pipeline.preparePipelineData" $pipelineDict -}}
+{{- if $enabledPipelines }}
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ $jobName }}
+  name: register-pipelines
   labels:
-    {{- include "ingestion-pipeline.pipelineLabels" $pipelineDict | nindent 4 }}
-  annotations:
-    ingestion-pipeline.ai/pipeline-key: {{ $pipelineKey }}
-    ingestion-pipeline.ai/pipeline-source: {{ $pipelineConfig.source }}
+    {{- include "ingestion-pipeline.labels" . | nindent 4 }}
 spec:
   template:
     metadata:
       labels:
-        {{- include "ingestion-pipeline.pipelineLabels" $pipelineDict | nindent 8 }}
-      annotations:
-        ingestion-pipeline.ai/pipeline-key: {{ $pipelineKey }}
+        {{- include "ingestion-pipeline.selectorLabels" . | nindent 8 }}
     spec:
       initContainers:
         - name: wait-for-pipeline
@@ -40,32 +30,71 @@ spec:
               done
               echo "Ingestion pipeline service ready"
       containers:
-        - name: create-{{ $pipelineKey }}-pipeline
+        - name: register-pipelines
           image: "image-registry.openshift-image-registry.svc:5000/openshift/tools:latest"
           imagePullPolicy: IfNotPresent
-          env:
-            - name: PIPELINE_KEY
-              value: {{ $pipelineKey | quote }}
-            - name: PIPELINE_SOURCE
-              value: {{ $pipelineConfig.source | quote }}
-            - name: PIPELINE_NAME
-              value: {{ $pipelineConfig.name | quote }}
-            - name: PIPELINE_VERSION
-              value: {{ $pipelineConfig.version | quote }}
           command:
             - /bin/bash
             - -c
             - |
-              echo "Creating pipeline: $PIPELINE_KEY ($PIPELINE_SOURCE)"
-              echo "Pipeline data: {{ $pipelineData }}"
-              
-              curl -sfX 'POST' \
-              'http://{{ include "ingestion-pipeline.fullname" $root }}/add' \
-              -H 'accept: application/json' \
-              -H 'Content-Type: application/json' \
-              -d '{{ $pipelineData }}'
-              
-              echo "Pipeline $PIPELINE_KEY created successfully"
+              SERVICE_URL="http://{{ include "ingestion-pipeline.fullname" $root }}"
+              FAILED=0
+              REGISTERED=0
+              TOTAL={{ len $enabledPipelines }}
+
+              register_pipeline() {
+                local key="$1"
+                local data="$2"
+                local max_attempts=5
+                local delay=10
+
+                for attempt in $(seq 1 $max_attempts); do
+                  HTTP_CODE=$(curl -s -o /tmp/response.txt -w '%{http_code}' \
+                    -X POST "${SERVICE_URL}/add" \
+                    -H 'accept: application/json' \
+                    -H 'Content-Type: application/json' \
+                    -d "$data" || echo "000")
+
+                  if [ "$HTTP_CODE" = "200" ]; then
+                    echo "Pipeline $key registered successfully:"
+                    cat /tmp/response.txt
+                    echo ""
+                    REGISTERED=$((REGISTERED + 1))
+                    return 0
+                  else
+                    echo "Attempt $attempt/$max_attempts failed (HTTP $HTTP_CODE), retrying in ${delay}s..."
+                    cat /tmp/response.txt 2>/dev/null || true
+                    echo ""
+                    sleep $delay
+                  fi
+                done
+
+                echo "ERROR: Failed to register pipeline $key after $max_attempts attempts"
+                FAILED=$((FAILED + 1))
+                return 1
+              }
+
+              COUNT=0
+              {{- range $pipelineKey, $pipelineConfig := $enabledPipelines }}
+              {{- $pipelineDict := dict "root" $root "pipelineKey" $pipelineKey "pipelineConfig" $pipelineConfig "pipelineName" $pipelineKey }}
+              {{- $pipelineData := include "ingestion-pipeline.preparePipelineData" $pipelineDict }}
+
+              COUNT=$((COUNT + 1))
+              echo ""
+              echo "=== Registering pipeline: {{ $pipelineKey }} ($COUNT/$TOTAL) ==="
+              register_pipeline "{{ $pipelineKey }}" '{{ $pipelineData }}' || true
+
+              # Pause between pipelines to avoid race conditions
+              sleep 5
+              {{- end }}
+
+              echo ""
+              if [ "$FAILED" -gt 0 ]; then
+                echo "ERROR: $FAILED pipeline(s) failed to register out of $TOTAL"
+                exit 1
+              fi
+
+              echo "All $TOTAL pipelines registered successfully ($REGISTERED/$TOTAL)"
       restartPolicy: Never
   backoffLimit: 3
-{{ end }}
+{{- end }}
