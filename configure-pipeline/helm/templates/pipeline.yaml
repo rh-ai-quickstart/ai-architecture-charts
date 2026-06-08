@@ -11,9 +11,10 @@ spec:
     deploy: true
     enableOauth: true
     enableSamplePipeline: false
+    {{- with .Values.managedPipelines }}
     managedPipelines:
-      instructLab:
-        state: Removed
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
   database:
     disableHealthCheck: false
     mariaDB:
