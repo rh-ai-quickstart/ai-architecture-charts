@@ -40,13 +40,17 @@ deviceConfigs:
       - amd.com/gpu
     acceleratorType: amd.com/gpu
   cpu:
-    image: quay.io/vllm/automation-vllm:0.18.0_rhaiv.5.cpu
+    image: redhat.io/rhaii/vllm-cpu-rhel9:3.4.0
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
+    env:
+      # jemalloc memory allocator not supported on this image, using libomp instead
+      - name: LD_PRELOAD
+        value: "/usr/lib64/libomp.so"
   # Intel Xeon CPU configuration for optimized performance; requires Sapphire Rapids and newer CPUs
   xeon:
-    image: quay.io/vllm/automation-vllm:0.18.0_rhaiv.5.cpu
+    image: redhat.io/rhaii/vllm-cpu-rhel9:3.4.0
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
@@ -69,6 +73,9 @@ deviceConfigs:
       # KV cache space in GiB, (do not add GiB suffix)
       - name: VLLM_CPU_KVCACHE_SPACE
         value: "16"
+      # jemalloc memory allocator not supported on this image, using libomp instead
+      - name: LD_PRELOAD
+        value: "/usr/lib64/libomp.so"
 
 servingRuntime:
   name: vllm-serving-runtime
