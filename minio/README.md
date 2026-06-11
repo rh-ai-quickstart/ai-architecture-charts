@@ -448,6 +448,9 @@ spec:
     - podSelector:
         matchLabels:
           app: llama-stack
+    - podSelector:
+        matchLabels:
+          app: ogx-ai
     ports:
     - protocol: TCP
       port: 9000
@@ -504,7 +507,7 @@ oc delete secret minio
 This chart integrates with:
 
 - **Ingestion Pipeline**: Document storage and retrieval
-- **LlamaStack**: Model storage and caching
+- **LlamaStack / OGX**: Model storage and caching
 - **Configure Pipeline**: Configuration and template storage
 - **Jupyter Notebooks**: Data science workflows
 

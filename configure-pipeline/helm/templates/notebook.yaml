@@ -63,6 +63,11 @@ spec:
                 secretKeyRef:
                   name: rag-pipeline-secrets
                   key: LLAMASTACK_BASE_URL
+            - name: OGX_AI_BASE_URL # TODO: update to use ogx-ai service name
+              valueFrom:
+                secretKeyRef:
+                  name: rag-pipeline-secrets
+                  key: OGX_AI_BASE_URL # TODO: update to use ogx-ai service name
             - name: DS_PIPELINE_URL
               valueFrom:
                 secretKeyRef:

@@ -1,6 +1,6 @@
 # AI Architecture Charts
 
-A comprehensive collection of Helm charts for deploying end-to-end AI/ML infrastructure on OpenShift, featuring LlamaStack orchestration, model serving, vector databases, and supporting services.
+A comprehensive collection of Helm charts for deploying end-to-end AI/ML infrastructure on OpenShift, featuring LlamaStack/OGX orchestration, model serving, vector databases, and supporting services.
 
 ## Overview
 
@@ -16,6 +16,16 @@ Comprehensive AI orchestration platform that provides a unified API for multiple
 **Key Features:**
 - Multi-provider model support (local, remote, VertexAI)
 - Safety shields with Llama Guard and other safety models
+- AI agent capabilities with persistent memory
+- Automatic model discovery and URL generation
+
+#### [OGX](./ogx-ai/README.md)
+Successor chart for [OGX](https://github.com/ogx-ai/ogx) (formerly Llama Stack). Provides the same orchestration role as the llama-stack chart with OpenAI-compatible APIs, multi-provider model support, and MCP-style tool integration. Use **ogx-ai** for new deployments; **llama-stack** remains available for backwards compatibility.
+
+**Key Features:**
+- OpenAI-compatible agentic API server
+- Multi-provider model support (local, remote, VertexAI)
+- Content moderation via OpenAI-compatible `/v1/moderations` endpoint
 - AI agent capabilities with persistent memory
 - Automatic model discovery and URL generation
 
@@ -98,10 +108,10 @@ Model Context Protocol servers that provide external tools and capabilities to A
 - Weather information services
 - Server-Sent Events (SSE) endpoints
 - Custom tool development framework
-- Integration with LlamaStack agents
+- Integration with LlamaStack and OGX agents
 
 #### [Oracle SQLcl MCP](./oracle-sqlcl/helm/README.md)
-MCP server that exposes Oracle SQLcl capabilities to AI agents via Toolhive, enabling database tooling and interactions from LlamaStack and compatible clients.
+MCP server that exposes Oracle SQLcl capabilities to AI agents via Toolhive, enabling database tooling and interactions from LlamaStack, OGX, and compatible clients.
 
 **Key Features:**
 - Execute SQL/PLSQL against Oracle databases via Model Context Protocol
@@ -132,8 +142,11 @@ helm install minio ./minio/helm
 helm install llm-service ./llm-service/helm \
   --set models.llama-3-2-3b-instruct.enabled=true
 
-# 4. Deploy LlamaStack orchestration
+# 4. Deploy orchestration (llama-stack or ogx-ai)
 helm install llama-stack ./llama-stack/helm \
+  --set models.llama-3-2-3b-instruct.enabled=true
+# or, for new deployments:
+helm install ogx-ai ./ogx-ai/helm \
   --set models.llama-3-2-3b-instruct.enabled=true
 
 # 5. Deploy ingestion pipeline
@@ -163,15 +176,18 @@ helm install llm-service ./llm-service/helm \
   --set models.llama-3-2-3b-instruct.enabled=true
 helm install llama-stack ./llama-stack/helm \
   --set models.llama-3-2-3b-instruct.enabled=true
+# or, for new deployments:
+helm install ogx-ai ./ogx-ai/helm \
+  --set models.llama-3-2-3b-instruct.enabled=true
 ```
 
 ## Integration Patterns
 
-### LlamaStack + LLM Service
-LlamaStack provides orchestration while LLM Service handles model inference:
+### LlamaStack / OGX + LLM Service
+The llama-stack or ogx-ai chart provides orchestration while LLM Service handles model inference:
 - LLM Service deploys models as InferenceServices
-- LlamaStack automatically discovers and configures model endpoints
-- Unified API access through LlamaStack
+- LlamaStack/OGX automatically discovers and configures model endpoints
+- Unified API access through LlamaStack or OGX
 
 ### Vector Storage Integration
 Both PGVector and Oracle 23ai can serve as vector databases:
@@ -189,7 +205,7 @@ Ingestion Pipeline supports various data sources:
 
 ```mermaid
 graph TB
-    LS[LlamaStack] --> LLM[LLM Service]
+    LS[LlamaStack / OGX] --> LLM[LLM Service]
     LS --> PG[PGVector]
     LS --> MCP[MCP Servers]
     
@@ -216,7 +232,7 @@ graph TB
 ## Monitoring and Observability
 
 - **Prometheus Integration**: Many components support Prometheus metrics
-- **OpenTelemetry**: LlamaStack supports distributed tracing
+- **OpenTelemetry**: LlamaStack and OGX support distributed tracing
 - **Logging**: All components provide structured logging
 - **Health Checks**: Kubernetes-native health and readiness probes
 
@@ -307,6 +323,10 @@ dependencies:
     version: "0.2.18"
     repository: "file://../ai-architecture-charts/llama-stack/helm"
   
+  - name: ogx-ai
+    version: "0.8.6"
+    repository: "file://../ai-architecture-charts/ogx-ai/helm"
+  
   - name: ingestion-pipeline
     version: "0.2.18"
     repository: "file://../ai-architecture-charts/ingestion-pipeline/helm"
@@ -347,6 +367,14 @@ llama-stack:
     llama-guard-3-8b:
       enabled: true
       registerShield: true
+
+# Use ogx-ai instead of llama-stack for new deployments (typically one or the other)
+ogx-ai:
+  models:
+    llama-3-2-3b-instruct:
+      enabled: true
+    llama-guard-3-8b:
+      enabled: true
 
 ingestion-pipeline:
   defaultPipeline:
@@ -424,7 +452,7 @@ minio:
     bucket: "ai-documents"
 
 # Global models will be merged with local configurations
-# Both llm-service and llama-stack will use the global.models settings
+# llm-service, llama-stack, and ogx-ai will use the global.models settings
 ```
 
 ### Deployment Workflow
@@ -555,6 +583,7 @@ Where:
 Examples:
 - `ingestion-pipeline-0.2.18`
 - `llama-stack-0.3.0`
+- `ogx-ai-0.8.6`
 - `mcp-servers-0.1.0`
 
 ### Container Image Tags

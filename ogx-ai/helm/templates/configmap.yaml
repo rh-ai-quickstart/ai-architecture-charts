@@ -1,0 +1,198 @@
+{{- $models := include "ogx-ai.mergeModels" . | fromJson }}
+{{- $mcpServers := include "ogx-ai.mergeMcpServers" . | fromJson }}
+{{- $hasToolRuntime := or .Values.toolRuntime.braveSearch.enabled .Values.toolRuntime.tavilySearch.enabled .Values.toolRuntime.ragRuntime.enabled .Values.toolRuntime.modelContextProtocol.enabled }}
+{{- $hasToolGroups := or .Values.toolGroups.websearch.enabled (and .Values.toolGroups.rag.enabled .Values.toolRuntime.ragRuntime.enabled) (gt (len $mcpServers) 0) }}
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: run-config
+data:
+  config.yaml: |
+    version: 2
+    image_name: starter
+    apis:
+      - batches
+      - files
+      - inference
+      - responses
+      - tool_runtime
+      - vector_io
+    providers:
+      inference:
+      {{- range $key, $model := $models }}
+      {{- if $model.enabled }}
+      - provider_id: {{ $key }}
+        provider_type: remote::vllm
+        config:
+          base_url: {{ $model.url }}
+          api_token: {{ $model.apiToken | default "fake" }}
+          max_tokens: {{ $model.maxTokens | default 4096 }}
+          tls_verify: {{ $model.tlsVerify | default false }}
+      {{- end }}
+      {{- end }}
+      {{- if .Values.vertexai.enabled }}
+      - provider_id: {{ .Values.vertexai.projectId }}-vertexai
+        provider_type: remote::vertexai
+        config:
+          project: {{ .Values.vertexai.projectId }}
+          location: {{ .Values.vertexai.location }}
+      {{- end }}
+      - provider_id: sentence-transformers
+        provider_type: inline::sentence-transformers
+      {{- if .Values.pgvector.enabled }}
+      vector_io:
+      - provider_id: pgvector
+        provider_type: remote::pgvector
+        config:
+          host: ${env.POSTGRES_HOST:=pgvector}
+          port: ${env.POSTGRES_PORT:=5432}
+          db: ${env.POSTGRES_DBNAME:=rag_blueprint}
+          user: ${env.POSTGRES_USER:=postgres}
+          password: ${env.POSTGRES_PASSWORD:=rag_password}
+          persistence:
+            {{- toYaml .Values.vectorIOKvstore | nindent 12 }}
+      {{- end }}
+      files:
+      - provider_id: meta-reference-files
+        provider_type: inline::localfs
+        config:
+          storage_dir: ${env.FILES_STORAGE_DIR:=~/.llama/distributions/starter/files}
+          metadata_store:
+            table_name: files_metadata
+            backend: sql_default
+      responses:
+      {{- with .Values.providers.responses }}
+      {{- toYaml . | nindent 6 }}
+      {{- else }}
+      - provider_id: builtin
+        provider_type: inline::builtin
+        config:
+          moderation_endpoint: ${env.MODERATION_ENDPOINT:+}
+          persistence:
+            agent_state:
+              namespace: agents
+              backend: kv_default
+            responses:
+              table_name: responses
+              backend: sql_default
+              max_write_queue_size: 10000
+              num_writers: 4
+      {{- end }}
+      {{- if not $hasToolRuntime }}
+      # OGX StackConfig requires a list; bare "tool_runtime:" parses as null in YAML
+      tool_runtime: []
+      {{- else }}
+      tool_runtime:
+      {{- if .Values.toolRuntime.braveSearch.enabled }}
+      - provider_id: brave-search
+        provider_type: remote::brave-search
+        config:
+          api_key: ${env.BRAVE_SEARCH_API_KEY:=}
+          max_results: 3
+      {{- end }}
+      {{- if .Values.toolRuntime.tavilySearch.enabled }}
+      - provider_id: tavily-search
+        provider_type: remote::tavily-search
+        config:
+          api_key: ${env.TAVILY_SEARCH_API_KEY:=}
+          max_results: 3
+      {{- end }}
+      {{- if .Values.toolRuntime.ragRuntime.enabled }}
+      - provider_id: rag-runtime
+        provider_type: inline::rag-runtime
+      {{- end }}
+      {{- if .Values.toolRuntime.modelContextProtocol.enabled }}
+      - provider_id: model-context-protocol
+        provider_type: remote::model-context-protocol
+      {{- end }}
+      {{- end }}
+      batches:
+      - provider_id: reference
+        provider_type: inline::reference
+        config:
+          sqlstore:
+            table_name: batches
+            backend: sql_default
+    storage:
+      backends:
+        {{- if and .Values.storage .Values.storage.backends }}
+        {{- toYaml .Values.storage.backends | nindent 8 }}
+        {{- else }}
+        kv_default:
+          type: kv_sqlite
+          db_path: ${env.SQLITE_STORE_DIR:=~/.llama/distributions/starter}/kvstore.db
+        sql_default:
+          type: sql_sqlite
+          db_path: ${env.SQLITE_STORE_DIR:=~/.llama/distributions/starter}/sql_store.db
+        {{- end }}
+      stores:
+        metadata:
+          namespace: registry
+          backend: kv_default
+        inference:
+          table_name: inference_store
+          backend: sql_default
+          max_write_queue_size: 10000
+          num_writers: 4
+        conversations:
+          table_name: openai_conversations
+          backend: sql_default
+    registered_resources:
+      {{- if include "ogx-ai.hasEnabledModels" . }}
+      models:
+      {{- range $key, $model := $models }}
+      {{- if and $model.enabled (ne $key "remote-llm") }}
+      - metadata: {}
+        model_id: {{ $model.id }}
+        provider_id: {{ $key }}
+        model_type: llm
+      {{- end }}
+      {{- end }}
+      {{- else }}
+      models: []
+      {{- end }}
+      vector_dbs: []
+      datasets: []
+      scoring_fns: []
+      benchmarks: []
+      {{- if not $hasToolGroups }}
+      # OGX StackConfig requires a list; bare "tool_groups:" parses as null in YAML
+      tool_groups: []
+      {{- else }}
+      tool_groups:
+      {{- if .Values.toolGroups.websearch.enabled }}
+      - toolgroup_id: builtin::websearch
+        provider_id: tavily-search
+      {{- end }}
+      {{- if and .Values.toolGroups.rag.enabled .Values.toolRuntime.ragRuntime.enabled }}
+      - toolgroup_id: builtin::rag
+        provider_id: rag-runtime
+      {{- end }}
+      {{- range $key, $server := $mcpServers }}
+      - toolgroup_id: mcp::{{ $key }}
+        provider_id: model-context-protocol
+        mcp_endpoint:
+          uri: {{ $server.uri }}
+      {{- end }}
+      {{- end }}
+    server:
+      port: 8321
+      {{- if .Values.auth }}
+      auth:
+        {{- with .Values.auth.provider_config }}
+        provider_config:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.auth.access_policy }}
+        access_policy:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- end }}
+    telemetry:
+      enabled: true
+    vector_stores:
+      default_provider_id: pgvector
+      default_embedding_model:
+        provider_id: sentence-transformers
+        model_id: nomic-ai/nomic-embed-text-v1.5
