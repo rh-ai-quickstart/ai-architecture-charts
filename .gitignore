@@ -76,3 +76,5 @@ logs/
 
 # Helm
 **/charts/*.tgz
+
+__tests__/

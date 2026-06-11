@@ -1,0 +1,49 @@
+# Integration test values for ogx-ai + llm-service.
+# Uses Llama 3.2 1B Instruct — the smallest bundled model — on CPU by default.
+#
+# Note: do not use global.models here. ogx-ai mergeModels injects predictor URLs
+# into the shared global map, which makes llm-service skip InferenceService creation.
+#
+# Install:
+#   helm dependency update ./tests
+#   helm install ogx-ai-test ./tests \
+#     --set llm-service.secret.hf_token="$HF_TOKEN"
+#
+# GPU clusters can override device:
+#   helm install ogx-ai-test ./tests \
+#     --set llm-service.device=gpu \
+#     --set llm-service.secret.hf_token="$HF_TOKEN"
+
+llm-service:
+  device: cpu
+  rawDeploymentMode: true
+  secret:
+    enabled: true
+    hf_token: ""
+  models:
+    llama-3-2-1b-instruct:
+      enabled: true
+      resources:
+        limits:
+          cpu: "4"
+          memory: 8Gi
+        requests:
+          cpu: "2"
+          memory: 4Gi
+
+ogx-ai:
+  pgvector:
+    enabled: false
+  toolRuntime:
+    braveSearch:
+      enabled: false
+    tavilySearch:
+      enabled: false
+    modelContextProtocol:
+      enabled: false
+  toolGroups:
+    websearch:
+      enabled: false
+  models:
+    llama-3-2-1b-instruct:
+      enabled: true

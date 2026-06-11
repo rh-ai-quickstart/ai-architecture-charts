@@ -1,0 +1,16 @@
+apiVersion: v2
+name: ogx-ai-test
+description: Integration test chart deploying ogx-ai with llm-service and a small model
+
+type: application
+
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies:
+  - name: llm-service
+    version: "0.5.9"
+    repository: "file://../../../ai-architecture-charts/llm-service/helm"
+  - name: ogx-ai
+    version: "0.8.0"
+    repository: "file://../../../ai-architecture-charts/ogx-ai/helm"

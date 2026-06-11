@@ -23,6 +23,14 @@ notebook:
 secret:
   create: true
 
+# DSPA apiServer options (OpenShift AI 2.13+ adds managedPipelines.instructLab to the CRD)
+apiServer:
+  managedPipelines:
+    instructLab:
+      # Set true only when the cluster CRD declares spec.apiServer.managedPipelines.instructLab
+      enabled: false
+      state: Removed
+
 # Pipeline storage configuration for DataSciencePipelinesApplication
 pipelineStorage:
   # Deploy minio as a dependency

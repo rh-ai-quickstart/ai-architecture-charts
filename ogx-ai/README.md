@@ -1,11 +1,11 @@
 # OGX Helm Chart
 
-This Helm chart deploys **[OGX](https://github.com/ogx-ai/ogx)** (formerly Llama Stack): an OpenAI-compatible, agentic API server that supports multiple LLM providers, remote vLLM endpoints, VertexAI, embeddings, and MCP-style tool integration. See the [project announcement](https://ogx-ai.github.io/blog/from-llama-stack-to-ogx).
+This Helm chart deploys **[OGX](https://github.com/ogx-ai/ogx)** (formerly Llama Stack): an OpenAI-compatible, agentic API server that supports multiple LLM providers, remote vLLM endpoints, VertexAI, embeddings, and MCP-style tool integration. See the [project announcement](https://ogx-ai.github.io/blog/from-ogx-ai-to-ogx).
 
-> **Chart path:** In this repo the chart still lives under `llama-stack/helm` for backwards compatibility; the Helm chart name is `ogx`.
+> **Chart path:** In this repo the chart still lives under `ogx-ai/helm` for backwards compatibility; the Helm chart name is `ogx-ai`.
 
-> **Service name:** Defaults use `fullnameOverride: ogx`, so the Kubernetes `Service` is `ogx`. Charts or jobs that still call `http://llamastack:8321` should either point at `ogx` or set `fullnameOverride: llamastack` in `values.yaml` until those references are updated.
-
+> **Service name:** Defaults use `fullnameOverride: ogx-ai`, so the Kubernetes `Service` is `ogx-ai`. Charts or jobs that still call `http://llamastack:8321` should either point at `ogx-ai` or set `fullnameOverride: llamastack` in `values.yaml` until those references are updated.
+-
 ## Overview
 
 The chart creates:
@@ -28,39 +28,39 @@ The chart creates:
 
 ### Operator Mode
 All of the above, plus:
-- **llama-stack operator** installed in the cluster
+- **ogx-ai operator** installed in the cluster
 - CRD `llamastackdistributions.llamastack.io` registered (API: `llamastack.io/v1alpha1`)
 
-To install the llama-stack operator:
+To install the ogx-ai operator:
 ```bash
 # Verify CRD is registered
 kubectl get crd llamastackdistributions.llamastack.io
 
 # Verify operator is running
-kubectl get deployment -n llama-stack-operator-system
+kubectl get deployment -n ogx-ai-operator-system
 
 # Check operator version
-kubectl get deployment -n llama-stack-operator-system -o jsonpath='{.items[0].spec.template.spec.containers[0].image}'
+kubectl get deployment -n ogx-ai-operator-system -o jsonpath='{.items[0].spec.template.spec.containers[0].image}'
 ```
 
-**Note**: The llama-stack operator is typically installed as part of OpenDataHub or via a standalone operator deployment. Consult your platform documentation for specific installation steps.
+**Note**: The ogx-ai operator is typically installed as part of OpenDataHub or via a standalone operator deployment. Consult your platform documentation for specific installation steps.
 
 ## Deployment Modes
 
 This chart supports two deployment modes:
 
 1. **Standard Helm Deployment** (default): Deploys traditional Kubernetes resources (Deployment, Service, ConfigMap, etc.)
-2. **Operator-based Deployment**: Deploys a LlamaStackDistribution custom resource managed by the llama-stack operator
+2. **Operator-based Deployment**: Deploys a LlamaStackDistribution custom resource managed by the ogx-ai operator
 
 ### Choosing a Deployment Mode
 
 Use standard Helm deployment when:
 - You want direct control over Kubernetes resources
-- You don't have the llama-stack operator installed
+- You don't have the ogx-ai operator installed
 - You're deploying in environments without CRD support
 
 Use operator-based deployment when:
-- You have the llama-stack operator installed in your cluster
+- You have the ogx-ai operator installed in your cluster
 - You want operator-managed lifecycle and reconciliation
 - You prefer declarative CRD-based configuration
 
@@ -74,10 +74,10 @@ helm install ogx ./helm
 
 ### Installation with Operator Mode
 
-**Prerequisites**: The llama-stack operator must be installed in your cluster.
+**Prerequisites**: The ogx-ai operator must be installed in your cluster.
 
 ```bash
-helm install llama-stack ./helm \
+helm install ogx-ai ./helm \
   --set managedByOperator=true
 ```
 
@@ -88,7 +88,7 @@ This will create a LlamaStackDistribution custom resource instead of traditional
 **Important**: VertexAI requires a Google Cloud service account file. You must provide this file during installation:
 
 ```bash
-helm install ogx ./helm \
+helm install ogx-ai ./helm \
   --set vertexai.enabled=true \
   --set vertexai.projectId=your-gcp-project \
   --set vertexai.location=us-central1 \
@@ -101,14 +101,14 @@ The service account file will be mounted at `/var/secrets/gcp-service-account.js
 
 **Standard Mode:**
 ```bash
-helm install ogx ./helm \
+helm install ogx-ai ./helm \
   --set models.llama-3-2-3b-instruct.enabled=true \
   --set models.llama-guard-3-8b.enabled=true
 ```
 
 **Operator Mode:**
 ```bash
-helm install llama-stack ./helm \
+helm install ogx-ai ./helm \
   --set managedByOperator=true \
   --set models.llama-3-2-3b-instruct.enabled=true \
   --set models.llama-guard-3-8b.enabled=true
@@ -224,7 +224,7 @@ env:
 ```
 
 ### Storage Configuration
-
+<!-- TODO -->
 ```yaml
 volumes:
   - configMap:
@@ -233,7 +233,7 @@ volumes:
     name: run-config-volume
   - name: dot-llama
     persistentVolumeClaim:
-      claimName: ogx-data
+      claimName: ogx-ai-data
   - emptyDir: {}
     name: cache
 
@@ -249,12 +249,12 @@ volumeMounts:
 ### Operator Mode Deployment
 
 When `managedByOperator: true`, the chart creates:
-1. A **ConfigMap** (`run-config`) containing the llama-stack configuration (models, providers, etc.)
+1. A **ConfigMap** (`run-config`) containing the ogx-ai configuration (models, providers, etc.)
 2. A **LlamaStackDistribution** custom resource that references this ConfigMap and defines the deployment characteristics
 3. **Secrets** for environment variables and credentials
-4. A **PersistentVolumeClaim** (`llama-stack-data`) for model storage and cache
+4. A **PersistentVolumeClaim** (`ogx-ai-data`) for model storage and cache
 
-The llama-stack operator then reconciles the LlamaStackDistribution CRD to create and manage:
+The ogx-ai operator then reconciles the LlamaStackDistribution CRD to create and manage:
 - Deployment
 - Service  
 - NetworkPolicy (if network access controls are specified)
@@ -369,25 +369,25 @@ kubectl get llamastackdistribution
 kubectl get llsd
 
 # View detailed status including phase, versions, and available replicas
-kubectl get llsd llama-stack -o wide
+kubectl get llsd ogx-ai -o wide
 
 # Describe the resource to see conditions and events
-kubectl describe llsd llama-stack
+kubectl describe llsd ogx-ai
 
 # View the full CRD specification
-kubectl get llsd llama-stack -o yaml
+kubectl get llsd ogx-ai -o yaml
 
 # View the ConfigMap referenced by the CRD
 kubectl get configmap run-config -o yaml
 
 # Check the service URL
-kubectl get llsd llama-stack -o jsonpath='{.status.serviceURL}'
+kubectl get llsd ogx-ai -o jsonpath='{.status.serviceURL}'
 
 # Check the external route URL (if exposeRoute is true)
-kubectl get llsd llama-stack -o jsonpath='{.status.routeURL}'
+kubectl get llsd ogx-ai -o jsonpath='{.status.routeURL}'
 
 # View provider health status
-kubectl get llsd llama-stack -o jsonpath='{.status.distributionConfig.providers}'
+kubectl get llsd ogx-ai -o jsonpath='{.status.distributionConfig.providers}'
 ```
 
 ### Complete Example values.yaml (Standard Mode)
@@ -446,7 +446,7 @@ The OGX API is available on port 8321:
 
 ```bash
 # Port forward for local access
-oc port-forward svc/ogx 8321:8321
+oc port-forward svc/ogx-ai 8321:8321
 
 # Test the API
 curl http://localhost:8321/models
@@ -457,8 +457,8 @@ curl http://localhost:8321/models
 Create a route for external access:
 
 ```bash
-oc expose service ogx
-oc get routes ogx
+oc expose service ogx-ai
+oc get routes ogx-ai
 ```
 
 ### API Examples
@@ -497,7 +497,7 @@ OGX integrates with PGVector for storing embeddings:
 
 ```bash
 # Check database connection
-oc exec -it deployment/ogx -- env | grep POSTGRES
+oc exec -it deployment/ogx-ai -- env | grep POSTGRES
 ```
 
 ## Monitoring and Troubleshooting
@@ -507,13 +507,13 @@ oc exec -it deployment/ogx -- env | grep POSTGRES
 **Standard Mode:**
 ```bash
 # Check pod status
-oc get pods -l app.kubernetes.io/name=ogx
+oc get pods -l app.kubernetes.io/name=ogx-ai
 
 # Check deployment
-oc get deployment llama-stack
+oc get deployment ogx-ai
 
 # Check service
-oc get svc ogx
+oc get svc ogx-ai
 
 # Test health endpoint
 oc exec -it deployment/ogx -- curl localhost:8321/health
@@ -522,31 +522,31 @@ oc exec -it deployment/ogx -- curl localhost:8321/health
 **Operator Mode:**
 ```bash
 # Check LlamaStackDistribution resource and its phase
-kubectl get llsd llama-stack -o wide
+kubectl get llsd ogx-ai -o wide
 
 # Check resource status, conditions, and events
-kubectl describe llsd llama-stack
+kubectl describe llsd ogx-ai
 
 # View detailed status information
-kubectl get llsd llama-stack -o jsonpath='{.status}' | jq
+kubectl get llsd ogx-ai -o jsonpath='{.status}' | jq
 
 # Check pods created by the operator
-kubectl get pods -l app.kubernetes.io/managed-by=llama-stack-operator
+kubectl get pods -l app.kubernetes.io/managed-by=ogx-ai-operator
 
 # Check deployment created by operator
-kubectl get deployment -l app.kubernetes.io/managed-by=llama-stack-operator
+kubectl get deployment -l app.kubernetes.io/managed-by=ogx-ai-operator
 
 # Check service created by operator
-kubectl get svc -l app.kubernetes.io/managed-by=llama-stack-operator
+kubectl get svc -l app.kubernetes.io/managed-by=ogx-ai-operator
 
 # Check operator logs for reconciliation errors
-kubectl logs -n llama-stack-operator-system -l app.kubernetes.io/name=llama-stack-operator --tail=100 -f
+kubectl logs -n ogx-ai-operator-system -l app.kubernetes.io/name=ogx-ai-operator --tail=100 -f
 
 # Check the ConfigMap referenced by the CRD
 kubectl get configmap run-config
 
 # Test health endpoint (once pods are running)
-kubectl exec -it deployment/llama-stack -- curl localhost:8321/v1/health
+kubectl exec -it deployment/ogx-ai -- curl localhost:8321/v1/health
 
 # Check network policies (if allowedFrom is configured)
 kubectl get networkpolicy
@@ -620,15 +620,15 @@ oc logs deployment/ogx -c ogx -f
    - Validate model configuration in LLM Service
 
 6. **Operator Mode Issues**:
-   - Verify llama-stack operator is installed: `kubectl get deployment -n llama-stack-operator-system`
+   - Verify ogx-ai operator is installed: `kubectl get deployment -n ogx-ai-operator-system`
    - Check if CRD is registered: `kubectl get crd llamastackdistributions.llamastack.io`
-   - Review operator logs for reconciliation errors: `kubectl logs -n llama-stack-operator-system -l app.kubernetes.io/name=llama-stack-operator`
+   - Review operator logs for reconciliation errors: `kubectl logs -n ogx-ai-operator-system -l app.kubernetes.io/name=ogx-ai-operator`
    - Check LlamaStackDistribution status and phase: `kubectl get llsd -o wide`
-   - View conditions for error details: `kubectl get llsd llama-stack -o jsonpath='{.status.conditions}' | jq`
+   - View conditions for error details: `kubectl get llsd ogx-ai -o jsonpath='{.status.conditions}' | jq`
    - Ensure operator has proper RBAC permissions
    - Verify the ConfigMap exists: `kubectl get configmap run-config`
    - Check for admission webhook errors in events: `kubectl get events --sort-by='.lastTimestamp'`
-   - Verify distribution image is accessible: `kubectl describe llsd llama-stack | grep -A5 distribution`
+   - Verify distribution image is accessible: `kubectl describe llsd ogx-ai | grep -A5 distribution`
 
 ### Resource Requirements
 
@@ -693,15 +693,15 @@ oc rollout status deployment/ogx
 
 ```bash
 # Upgrade the Helm release (updates the CRD)
-helm upgrade llama-stack ./helm \
+helm upgrade ogx-ai ./helm \
   --set managedByOperator=true \
   --set image.tag=v0.3.0
 
 # Watch the operator reconcile the changes
-kubectl get llamastackdistribution llama-stack -w
+kubectl get llamastackdistribution ogx-ai -w
 
 # Check operator-created deployment status
-oc rollout status deployment/llama-stack
+oc rollout status deployment/ogx-ai
 ```
 
 ### Switching Between Modes
@@ -714,10 +714,10 @@ oc rollout status deployment/llama-stack
 kubectl get crd llamastackdistributions.llama.meta.com
 
 # 2. Backup current configuration
-kubectl get deployment llama-stack -o yaml > llama-stack-backup.yaml
+kubectl get deployment ogx-ai -o yaml > ogx-ai-backup.yaml
 
 # 3. Upgrade to operator mode
-helm upgrade llama-stack ./helm \
+helm upgrade ogx-ai ./helm \
   --set managedByOperator=true \
   --reuse-values
 
@@ -729,10 +729,10 @@ helm upgrade llama-stack ./helm \
 **From Operator to Standard Mode:**
 ```bash
 # 1. Backup the CRD
-kubectl get llamastackdistribution llama-stack -o yaml > llama-stack-crd-backup.yaml
+kubectl get llamastackdistribution ogx-ai -o yaml > ogx-ai-crd-backup.yaml
 
 # 2. Upgrade to standard mode
-helm upgrade llama-stack ./helm \
+helm upgrade ogx-ai ./helm \
   --set managedByOperator=false \
   --reuse-values
 
@@ -748,7 +748,7 @@ helm upgrade llama-stack ./helm \
 helm uninstall ogx
 
 # Remove persistent data
-oc delete pvc ogx-data
+oc delete pvc ogx-ai-data
 
 # Remove secrets (if needed)
 oc delete secret gcp-service-account

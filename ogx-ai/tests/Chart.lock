@@ -1,0 +1,9 @@
+dependencies:
+- name: llm-service
+  repository: file://../../../ai-architecture-charts/llm-service/helm
+  version: 0.5.9
+- name: ogx-ai
+  repository: file://../../../ai-architecture-charts/ogx-ai/helm
+  version: 0.8.0
+digest: sha256:0324adc931ca661982c36338c00366b6fe3681c326866360a80113e1778d40c1
+generated: "2026-06-11T08:30:19.781956-04:00"

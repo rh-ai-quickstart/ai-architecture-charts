@@ -1,10 +1,9 @@
-{{- if not .Values.managedByOperator }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "llama-stack.fullname" . }}
+  name: {{ include "ogx-ai.fullname" . }}
   labels:
-    {{- include "llama-stack.labels" . | nindent 4 }}
+    {{- include "ogx-ai.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -13,5 +12,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "llama-stack.selectorLabels" . | nindent 4 }}
-{{- end }}
+    {{- include "ogx-ai.selectorLabels" . | nindent 4 }}

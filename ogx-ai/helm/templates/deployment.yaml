@@ -1,17 +1,16 @@
-{{- if not .Values.managedByOperator }}
-{{- $models := include "llama-stack.mergeModels" . | fromJson }}
+{{- $models := include "ogx-ai.mergeModels" . | fromJson }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "llama-stack.fullname" . }}
+  name: {{ include "ogx-ai.fullname" . }}
   labels:
-    {{- include "llama-stack.labels" . | nindent 4 }}
+    {{- include "ogx-ai.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "llama-stack.selectorLabels" . | nindent 6 }}
+      {{- include "ogx-ai.selectorLabels" . | nindent 6 }}
   {{- with .Values.strategy }}
   strategy:
     {{- toYaml . | nindent 4 }}
@@ -24,19 +23,20 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "llama-stack.labels" . | nindent 8 }}
+        {{- include "ogx-ai.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      enableServiceLinks: {{ .Values.enableServiceLinks }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "llama-stack.serviceAccountName" . }}
+      serviceAccountName: {{ include "ogx-ai.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- if include "llama-stack.hasEnabledModels" . }}
+      {{- if include "ogx-ai.hasEnabledModels" . }}
       initContainers:
         - name: wait-for-models
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -96,6 +96,8 @@ spec:
           {{- end }}
           env:
             {{- toYaml .Values.env | nindent 12 }}
+            - name: OGX_PORT
+              value: {{ .Values.service.port | quote }}
             {{- if .Values.otelExporter }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.otelExporter }}
@@ -180,4 +182,3 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-{{- end }}
