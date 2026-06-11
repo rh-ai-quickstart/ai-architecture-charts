@@ -1,0 +1,101 @@
+# Integration test values for ogx-ai + llm-service (+ optional ingestion pipeline).
+# Uses Llama 3.2 1B Instruct — the smallest bundled model — on CPU by default.
+#
+# Note: do not use global.models here. ogx-ai mergeModels injects predictor URLs
+# into the shared global map, which makes llm-service skip InferenceService creation.
+#
+# Install:
+#   helm dependency update ./tests
+#   helm install ogx-ai-test ./tests \
+#     --set llm-service.secret.hf_token="$HF_TOKEN"
+#
+# GPU clusters can override device:
+#   helm install ogx-ai-test ./tests \
+#     --set llm-service.device=gpu \
+#     --set llm-service.secret.hf_token="$HF_TOKEN"
+#
+# Disable ingestion (ogx-ai + llm-service only):
+#   helm install ogx-ai-test ./tests \
+#     --set ingestion-pipeline.enabled=false \
+#     --set configure-pipeline.enabled=false \
+#     --set pgvector.enabled=false \
+#     --set ogx-ai.pgvector.enabled=false \
+#     --set llm-service.secret.hf_token="$HF_TOKEN"
+
+llm-service:
+  device: cpu
+  rawDeploymentMode: true
+  secret:
+    enabled: true
+    hf_token: ""
+  models:
+    llama-3-2-1b-instruct:
+      enabled: true
+      resources:
+        limits:
+          cpu: "4"
+          memory: 8Gi
+        requests:
+          cpu: "2"
+          memory: 4Gi
+
+ogx-ai:
+  # ingestion-pipeline expects the OGX service at http://llamastack:8321
+  fullnameOverride: llamastack
+  pgvector:
+    enabled: true
+  toolRuntime:
+    braveSearch:
+      enabled: false
+    tavilySearch:
+      enabled: false
+    modelContextProtocol:
+      enabled: false
+  toolGroups:
+    websearch:
+      enabled: false
+  models:
+    llama-3-2-1b-instruct:
+      enabled: true
+
+pgvector:
+  enabled: true
+  secret:
+    user: postgres
+    password: ogx_test_password
+    dbname: ogx_test
+    host: pgvector
+    port: "5432"
+
+configure-pipeline:
+  enabled: true
+  notebook:
+    create: false
+  pipelineStorage:
+    deployMinio: true
+  minio:
+    secret:
+      user: minio_rag_user
+      password: minio_rag_password
+      host: minio
+      port: "9000"
+
+ingestion-pipeline:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: ogx-test-pipeline
+  pipelines:
+    # Single public GitHub docs folder — no MinIO document bucket required.
+    smoke-github:
+      enabled: true
+      source: GITHUB
+      embedding_model: all-MiniLM-L6-v2
+      name: ogx-test-kb
+      version: "1.0"
+      vector_store_name: ogx-test-kb-v1-0
+      GITHUB:
+        url: https://github.com/rh-ai-quickstart/RAG.git
+        path: docs
+        token: ""
+        branch: main

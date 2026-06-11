@@ -555,6 +555,9 @@ spec:
           app: llama-stack
     - podSelector:
         matchLabels:
+          app: ogx-ai
+    - podSelector:
+        matchLabels:
           app: ingestion-pipeline
     ports:
     - protocol: TCP
@@ -592,7 +595,7 @@ oc delete secret pgvector
 
 This chart integrates with:
 
-- **LlamaStack**: Vector storage for embeddings and agent memory
+- **LlamaStack / OGX**: Vector storage for embeddings and agent memory
 - **Ingestion Pipeline**: Document embedding storage
 - **Configure Pipeline**: Configuration and metadata storage
 - **AI Applications**: Vector similarity search and retrieval

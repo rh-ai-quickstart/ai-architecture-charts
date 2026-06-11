@@ -164,7 +164,7 @@ Once started, the server will listen for HTTP requests and handle events as conf
 
 **Note**
 
-In order to get the correct output for the LLM when uysing LLamastack be sure to enable tool outputs. 
+In order to get the correct output for the LLM when using LlamaStack or OGX be sure to enable tool outputs. 
 For example for `LLM=llama-3-2-3b-instruct` you must set:
 
 ```yaml

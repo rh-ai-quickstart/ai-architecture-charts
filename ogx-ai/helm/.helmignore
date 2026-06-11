@@ -1,0 +1,2 @@
+# Integration test umbrella chart — not part of the ogx-ai release package
+tests/
