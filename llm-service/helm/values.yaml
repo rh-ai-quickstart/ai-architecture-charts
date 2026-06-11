@@ -40,7 +40,7 @@ deviceConfigs:
       - amd.com/gpu
     acceleratorType: amd.com/gpu
   cpu:
-    image: redhat.io/rhaii/vllm-cpu-rhel9:3.4.0
+    image: registry.redhat.io/rhaii/vllm-cpu-rhel9:3.4.0
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
@@ -50,7 +50,7 @@ deviceConfigs:
         value: "/usr/lib64/libomp.so"
   # Intel Xeon CPU configuration for optimized performance; requires Sapphire Rapids and newer CPUs
   xeon:
-    image: redhat.io/rhaii/vllm-cpu-rhel9:3.4.0
+    image: registry.redhat.io/rhaii/vllm-cpu-rhel9:3.4.0
     tolerations: []
     recommendedAccelerators: []
     acceleratorType: null
