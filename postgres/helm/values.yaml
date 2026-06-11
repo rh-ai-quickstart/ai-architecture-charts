@@ -1,0 +1,91 @@
+# Default values for postgres.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Namespace override - allows cross-namespace deployment when used as subchart
+namespace: ""
+
+replicaCount: 1
+
+image:
+  repository: docker.io/library/postgres
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "16"
+
+imagePullSecrets: []
+
+nameOverride: "postgres"
+fullnameOverride: "postgres"
+
+serviceAccount:
+  create: false
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 5432
+  portName: postgresql
+
+# PostgreSQL data directory inside the container
+pgdata: /var/lib/postgresql/data/pgdata
+
+# Additional env vars beyond the standard POSTGRES_USER, POSTGRES_PASSWORD,
+# POSTGRES_DB, and PGDATA (which are injected automatically from the secret).
+extraEnv: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+
+volumeClaimTemplates:
+  - metadata:
+      name: pg-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+
+volumeMounts:
+  - mountPath: /var/lib/postgresql/data
+    name: pg-data
+
+nodeSelector: {}
+affinity: {}
+
+# Secret configuration for postgres
+# These values can be overridden from a parent chart or via --set flags
+secret:
+  create: true
+  user: postgres
+  password: rag_password
+  dbname: partner_agent
+  host: postgres
+  port: "5432"
+
+# Custom init scripts mounted at /docker-entrypoint-initdb.d
+# Each key is a filename, each value is the script content.
+# Scripts run in alphabetical order on first container start.
+# Example:
+#   initScripts:
+#     setup-extensions.sh: |
+#       #!/bin/bash
+#       set -e
+#       psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE EXTENSION IF NOT EXISTS vector;"
+initScripts: {}
+
+# Extra databases to create on init
+# Example:
+#   extraDatabases:
+#     - name: analytics_db
+#     - name: embeddings_db
+#       extensions:
+#         - vector
+extraDatabases: []

@@ -1,6 +1,6 @@
 dependencies:
 - name: pgvector
   repository: file://../../pgvector/helm
-  version: 0.5.3
-digest: sha256:f133474eeb0f35ab32cebfc1a0bbe0023f5a9d681468cdc2bb1997d7f886bd38
-generated: "2026-01-29T16:31:55.253809-05:00"
+  version: 0.5.5
+digest: sha256:1ac2d33ea2f121d2a62e85844ddcdeb82adc4a7a4715ccb2bd3e57e675527e84
+generated: "2026-03-25T10:49:07.738169825+01:00"
