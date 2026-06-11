@@ -742,7 +742,7 @@ oc delete secret huggingface-secret
 This chart integrates with:
 
 - **OpenShift AI/KServe**: Model serving infrastructure
-- **LlamaStack**: Unified AI stack integration
+- **LlamaStack / OGX**: Unified AI stack integration
 - **Ingestion Pipeline**: Document processing workflows
 - **MCP Servers**: External tool integration
 - **PGVector**: Vector storage for embeddings
