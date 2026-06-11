@@ -1,9 +1,18 @@
 dependencies:
 - name: llm-service
-  repository: file://../../../ai-architecture-charts/llm-service/helm
+  repository: file://../../llm-service/helm
   version: 0.5.9
 - name: ogx-ai
-  repository: file://../../../ai-architecture-charts/ogx-ai/helm
-  version: 0.8.0
-digest: sha256:0324adc931ca661982c36338c00366b6fe3681c326866360a80113e1778d40c1
-generated: "2026-06-11T08:30:19.781956-04:00"
+  repository: file://../helm
+  version: 0.8.6
+- name: pgvector
+  repository: file://../../pgvector/helm
+  version: 0.5.5
+- name: configure-pipeline
+  repository: file://../../configure-pipeline/helm
+  version: 0.5.8
+- name: ingestion-pipeline
+  repository: file://../../ingestion-pipeline/helm
+  version: 0.7.4
+digest: sha256:cfdd73af680280863f806a0e83ed6b7b450195aa1403a638946648069f63f4ed
+generated: "2026-06-11T10:16:44.535058-04:00"

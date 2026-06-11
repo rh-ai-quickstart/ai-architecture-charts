@@ -114,7 +114,7 @@ def store_documents(llamastack_base_url: str, input_dir: Input[Dataset], auth_us
     import time
     from pathlib import Path
 
-    from llama_stack_client import LlamaStackClient
+    from ogx_client import OgxClient
 
     vector_store_name = os.getenv("VECTOR_STORE_NAME")
 
@@ -142,7 +142,7 @@ def store_documents(llamastack_base_url: str, input_dir: Input[Dataset], auth_us
         except Exception as e:
             print(f"An error occurred: {e}")
 
-    client = LlamaStackClient(
+    client = OgxClient(
         base_url=llamastack_base_url,
         default_headers=headers,
     )
@@ -218,7 +218,7 @@ def generate_provenance(input_dir: Input[Dataset]):
     import gzip
     import hashlib
     import json
-    import llama_stack_client
+    import ogx_client
     import io
     import os
     import requests
@@ -239,7 +239,7 @@ def generate_provenance(input_dir: Input[Dataset]):
                 "internalParameters": {
                     "environment": {
                         "embedding_model": os.getenv('EMBEDDING_MODEL'),
-                        "llama_stack_client": f"{llama_stack_client.__version__}",
+                        "ogx_client": f"{ogx_client.__version__}",
                     },
                 },
                 "resolvedDependencies": [],

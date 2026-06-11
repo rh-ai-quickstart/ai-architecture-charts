@@ -12,12 +12,12 @@ data:
     version: 2
     image_name: starter
     apis:
-    - responses
-    - inference
-    - vector_io
-    - files
-    - tool_runtime
-    - batches
+      - batches
+      - files
+      - inference
+      - responses
+      - tool_runtime
+      - vector_io
     providers:
       inference:
       {{- range $key, $model := $models }}
