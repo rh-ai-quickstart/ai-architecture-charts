@@ -26,6 +26,15 @@ jobs:
       - name: Detect changed components
         id: changes
         run: |
+          # Handle workflow_dispatch (no event.before)
+          if [ -z "${{ github.event.before }}" ] || [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            echo "Manual trigger or first push - processing all components"
+            CHANGED_COMPONENTS=$(find . -maxdepth 3 -name "Chart.yaml" -path "*/helm/Chart.yaml" | cut -d'/' -f2 | sort | uniq | xargs)
+          else
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..HEAD)
+            # ...existing code...
+          fi
+
           # Get changed files
           CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..HEAD)
 
