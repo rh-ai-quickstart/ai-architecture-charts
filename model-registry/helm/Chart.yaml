@@ -2,8 +2,8 @@ apiVersion: v2
 name: model-registry
 description: A Helm chart for OpenDataHub Model Registry on Kubernetes/OpenShift
 type: application
-version: 0.2.1
-appVersion: "0.2.1"
+version: 0.2.2
+appVersion: "0.2.2"
 keywords:
   - model-registry
   - openshift-ai
