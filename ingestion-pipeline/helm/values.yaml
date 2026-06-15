@@ -125,9 +125,10 @@ pipelines:
         - "https://arxiv.org/pdf/2408.09869"
         - "https://raw.githubusercontent.com/docling-project/docling/main/tests/data/pdf/2305.03393v1-pg9.pdf"
 
-
-
 authUser: ""
 
 # generate provenance for the knowledge base
 enableSigning: false
+
+# Gateway client dependency: llama-stack (default) or ogx-ai
+clientDependency: llama-stack

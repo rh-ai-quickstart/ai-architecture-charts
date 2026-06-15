@@ -89,6 +89,8 @@ spec:
           {{- end }}
             - name: SIGN_DATABASE
               value: {{ .Values.enableSigning | quote }}
+            - name: CLIENT_DEPENDENCY
+              value: {{ .Values.clientDependency | quote }}
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
