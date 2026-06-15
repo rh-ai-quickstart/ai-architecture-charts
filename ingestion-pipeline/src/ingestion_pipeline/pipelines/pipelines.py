@@ -1,7 +1,15 @@
 from kfp import dsl
 from typing import Optional
+import os
 
 from . import tasks
+
+
+def _set_client_dependency_env(task):
+    task.set_env_variable(
+        "CLIENT_DEPENDENCY",
+        os.getenv("CLIENT_DEPENDENCY", "llama-stack"),
+    )
 
 
 def s3_pipeline(pipeline_name: str, llamastack_base_url: str, auth_user: str, sign_db: str):
@@ -31,6 +39,7 @@ def s3_pipeline(pipeline_name: str, llamastack_base_url: str, auth_user: str, si
             input_dir=fetch_task.outputs["output_dir"],
             auth_user=auth_user
         )
+        _set_client_dependency_env(store_task)
         store_task.set_caching_options(False)
         pipeline_tasks.append(store_task)
 
@@ -71,6 +80,7 @@ def url_pipeline(pipeline_name: str, llamastack_base_url: str, auth_user: str, s
             input_dir=fetch_task.outputs["output_dir"],
             auth_user=auth_user
         )
+        _set_client_dependency_env(store_task)
         store_task.set_caching_options(False)
 
         kubernetes.use_secret_as_env(
@@ -104,6 +114,7 @@ def github_pipeline(pipeline_name: str, llamastack_base_url: str, auth_user: str
             input_dir=fetch_task.outputs["output_dir"],
             auth_user=auth_user
         )
+        _set_client_dependency_env(store_task)
         store_task.set_caching_options(False)
 
         for task in (fetch_task, store_task):

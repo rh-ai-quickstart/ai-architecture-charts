@@ -108,13 +108,17 @@ def fetch_from_github(output_dir: Output[Dataset]):
 
 
 @dsl.component(base_image=BASE_IMAGE)
-def store_documents(llamastack_base_url: str, input_dir: Input[Dataset], auth_user: str):
+def store_documents(
+    llamastack_base_url: str,
+    input_dir: Input[Dataset],
+    auth_user: str,
+):
     import ast
     import os
     import time
     from pathlib import Path
 
-    from llama_stack_client import LlamaStackClient
+    from ingestion_pipeline.lib.client import get_client
 
     vector_store_name = os.getenv("VECTOR_STORE_NAME")
 
@@ -142,7 +146,7 @@ def store_documents(llamastack_base_url: str, input_dir: Input[Dataset], auth_us
         except Exception as e:
             print(f"An error occurred: {e}")
 
-    client = LlamaStackClient(
+    client = get_client(
         base_url=llamastack_base_url,
         default_headers=headers,
     )
