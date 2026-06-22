@@ -1,0 +1,66 @@
+# Example values.yaml showing how to import a realm configuration
+# This creates a pre-configured realm with clients for AI applications
+
+# Realm Import Configuration
+# Clean YAML format - will be converted to JSON for Keycloak
+realmImport:
+  enabled: true
+  realms:
+    # AI Apps realm - key is the realm name
+    ai-apps:
+      enabled: true
+      clients:
+      - clientId: llama-stack
+        enabled: true
+        protocol: openid-connect
+        publicClient: false
+        redirectUris:
+        - https://llama-stack-*.apps.example.com/*
+        webOrigins:
+        - https://llama-stack-*.apps.example.com
+        serviceAccountsEnabled: true
+        directAccessGrantsEnabled: true
+        standardFlowEnabled: true
+      - clientId: ingestion-pipeline
+        enabled: true
+        protocol: openid-connect
+        publicClient: false
+        redirectUris:
+        - https://ingestion-pipeline-*.apps.example.com/*
+        webOrigins:
+        - https://ingestion-pipeline-*.apps.example.com
+        serviceAccountsEnabled: true
+        directAccessGrantsEnabled: true
+      roles:
+        realm:
+        - name: user
+        - name: admin
+        - name: ai-operator
+      users:
+      - username: admin
+        enabled: true
+        credentials:
+        - type: password
+          value: admin123
+          temporary: false
+        realmRoles:
+        - admin
+        - ai-operator
+        - user
+
+# Database configuration (use external PostgreSQL for production)
+database:
+  vendor: postgres
+  host: pgvector-postgresql
+  database: keycloak
+  username: keycloak
+  password: keycloak-password
+
+# Admin credentials
+auth:
+  adminUser: admin
+  adminPassword: secure-admin-password
+
+# OpenShift OAuth enabled by default
+openshiftOAuth:
+  enabled: true

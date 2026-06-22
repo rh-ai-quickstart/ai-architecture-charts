@@ -1,0 +1,14 @@
+{{- if .Values.openshiftOAuth.enabled }}
+---
+apiVersion: oauth.openshift.io/v1
+kind: OAuthClient
+metadata:
+  name: {{ include "keycloak.fullname" . }}
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+# Keycloak redirect URIs - OpenShift will redirect here after authentication
+redirectURIs:
+- https://ai-virtual-agent-keycloak-ytt.apps.ai-dev04.kni.syseng.devcluster.openshift.com/realms/ai-virtual-agent/broker/openshift/endpoint
+secret: {{ required "openshiftOAuth.clientSecret is required when openshiftOAuth.enabled is true" .Values.openshiftOAuth.clientSecret }}
+grantMethod: auto
+{{- end }}
