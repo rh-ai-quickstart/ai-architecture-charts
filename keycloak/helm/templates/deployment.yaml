@@ -1,0 +1,165 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "keycloak.fullname" . }}
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      {{- include "keycloak.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "keycloak.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "keycloak.serviceAccountName" . }}
+      containers:
+      - name: keycloak
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+          - start
+          # Note: Not using --optimized flag to allow auto-build on startup
+          # This adds ~30s to first startup but is more reliable
+        env:
+        # Database configuration
+        # All database credentials and connection details come from pgvector.secret
+        # For pgvector subchart: use default pgvector.secret.host = "pgvector"
+        # For external database: set pgvector.secret.host to external database hostname
+        - name: KC_DB
+          value: {{ .Values.database.vendor }}
+        - name: KC_DB_URL_HOST
+          value: {{ .Values.pgvector.secret.host | quote }}
+        - name: KC_DB_URL_PORT
+          value: {{ .Values.pgvector.secret.port | quote }}
+        - name: KC_DB_URL_DATABASE
+          value: {{ .Values.pgvector.secret.dbname }}
+        - name: KC_DB_USERNAME
+          value: {{ .Values.pgvector.secret.user }}
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pgvector
+              key: password
+        
+        # Admin credentials
+        - name: KEYCLOAK_ADMIN
+          value: {{ .Values.admin.username }}
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.adminSecretName" . }}
+              key: {{ .Values.admin.existingSecretKey }}
+        
+        # Proxy configuration
+        - name: KC_PROXY
+          value: {{ .Values.config.proxy }}
+        {{- if .Values.config.proxyHeaders }}
+        - name: KC_PROXY_HEADERS
+          value: {{ .Values.config.proxyHeaders }}
+        {{- end }}
+        
+        # Health and metrics
+        - name: KC_HEALTH_ENABLED
+          value: {{ .Values.config.healthEnabled | quote }}
+        - name: KC_METRICS_ENABLED
+          value: {{ .Values.config.metricsEnabled | quote }}
+        
+        # Hostname configuration
+        - name: KC_HOSTNAME_STRICT
+          value: {{ .Values.config.hostnameStrict | quote }}
+        - name: KC_HOSTNAME_STRICT_HTTPS
+          value: "false"
+        - name: KC_HTTP_ENABLED
+          value: "true"
+        {{- if .Values.config.hostname }}
+        - name: KC_HOSTNAME
+          value: {{ .Values.config.hostname }}
+        {{- end }}
+        
+        # Logging
+        - name: KC_LOG_LEVEL
+          value: {{ .Values.config.logLevel }}
+        
+        {{- if .Values.config.features }}
+        - name: KC_FEATURES
+          value: {{ .Values.config.features }}
+        {{- end }}
+        
+        {{- with .Values.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        
+        {{- with .Values.extraEnvFrom }}
+        envFrom:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        
+        {{- if .Values.livenessProbe }}
+        livenessProbe:
+          {{- toYaml .Values.livenessProbe | nindent 10 }}
+        {{- end }}
+        
+        {{- if .Values.readinessProbe }}
+        readinessProbe:
+          {{- toYaml .Values.readinessProbe | nindent 10 }}
+        {{- end }}
+        
+        {{- if .Values.resources }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        {{- end }}
+        
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        
+        {{- with .Values.extraVolumeMounts }}
+        volumeMounts:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      
+      {{- with .Values.extraVolumes }}
+      volumes:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+

@@ -1,0 +1,27 @@
+apiVersion: v2
+name: keycloak
+description: Official Keycloak Helm chart for identity and access management
+type: application
+version: 1.0.0
+appVersion: "26.0.7"
+dependencies:
+  - name: pgvector
+    version: 0.5.1
+    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: pgvector.enabled
+keywords:
+  - keycloak
+  - authentication
+  - authorization
+  - identity
+  - access-management
+  - oauth2
+  - openid-connect
+home: https://www.keycloak.org/
+sources:
+  - https://github.com/keycloak/keycloak
+icon: https://www.keycloak.org/resources/images/keycloak_icon_512px.svg
+maintainers:
+  - name: Development Team
+    email: dev@example.com
+
