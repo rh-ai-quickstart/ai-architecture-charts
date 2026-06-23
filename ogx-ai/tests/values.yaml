@@ -40,8 +40,7 @@ llm-service:
           memory: 4Gi
 
 ogx-ai:
-  # ingestion-pipeline expects the OGX service at http://llamastack:8321
-  fullnameOverride: llamastack
+  fullnameOverride: ogx-ai
   pgvector:
     enabled: true
   toolRuntime:
