@@ -1,0 +1,46 @@
+playground:
+  genAiStudio: false
+  aiAssetCustomEndpoints: false
+  externalProviders: false
+  externalVectorStores: false
+  promptManagement: false
+  modelAsService: false
+  mcpCatalog: false
+  mlflow: false
+  observabilityDashboard: false
+  trainingJobs: false
+  vllmDeploymentOnMaas: false
+  llmGatewayField: false
+
+  disableKueue: false
+  disableLMEval: false
+
+clusterDomains:
+  - apps.cluster.example.com
+
+notebookController:
+  enabled: false
+
+mcpServers:
+  github:
+    enabled: true
+    image: ghcr.io/modelcontextprotocol/servers/github:latest
+
+  filesystem:
+    enabled: true
+    image: ghcr.io/modelcontextprotocol/servers/filesystem:latest
+
+  postgres:
+    enabled: true
+    image: ghcr.io/modelcontextprotocol/servers/postgres:latest
+
+# For each MCP server, add the following:
+# Deployment for each
+# Service for Each
+# and A route for each
+
+# Ask claude to generate each using a loop for every MCP server in the values.yaml file
+
+
+# Knowledge Bases
+

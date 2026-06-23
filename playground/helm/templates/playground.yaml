@@ -1,0 +1,50 @@
+apiVersion: dashboard.opendatahub.io/v1
+kind: OdhDashboardConfig
+metadata:
+  name: odh-dashboard-config
+  namespace: redhat-ods-applications
+spec:
+
+  dashboardConfig:
+    genAiStudio: {{ .Values.playground.genAiStudio }}
+    aiAssetCustomEndpoints: {{ .Values.playground.aiAssetCustomEndpoints }}
+    # Playground Features
+    externalVectorStores: {{ .Values.playground.externalVectorStores }}
+    promptManagement: {{ .Values.playground.promptManagement }}
+    # MCP
+    mcpCatalog: {{ .Values.playground.mcpCatalog }}
+    # Model Serving
+    disableModelServing: false
+    disableKServe: false
+    disableKServeAuth: false
+    disableKServeMetrics: false
+    disableNIMModelServing: false
+    # Registry
+    disableModelRegistry: false
+    disableModelRegistrySecureDB: false
+    disablePipelines: false
+    trainingJobs: {{ .Values.playground.trainingJobs }}
+    mlflow: {{ .Values.playground.mlflow }}
+    # Observability
+    observabilityDashboard: {{ .Values.playground.observabilityDashboard }}
+    modelAsService: {{ .Values.playground.modelAsService }}
+    vLLMDeploymentOnMaas: {{ .Values.playground.vllmDeploymentOnMaas }}
+    llmGatewayField: {{ .Values.playground.llmGatewayField }}
+    disableKueue: {{ .Values.playground.disableKueue }}
+    disableLMEval: {{ .Values.playground.disableLMEval }}
+    disableProjectSharing: false
+    projectRBAC: true
+
+    disableProjects: false
+    disableHome: false
+    disableSupport: false
+    disableTracking: false
+
+  genAiStudioConfig:
+    aiAssetCustomEndpoints:
+      externalProviders: {{ .Values.playground.externalProviders }}
+      clusterDomains:
+{{ toYaml .Values.clusterDomains | indent 8 }}
+
+  notebookController:
+    enabled: {{ .Values.notebookController.enabled }}
