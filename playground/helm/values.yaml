@@ -1,3 +1,10 @@
+# -- Override the chart name used in resource names.
+nameOverride: ""
+# -- Override the fully qualified app name.
+fullnameOverride: ""
+
+# ── OdhDashboardConfig ────────────────────────────────────────────
+# Controls which Gen AI Studio features are enabled in the dashboard.
 playground:
   genAiStudio: false
   aiAssetCustomEndpoints: false
@@ -21,26 +28,29 @@ clusterDomains:
 notebookController:
   enabled: false
 
+# ── MCP Server Registration ──────────────────────────────────────
+# Creates a ConfigMap (gen-ai-aa-mcp-servers) in redhat-ods-applications
+# that registers existing MCP server endpoints with the Playground UI.
+# No new deployments are created — this points to already-deployed services.
 mcpServers:
-  github:
-    enabled: true
-    image: ghcr.io/modelcontextprotocol/servers/github:latest
+  enabled: true
+  namespace: redhat-ods-applications
+  servers: []
+  # Example entry (override in consuming chart's values):
+  #   - name: MCP-OpenShift
+  #     url: http://mcp-noc-openshift.{{ .Release.Namespace }}.svc:8000/mcp/
+  #     description: OpenShift cluster operations
 
-  filesystem:
-    enabled: true
-    image: ghcr.io/modelcontextprotocol/servers/filesystem:latest
-
-  postgres:
-    enabled: true
-    image: ghcr.io/modelcontextprotocol/servers/postgres:latest
-
-# For each MCP server, add the following:
-# Deployment for each
-# Service for Each
-# and A route for each
-
-# Ask claude to generate each using a loop for every MCP server in the values.yaml file
-
-
-# Knowledge Bases
+# ── Vector Store Registration ────────────────────────────────────
+# Creates a ConfigMap (gen-ai-aa-vector-stores) in redhat-ods-applications
+# that registers existing vector store endpoints with the Playground UI.
+vectorStores:
+  enabled: true
+  namespace: redhat-ods-applications
+  stores: []
+  # Example entry (override in consuming chart's values):
+  #   - name: NOC-Runbooks
+  #     url: http://llamastack.{{ .Release.Namespace }}.svc:8321
+  #     vectorStoreName: noc_runbooks
+  #     description: NOC runbook knowledge base
 

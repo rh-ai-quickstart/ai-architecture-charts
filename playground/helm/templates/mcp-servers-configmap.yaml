@@ -1,0 +1,26 @@
+{{- if and .Values.mcpServers.enabled .Values.mcpServers.servers }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gen-ai-aa-mcp-servers
+  namespace: {{ .Values.mcpServers.namespace | default "redhat-ods-applications" }}
+  labels:
+    {{- include "playground.labels" . | nindent 4 }}
+data:
+  mcp-servers.json: |
+    {
+      "servers": [
+        {{- $servers := .Values.mcpServers.servers }}
+        {{- range $i, $server := $servers }}
+        {{- if $i }},{{ end }}
+        {
+          "name": {{ $server.name | quote }},
+          "url": {{ tpl $server.url $ | quote }}
+          {{- if $server.description }},
+          "description": {{ $server.description | quote }}
+          {{- end }}
+        }
+        {{- end }}
+      ]
+    }
+{{- end }}
