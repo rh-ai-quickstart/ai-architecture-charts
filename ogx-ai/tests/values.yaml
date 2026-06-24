@@ -81,6 +81,7 @@ configure-pipeline:
 
 ingestion-pipeline:
   enabled: true
+  clientDependency: ogx-ai
   serviceAccount:
     create: true
     name: ogx-test-pipeline

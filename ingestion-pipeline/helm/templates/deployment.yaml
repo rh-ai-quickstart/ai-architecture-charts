@@ -54,7 +54,7 @@ spec:
               done
               echo "Data science pipeline configured"
 
-              url="http://llamastack:8321/v1/models"
+              url="{{ include "ingestion-pipeline.gatewayModelsUrl" . }}"
               if [ ! -z ${LLAMA_STACK_AUTH_USER} ]; then
                 headers="-H \"X-Forwarded-User: ${LLAMA_STACK_AUTH_USER}\" -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\""
               fi
@@ -80,7 +80,7 @@ spec:
             - name: INGESTION_PIPELINE_IMAGE
               value: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.Version }}"
             - name: LLAMASTACK_BASE_URL
-              value: "http://llamastack.{{ .Release.Namespace }}.svc.cluster.local:8321"
+              value: {{ include "ingestion-pipeline.gatewayBaseUrl" . | quote }}
             - name: DS_PIPELINE_URL
               value: "https://ds-pipeline-dspa.{{ .Release.Namespace }}.svc.cluster.local:8888"
           {{- if .Values.authUser }}
