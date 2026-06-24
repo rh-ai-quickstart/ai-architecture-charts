@@ -5,6 +5,10 @@ fullnameOverride: ""
 
 # ── OdhDashboardConfig ────────────────────────────────────────────
 # Controls which Gen AI Studio features are enabled in the dashboard.
+# Set dashboardConfig.enabled to true only when RHOAI/ODH operator is installed.
+dashboardConfig:
+  enabled: false
+
 playground:
   genAiStudio: false
   aiAssetCustomEndpoints: false

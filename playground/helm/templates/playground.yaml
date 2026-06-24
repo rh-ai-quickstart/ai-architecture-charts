@@ -1,3 +1,4 @@
+{{- if .Values.dashboardConfig.enabled }}
 apiVersion: dashboard.opendatahub.io/v1
 kind: OdhDashboardConfig
 metadata:
@@ -48,3 +49,4 @@ spec:
 
   notebookController:
     enabled: {{ .Values.notebookController.enabled }}
+{{- end }}
