@@ -22,6 +22,7 @@ Examples:
 ingestion-pipeline-0.2.18
 ingestion-pipeline-0.2.19
 llama-stack-0.3.0
+ogx-ai-1.0.0
 mcp-servers-0.1.0
 ```
 
@@ -52,6 +53,7 @@ Follow [Semantic Versioning](https://semver.org/):
 
 **Dependency Versions:**
 - LlamaStack version is configured in `llama-stack/helm/values.yaml`
+- OGX version is configured in `ogx-ai/helm/values.yaml`
 - LlamaStack client version is pinned in `ingestion-pipeline/src/requirements.txt`
 - No build args or templating needed
 
@@ -96,6 +98,7 @@ Examples:
 - `ingestion-pipeline-0.2.18`
 - `ingestion-pipeline-0.2.19`
 - `llama-stack-0.3.0`
+- `ogx-ai-0.8.6`
 - `mcp-servers-0.1.0`
 
 You can list all tags for a component:
@@ -206,6 +209,13 @@ Dependency versions are managed directly in their configuration files:
 llamastackVersion: "0.0.58"  # Update the LlamaStack container version
 ```
 
+**OGX version:**
+```yaml
+# ogx-ai/helm/values.yaml
+image:
+  tag: "0.6.0"  # Update the OGX container version
+```
+
 **LlamaStack client version:**
 ```txt
 # ingestion-pipeline/src/requirements.txt
@@ -307,6 +317,7 @@ The chart `version` field determines the Helm package version, while `appVersion
 |-----------|------------------|-----------------|-------------------|
 | ingestion-pipeline | Yes (via build.yaml) | 0.2.18 | LlamaStack client |
 | llama-stack | No | 0.2.18 | LlamaStack upstream |
+| ogx-ai | No | 0.8.6 | OGX upstream |
 | mcp-servers | Yes (via build.yaml) | 0.1.0 | MCP protocol |
 | llm-service | No | 0.1.0 | N/A |
 | pgvector | No | 0.1.0 | PostgreSQL/pgvector |
@@ -401,6 +412,7 @@ That's fine! Each component versions independently:
 ```
 ingestion-pipeline-0.3.0  (manually bumped to minor)
 llama-stack-0.2.19        (auto-incremented patch)
+ogx-ai-0.8.7              (auto-incremented patch)
 ```
 
 ## Future Enhancements

@@ -29,7 +29,7 @@ This chart supports multiple concurrent pipelines, allowing you to:
 - External dependencies:
   - MinIO instance for S3 storage
   - Vector database (PGVector recommended)
-  - LlamaStack for embeddings (optional)
+  - LlamaStack or OGX for embeddings (optional)
 
 ## Installation
 
@@ -435,7 +435,7 @@ This chart integrates with:
 
 - **MinIO**: Object storage for documents
 - **PGVector**: Vector database for embeddings
-- **LlamaStack**: LLM inference and embeddings
+- **LlamaStack / OGX**: LLM inference and embeddings
 - **OpenShift AI**: Pipeline orchestration and notebooks
 
 ## API Reference

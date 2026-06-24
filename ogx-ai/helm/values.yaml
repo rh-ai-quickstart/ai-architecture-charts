@@ -1,0 +1,265 @@
+# Default values for OGX (https://github.com/ogx-ai/ogx).
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+rawDeploymentMode: true
+
+image:
+  repository: quay.io/opendatahub/odh-ogx-core
+  pullPolicy: IfNotPresent
+  tag: "rhoai-v3.5-ea1-latest"
+
+imagePullSecrets: []
+nameOverride: "ogx-ai"
+fullnameOverride: "ogx-ai"
+
+serviceAccount:
+  create: false
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+progressDeadlineSeconds: 3600
+
+strategy:
+  type: Recreate
+
+service:
+  type: ClusterIP
+  port: 8321
+
+# OpenShift Route for external access. Defaults to name "llamastack" for backwards
+# compatibility with charts and jobs that still reference the Llama Stack service name.
+route:
+  enabled: true
+  name: ogx-ai
+  host: ""
+  annotations: {}
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# Disable automatic service env vars (e.g. OGX_PORT=tcp://...) which collide with the
+# OGX CLI's numeric OGX_PORT when the Service is named "ogx".
+enableServiceLinks: false
+
+env:
+  - name: RUN_CONFIG_PATH
+    value: /app-config/config.yaml
+
+# PGVector configuration - set enabled to true to enable pgvector integration
+pgvector:
+  enabled: true # backwards compatibility
+  # When enabled, the following environment variables will be automatically added
+  # from the 'pgvector' secret in the deployment.yaml
+  # - POSTGRES_USER
+  # - POSTGRES_PASSWORD
+  # - POSTGRES_HOST
+  # - POSTGRES_PORT
+  # - POSTGRES_DBNAME
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /v1/health
+    port: 8321
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /v1/health
+    port: 8321
+  initialDelaySeconds: 15
+  periodSeconds: 15
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+autoscaling:
+  enabled: false
+
+# Additional volumes on the output Deployment definition.
+volumes:
+  - configMap:
+      defaultMode: 420
+      name: run-config
+    name: run-config-volume
+  - name: dot-ogx-ai
+    persistentVolumeClaim:
+      claimName: ogx-ai-data
+  - emptyDir: {}
+    name: cache
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts:
+  - mountPath: /app-config
+    name: run-config-volume
+  - mountPath: /.llama
+    name: dot-ogx-ai
+  - mountPath: /.cache
+    name: cache
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+gcpServiceAccount:
+  name: gcp-service-account
+  mountPath: /var/secrets/gcp-service-account.json
+
+vertexai:
+  enabled: false
+  #projectId:
+  #location:
+
+secrets: {}
+
+# Extra secret references to mount as environment variables in init and main containers
+# Example: extraSecretRefs: [{ name: my-api-keys-secret }]
+extraSecretRefs: []
+
+mcp-servers: {}
+models:
+  gpt-oss-20b:
+    id: openai/gpt-oss-20b
+    enabled: false
+  llama-3-2-3b-instruct:
+    id: meta-llama/Llama-3.2-3B-Instruct
+    enabled: false
+  llama-guard-3-8b:
+    id: meta-llama/Llama-Guard-3-8B
+    enabled: false
+    registerShield: true
+  llama-3-2-1b-instruct:
+    id: meta-llama/Llama-3.2-1B-Instruct
+    enabled: false
+  llama-3-1-8b-instruct:
+    id: meta-llama/Llama-3.1-8B-Instruct
+    enabled: false
+  llama-guard-3-1b:
+    id: meta-llama/Llama-Guard-3-1B
+    enabled: false
+    registerShield: true
+  llama-3-3-70b-instruct:
+    id: meta-llama/Llama-3.3-70B-Instruct
+    enabled: false
+  llama-3-2-1b-instruct-quantized:
+    id: RedHatAI/Llama-3.2-1B-Instruct-quantized.w8a8
+    enabled: false
+  # To configure OGX with remote llm provider (without registering a specific model),
+  # set url and optionally apiToken, then set enabled to true
+  remote-llm:
+    url: ""
+    apiToken: ""
+    enabled: false
+
+# Vector IO provider persistence configuration
+# By default uses kv_default backend defined in storage section
+# For multi-replica deployments, override in parent values.yaml to use PostgreSQL
+vectorIOKvstore:
+  namespace: vector_io::pgvector
+  backend: kv_default
+
+# Optional: Override storage backends (defaults to SQLite if not provided)
+# storage:
+#   backends:
+#     kv_default:
+#       type: kv_postgres
+#       host: pgvector
+#       port: 5432
+#       db: llama_agents
+#       user: postgres
+#       password: rag_password
+#     sql_default:
+#       type: sql_postgres
+#       host: pgvector
+#       port: 5432
+#       db: llama_responses
+#       user: postgres
+#       password: rag_password
+
+# OGX 1.x: agents/safety/shields APIs removed; use responses + optional MODERATION_ENDPOINT
+providers:
+  responses:
+    - provider_id: builtin
+      provider_type: inline::builtin
+      config:
+        moderation_endpoint: ${env.MODERATION_ENDPOINT:+}
+        persistence:
+          agent_state:
+            namespace: agents
+            backend: kv_default
+          responses:
+            table_name: responses
+            backend: sql_default
+            max_write_queue_size: 10000
+            num_writers: 4
+
+auth: {}
+
+# Tool runtime providers included in run-config. The distribution-starter image
+# (ogxai/distribution-starter) does not ship inline::rag-runtime; leave disabled
+# unless you use a distribution that includes it.
+toolRuntime:
+  braveSearch:
+    enabled: true
+  tavilySearch:
+    enabled: true
+  ragRuntime:
+    enabled: false
+  modelContextProtocol:
+    enabled: true
+
+toolGroups:
+  websearch:
+    enabled: true
+  rag:
+    enabled: false
+# auth:
+#   provider_config:
+#     type: "custom"
+#     endpoint: "https://auth.example.com/validate"
+#   access_policy:
+#   - permit:
+#       actions: [create]
+#       resource: session::*
+#     description: all users have create access to sessions
+#   - permit:
+#       actions: [read]
+#       resource: agent::*
+#     description: all users have read access to agents
+#   - permit:
+#       actions: [read]
+#       resource: tool_group::*
+#     description: all users have read access to tool_groups
+#   - permit:
+#       actions: [read]
+#       resource: model::*
+#     description: all users have read access to models
+#   - permit:
+#       actions: [read]
+#       resource: vector_db::*
+#     description: all users have read access to vector_dbs
+#   - permit:
+#       actions: [create, update, delete]
+#       resource: vector_db::*
+#     when: user with admin in roles
+#     description: users with the admin role can create, update or delete vector_dbs
+#   - forbid:
+#       actions: [create, update, delete]
+#     unless: user with admin in roles
+#     description: only users with the admin role can create, update or delete resources
+#   - permit:
+#       actions: [read, update, delete]
+#     when: user is owner
+#     description: users can read, update and delete resources they own
