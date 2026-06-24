@@ -1,0 +1,29 @@
+{{- if and .Values.vectorStores.enabled .Values.vectorStores.stores }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gen-ai-aa-vector-stores
+  namespace: {{ .Values.vectorStores.namespace | default "redhat-ods-applications" }}
+  labels:
+    {{- include "playground.labels" . | nindent 4 }}
+data:
+  vector-stores.json: |
+    {
+      "stores": [
+        {{- $stores := .Values.vectorStores.stores }}
+        {{- range $i, $store := $stores }}
+        {{- if $i }},{{ end }}
+        {
+          "name": {{ $store.name | quote }},
+          "url": {{ tpl $store.url $ | quote }}
+          {{- if $store.vectorStoreName }},
+          "vectorStoreName": {{ $store.vectorStoreName | quote }}
+          {{- end }}
+          {{- if $store.description }},
+          "description": {{ $store.description | quote }}
+          {{- end }}
+        }
+        {{- end }}
+      ]
+    }
+{{- end }}
