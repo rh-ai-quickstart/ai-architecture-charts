@@ -40,7 +40,7 @@ spec:
               done
               echo "Ingestion pipeline service ready"
 
-              url="http://llamastack:8321/v1/models"
+              url="{{ include "ingestion-pipeline.gatewayModelsUrl" . }}"
               if [ ! -z ${LLAMA_STACK_AUTH_USER} ]; then
                 headers="-H \"X-Forwarded-User: ${LLAMA_STACK_AUTH_USER}\" -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\""
               fi

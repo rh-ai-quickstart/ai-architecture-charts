@@ -107,3 +107,28 @@ Prepare pipeline data for API call
 -}}
 {{- merge $base $sourceData | toJson -}}
 {{- end }}
+
+{{/*
+Kubernetes Service hostname for the AI gateway (llama-stack or ogx-ai).
+*/}}
+{{- define "ingestion-pipeline.gatewayServiceHost" -}}
+{{- if eq .Values.clientDependency "ogx-ai" -}}
+ogx-ai
+{{- else -}}
+llamastack
+{{- end -}}
+{{- end }}
+
+{{/*
+In-cluster base URL for the AI gateway API.
+*/}}
+{{- define "ingestion-pipeline.gatewayBaseUrl" -}}
+http://{{ include "ingestion-pipeline.gatewayServiceHost" . }}.{{ .Release.Namespace }}.svc.cluster.local:8321
+{{- end }}
+
+{{/*
+Short in-namespace URL for init-container health checks.
+*/}}
+{{- define "ingestion-pipeline.gatewayModelsUrl" -}}
+http://{{ include "ingestion-pipeline.gatewayServiceHost" . }}:8321/v1/models
+{{- end }}

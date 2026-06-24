@@ -130,5 +130,5 @@ authUser: ""
 # generate provenance for the knowledge base
 enableSigning: false
 
-# Gateway client dependency: llama-stack (default) or ogx-ai
+# Gateway client dependency: llama-stack (polls llamastack:8321) or ogx-ai (polls ogx-ai:8321)
 clientDependency: llama-stack
