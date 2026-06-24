@@ -7,23 +7,16 @@ metadata:
   labels:
     {{- include "playground.labels" . | nindent 4 }}
 data:
-  vector-stores.json: |
+  {{- range .Values.vectorStores.stores }}
+  {{ .name }}: |
     {
-      "stores": [
-        {{- $stores := .Values.vectorStores.stores }}
-        {{- range $i, $store := $stores }}
-        {{- if $i }},{{ end }}
-        {
-          "name": {{ $store.name | quote }},
-          "url": {{ tpl $store.url $ | quote }}
-          {{- if $store.vectorStoreName }},
-          "vectorStoreName": {{ $store.vectorStoreName | quote }}
-          {{- end }}
-          {{- if $store.description }},
-          "description": {{ $store.description | quote }}
-          {{- end }}
-        }
-        {{- end }}
-      ]
+      "url": {{ tpl .url $ | quote }}
+      {{- if .vectorStoreName }},
+      "vectorStoreName": {{ .vectorStoreName | quote }}
+      {{- end }}
+      {{- if .description }},
+      "description": {{ .description | quote }}
+      {{- end }}
     }
+  {{- end }}
 {{- end }}

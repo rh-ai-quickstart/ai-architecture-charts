@@ -7,20 +7,13 @@ metadata:
   labels:
     {{- include "playground.labels" . | nindent 4 }}
 data:
-  mcp-servers.json: |
+  {{- range .Values.mcpServers.servers }}
+  {{ .name }}: |
     {
-      "servers": [
-        {{- $servers := .Values.mcpServers.servers }}
-        {{- range $i, $server := $servers }}
-        {{- if $i }},{{ end }}
-        {
-          "name": {{ $server.name | quote }},
-          "url": {{ tpl $server.url $ | quote }}
-          {{- if $server.description }},
-          "description": {{ $server.description | quote }}
-          {{- end }}
-        }
-        {{- end }}
-      ]
+      "url": {{ tpl .url $ | quote }}
+      {{- if .description }},
+      "description": {{ .description | quote }}
+      {{- end }}
     }
+  {{- end }}
 {{- end }}

@@ -31,7 +31,9 @@ notebookController:
 # ── MCP Server Registration ──────────────────────────────────────
 # Creates a ConfigMap (gen-ai-aa-mcp-servers) in redhat-ods-applications
 # that registers existing MCP server endpoints with the Playground UI.
+# Each entry becomes a data key in the ConfigMap (name → JSON value).
 # No new deployments are created — this points to already-deployed services.
+# See: https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/experimenting_with_models_in_the_gen_ai_playground/playground-prerequisites_rhoai-user
 mcpServers:
   enabled: true
   namespace: redhat-ods-applications
@@ -44,6 +46,7 @@ mcpServers:
 # ── Vector Store Registration ────────────────────────────────────
 # Creates a ConfigMap (gen-ai-aa-vector-stores) in redhat-ods-applications
 # that registers existing vector store endpoints with the Playground UI.
+# Each entry becomes a data key in the ConfigMap (name → JSON value).
 vectorStores:
   enabled: true
   namespace: redhat-ods-applications
