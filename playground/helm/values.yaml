@@ -46,5 +46,3 @@ mcpServers:
   #   - name: MCP-OpenShift
   #     url: http://mcp-noc-openshift.{{ .Release.Namespace }}.svc:8000/mcp/
   #     description: OpenShift cluster operations
-
-
