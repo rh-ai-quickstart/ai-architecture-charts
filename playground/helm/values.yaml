@@ -47,17 +47,4 @@ mcpServers:
   #     url: http://mcp-noc-openshift.{{ .Release.Namespace }}.svc:8000/mcp/
   #     description: OpenShift cluster operations
 
-# ── Vector Store Registration ────────────────────────────────────
-# Creates a ConfigMap (gen-ai-aa-vector-stores) in redhat-ods-applications
-# that registers existing vector store endpoints with the Playground UI.
-# Each entry becomes a data key in the ConfigMap (name → JSON value).
-vectorStores:
-  enabled: true
-  namespace: redhat-ods-applications
-  stores: []
-  # Example entry (override in consuming chart's values):
-  #   - name: NOC-Runbooks
-  #     url: http://llamastack.{{ .Release.Namespace }}.svc:8321
-  #     vectorStoreName: noc_runbooks
-  #     description: NOC runbook knowledge base
 
