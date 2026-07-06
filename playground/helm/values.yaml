@@ -46,3 +46,21 @@ mcpServers:
   #   - name: MCP-OpenShift
   #     url: http://mcp-noc-openshift.{{ .Release.Namespace }}.svc:8000/mcp/
   #     description: OpenShift cluster operations
+
+# ── Custom External Model Endpoints ─────────────────────────────
+# Creates a ConfigMap (gen-ai-aa-custom-model-endpoints) and corresponding
+# Secrets to pre-register external OpenAI-compatible models with the Playground.
+# Supports any provider with an OpenAI-compatible API (OpenAI, Gemini, Anthropic, etc.).
+# Requires aiAssetCustomEndpoints and externalProviders to be enabled in the
+# OdhDashboardConfig (see dashboardConfig above).
+customEndpoints:
+  enabled: false
+  namespace: ""
+  endpoints: []
+  # Example entry (override in consuming chart's values):
+  #   - modelId: gpt-4o-mini
+  #     displayName: GPT-4o Mini
+  #     url: https://api.openai.com/v1
+  #     apiKey: ""  # provide via --set at install time
+  #     providerType: remote::openai  # optional, defaults to remote::openai
+  #     modelType: llm  # optional, defaults to llm
