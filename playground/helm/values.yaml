@@ -47,6 +47,23 @@ mcpServers:
   #     url: http://mcp-noc-openshift.{{ .Release.Namespace }}.svc:8000/mcp/
   #     description: OpenShift cluster operations
 
+# ── Vector Store Registration ─────────────────────────────────
+# Creates a ConfigMap (gen-ai-aa-vector-stores) in redhat-ods-applications
+# that registers external vector stores with the Playground "Knowledge" tab.
+# Each entry becomes a data key in the ConfigMap (name → JSON value with
+# url, name (collection name), and description).
+# Queries are routed through Llama Stack RAG primitives.
+# Requires externalVectorStores to be enabled in the OdhDashboardConfig.
+vectorStores:
+  enabled: false
+  namespace: redhat-ods-applications
+  stores: []
+  # Example entry (override in consuming chart's values):
+  #   - name: NOC-Runbooks
+  #     url: http://llamastack-service.{{ .Release.Namespace }}.svc:8321
+  #     vectorStoreName: noc_runbooks
+  #     description: NOC runbook knowledge base
+
 # ── Custom External Model Endpoints ─────────────────────────────
 # Creates a ConfigMap (gen-ai-aa-custom-model-endpoints) and corresponding
 # Secrets to pre-register external OpenAI-compatible models with the Playground.
