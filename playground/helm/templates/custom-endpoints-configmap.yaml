@@ -31,5 +31,8 @@ data:
         model_type: {{ $ep.modelType | default "llm" }}
         metadata:
           display_name: {{ $ep.displayName }}
+          {{- if $ep.embeddingDimension }}
+          embedding_dimension: {{ $ep.embeddingDimension }}
+          {{- end }}
       {{- end }}
 {{- end }}
