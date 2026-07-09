@@ -48,21 +48,31 @@ mcpServers:
   #     description: OpenShift cluster operations
 
 # ── Vector Store Registration ─────────────────────────────────
-# Creates a ConfigMap (gen-ai-aa-vector-stores) in redhat-ods-applications
+# Creates a ConfigMap (gen-ai-aa-vector-stores) in the project namespace
 # that registers external vector stores with the Playground "Knowledge" tab.
-# Each entry becomes a data key in the ConfigMap (name → JSON value with
-# url, name (collection name), and description).
+# Follows the providers + registered_resources format.
 # Queries are routed through Llama Stack RAG primitives.
 # Requires externalVectorStores to be enabled in the OdhDashboardConfig.
 vectorStores:
   enabled: false
-  namespace: redhat-ods-applications
+  namespace: ""
   stores: []
-  # Example entry (override in consuming chart's values):
-  #   - name: NOC-Runbooks
-  #     url: http://llamastack-service.{{ .Release.Namespace }}.svc:8321
-  #     vectorStoreName: noc_runbooks
-  #     description: NOC runbook knowledge base
+  # Example pgvector entry (override in consuming chart's values):
+  #   - providerId: pgvector-provider
+  #     providerType: remote::pgvector
+  #     host: pgvector.{{ .Release.Namespace }}.svc.cluster.local
+  #     port: 5432
+  #     db: vectordb
+  #     user: vectoruser
+  #     distanceMetric: COSINE
+  #     credentialSecret:
+  #       name: pgvector-credentials
+  #       key: password
+  #     vectorStoreId: vs-my-store-001
+  #     displayName: "My Vector Store (pgvector)"
+  #     embeddingModel: sentence-transformers/nomic-ai/nomic-embed-text-v1.5
+  #     embeddingDimension: 768
+  #     description: My vector store description
 
 # ── Custom External Model Endpoints ─────────────────────────────
 # Creates a ConfigMap (gen-ai-aa-custom-model-endpoints) and corresponding

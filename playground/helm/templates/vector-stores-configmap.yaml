@@ -3,18 +3,57 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: gen-ai-aa-vector-stores
-  namespace: {{ .Values.vectorStores.namespace | default "redhat-ods-applications" }}
+  namespace: {{ .Values.vectorStores.namespace | default .Release.Namespace }}
   labels:
     {{- include "playground.labels" . | nindent 4 }}
 data:
-  {{- range .Values.vectorStores.stores }}
-  {{ .name }}: |
-    {
-      "url": {{ tpl .url $ | quote }},
-      "name": {{ .vectorStoreName | quote }}
-      {{- if .description }},
-      "description": {{ .description | quote }}
+  config.yaml: |
+    providers:
+      vector_io:
+      {{- range $i, $store := .Values.vectorStores.stores }}
+      - provider_id: {{ $store.providerId | default (printf "provider-%d" (add $i 1)) }}
+        provider_type: {{ $store.providerType | default "remote::pgvector" }}
+        config:
+          {{- if $store.uri }}
+          uri: {{ tpl $store.uri $ }}
+          {{- end }}
+          {{- if $store.host }}
+          host: {{ tpl $store.host $ }}
+          {{- end }}
+          {{- if $store.port }}
+          port: {{ $store.port }}
+          {{- end }}
+          {{- if $store.db }}
+          db: {{ $store.db }}
+          {{- end }}
+          {{- if $store.user }}
+          user: {{ $store.user }}
+          {{- end }}
+          {{- if $store.distanceMetric }}
+          distance_metric: {{ $store.distanceMetric }}
+          {{- end }}
+          persistence:
+            backend: kv_default
+            namespace: {{ $store.persistenceNamespace | default (printf "vector_io::%s" ($store.providerId | default (printf "provider-%d" (add $i 1)))) }}
+          {{- if $store.credentialSecret }}
+          custom_gen_ai:
+            credentials:
+              secretRefs:
+                - name: {{ $store.credentialSecret.name }}
+                  key: {{ $store.credentialSecret.key }}
+          {{- end }}
       {{- end }}
-    }
-  {{- end }}
+    registered_resources:
+      vector_stores:
+      {{- range $i, $store := .Values.vectorStores.stores }}
+      - provider_id: {{ $store.providerId | default (printf "provider-%d" (add $i 1)) }}
+        vector_store_id: {{ $store.vectorStoreId | default (printf "vs-%s-%03d" ($store.providerId | default "store") (add $i 1)) }}
+        vector_store_name: {{ $store.displayName | quote }}
+        embedding_model: {{ $store.embeddingModel }}
+        embedding_dimension: {{ $store.embeddingDimension | default 768 }}
+        {{- if $store.description }}
+        metadata:
+          description: {{ $store.description | quote }}
+        {{- end }}
+      {{- end }}
 {{- end }}
