@@ -21,6 +21,9 @@ metadata:
     opendatahub.io/dashboard: "true"
     networking.knative.dev/visibility: "cluster-local"
     device: {{ $modelDevice }}
+    {{- with $model.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   predictor:
     maxReplicas: {{ $model.maxReplicas | default 1 }}
