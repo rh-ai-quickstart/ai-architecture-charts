@@ -1,0 +1,47 @@
+{{- if and .Values.postInstall.enabled .Values.postInstall.command }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "playground.fullname" . }}-post-install
+  namespace: {{ .Values.postInstall.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "playground.labels" . | nindent 4 }}
+  annotations: {}
+spec:
+  backoffLimit: {{ .Values.postInstall.backoffLimit | default 2 }}
+  template:
+    metadata:
+      labels:
+        {{- include "playground.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        {{- if .Values.postInstall.waitForLlamaStack.enabled }}
+        - name: wait-for-llamastack
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for LlamaStack at {{ .Values.postInstall.waitForLlamaStack.url }} ..."
+              until wget -qO- {{ .Values.postInstall.waitForLlamaStack.url }}/v1/models > /dev/null 2>&1; do
+                echo "  LlamaStack not ready — retrying in 10s"
+                sleep 10
+              done
+              echo "LlamaStack is up."
+        {{- end }}
+      containers:
+        - name: post-install
+          image: {{ .Values.postInstall.image }}
+          imagePullPolicy: Always
+          command:
+            {{- toYaml .Values.postInstall.command | nindent 12 }}
+          {{- with .Values.postInstall.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.postInstall.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

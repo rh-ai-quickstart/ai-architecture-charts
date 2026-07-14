@@ -91,3 +91,33 @@ customEndpoints:
   #     apiKey: ""  # provide via --set at install time
   #     providerType: remote::openai  # optional, defaults to remote::openai
   #     modelType: llm  # optional, defaults to llm
+
+# ── Post-Install Hook ───────────────────────────────────────────
+# Runs a Job after install/upgrade that calls configurable URLs.
+# Use this to trigger RAG ingestion, data sync, or other post-deploy
+# setup. Each quickstart provides its own URLs via values.
+postInstall:
+  enabled: false
+  namespace: ""
+  image: ""
+  backoffLimit: 2
+  waitForLlamaStack:
+    enabled: false
+    url: ""
+  command: []
+  env: []
+  envFrom: []
+  # Example: run the ingestion pipeline image targeting the Playground's LlamaStack.
+  # The init container polls until the Playground's LlamaStack is up (user must
+  # create the Playground through the UI after deploy).
+  #
+  #   image: quay.io/rh-ai-quickstart/noc-ingestion-pipeline:0.1.0
+  #   waitForLlamaStack:
+  #     enabled: true
+  #     url: http://lsd-genai-playground-service:8321
+  #   command: ["python", "-m", "ingestion_pipeline.ingest"]
+  #   env:
+  #     - name: LLAMASTACK_HOST
+  #       value: lsd-genai-playground-service
+  #     - name: LLAMASTACK_PORT
+  #       value: "8321"
