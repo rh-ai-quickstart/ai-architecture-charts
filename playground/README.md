@@ -19,6 +19,7 @@ This chart does **not** deploy any workloads. Instead, it creates ConfigMaps and
 - Gen AI Studio Playground enabled (`genAiStudio: true` in dashboard config)
 - For external models: `aiAssetCustomEndpoints: true` and `externalProviders: true` in `OdhDashboardConfig`
 - For vector stores: `externalVectorStores: true` in `OdhDashboardConfig`
+- For prompt management (MLflow): `promptManagement: true` in `OdhDashboardConfig` and `mlflowoperator: Managed` in `DataScienceCluster`
 - For external models: outbound network access to the provider API
 
 
@@ -195,6 +196,8 @@ helm install playground ./helm \
 - The ConfigMap is created in the **project namespace** (not `redhat-ods-applications`)
 - The `embeddingModel` must match a model registered in the Playground's LlamaStack
 
+
+
 ## Resources Created
 
 
@@ -205,11 +208,14 @@ helm install playground ./helm \
 | `custom-endpoints-configmap.yaml` | ConfigMap `gen-ai-aa-custom-model-endpoints`   | Release namespace         | `customEndpoints.enabled` and endpoints non-empty |
 | `custom-endpoints-secrets.yaml`   | Secret `endpoint-api-key-N` (one per endpoint) | Release namespace         | `customEndpoints.enabled` and `apiKey` non-empty  |
 | `vector-stores-configmap.yaml`    | ConfigMap `gen-ai-aa-vector-stores`            | Release namespace         | `vectorStores.enabled` and stores non-empty       |
+| `post-install-job.yaml`           | Job (polls for LlamaStack, runs ingestion)     | Release namespace         | `postInstall.enabled` and command non-empty       |
 
 
 
 
 ## Examples
+
+
 
 ### Register MCP servers only (no external models)
 
@@ -277,12 +283,71 @@ playground:
           key: password
         vectorStoreId: vs-my-store-001
         displayName: "My Vector Store (pgvector)"
-        embeddingModel: sentence-transformers/ibm-granite/granite-embedding-125m-english
+        embeddingModel: <embedding-model-id>
         embeddingDimension: 768
         description: My knowledge base
 ```
 
 
+
+### Post-Install Ingestion Job
+
+The chart includes a generic Job template that can run a container after deploy. It uses an init container to poll for the Playground's LlamaStack (`lsd-genai-playground-service`) - the Job waits indefinitely until the user creates the Playground through the UI, then runs the ingestion.
+
+
+| Parameter                               | Description                             | Default |
+| --------------------------------------- | --------------------------------------- | ------- |
+| `postInstall.enabled`                   | Create the ingestion Job                | `false` |
+| `postInstall.image`                     | Container image to run                  | `""`    |
+| `postInstall.waitForLlamaStack.enabled` | Poll for LlamaStack before running      | `false` |
+| `postInstall.waitForLlamaStack.url`     | LlamaStack URL to poll                  | `""`    |
+| `postInstall.command`                   | Command to run in the container         | `[]`    |
+| `postInstall.env`                       | Environment variables for the container | `[]`    |
+| `postInstall.backoffLimit`              | Number of retries                       | `2`     |
+
+
+```yaml
+playground:
+  postInstall:
+    enabled: true
+    image: <ingestion-pipeline-image>
+    waitForLlamaStack:
+      enabled: true
+      url: http://lsd-genai-playground-service:8321
+    command:
+      - sh
+      - -c
+      - |
+        ingestion-pipeline &
+        sleep 5
+        until wget -qO- http://localhost:8000/health > /dev/null 2>&1; do sleep 2; done
+        wget -qO- --post-data= http://localhost:8000/runbooks/sync
+        wget -qO- --post-data= http://localhost:8000/runbooks/ingest
+    env:
+      - name: LLAMASTACK_HOST
+        value: lsd-genai-playground-service
+```
+
+
+
+### MLflow Prompt Management
+
+MLflow prompt save/load is managed at the platform level - no chart configuration needed. To enable:
+
+1. Ensure `mlflowoperator: Managed` in the `DataScienceCluster` CR
+2. Ensure `promptManagement: true` in the `OdhDashboardConfig`
+
+These are cluster-scoped settings that must be configured by a cluster admin:
+
+```bash
+oc patch datasciencecluster default-dsc --type=merge \
+  -p '{"spec":{"components":{"mlflowoperator":{"managementState":"Managed"}}}}'
+
+oc patch OdhDashboardConfig odh-dashboard-config -n redhat-ods-applications --type=merge \
+  -p '{"spec":{"dashboardConfig":{"promptManagement":true}}}'
+```
+
+Once enabled, users can save and load prompts in the Playground's Prompt tab. Saved prompts are stored via MLflow and visible on the Gen AI Studio > Prompts page.
 
 ## Security Notes
 
