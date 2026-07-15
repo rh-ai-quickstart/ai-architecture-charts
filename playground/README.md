@@ -17,7 +17,7 @@ This chart does **not** deploy any workloads. Instead, it creates ConfigMaps and
 
 - OpenShift cluster with RHOAI 3.4+ installed
 - Gen AI Studio Playground enabled (`genAiStudio: true` in dashboard config)
-- For external models: `aiAssetCustomEndpoints: true` and `externalProviders: true` in `OdhDashboardConfig`
+- For external models: `aiAssetCustomEndpoints: true` in `OdhDashboardConfig` and `externalProviders: true` under `genAiStudioConfig`
 - For vector stores: `externalVectorStores: true` in `OdhDashboardConfig`
 - For prompt management (MLflow): `promptManagement: true` in `OdhDashboardConfig` and `mlflowoperator: Managed` in `DataScienceCluster`
 - For external models: outbound network access to the provider API
