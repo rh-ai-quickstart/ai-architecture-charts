@@ -1,0 +1,62 @@
+{{- if .Values.externalDatabase.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "pgvector.fullname" . }}-init
+  namespace: {{ include "pgvector.namespace" . }}
+  labels:
+    {{- include "pgvector.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  activeDeadlineSeconds: 300
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        {{- include "pgvector.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: OnFailure
+      containers:
+        - name: init-db
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          command: ["/bin/bash", "/scripts/init-db.sh"]
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pgvector.fullname" . }}
+                  key: user
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pgvector.fullname" . }}
+                  key: password
+            - name: POSTGRES_DBNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pgvector.fullname" . }}
+                  key: dbname
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pgvector.fullname" . }}
+                  key: host
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pgvector.fullname" . }}
+                  key: port
+          volumeMounts:
+            - name: initdb-volume
+              mountPath: /scripts
+      volumes:
+        - name: initdb-volume
+          configMap:
+            name: {{ include "pgvector.fullname" . }}-initsql
+{{- end }}

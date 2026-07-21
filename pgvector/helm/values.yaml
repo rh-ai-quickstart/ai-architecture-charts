@@ -92,3 +92,14 @@ secret:
 extraDatabases: []
   #- name: test_db
   #  vectordb: false
+
+# External database configuration
+# When enabled, the chart will NOT deploy a PostgreSQL instance.
+# Instead, it will create a Secret pointing to the external database.
+externalDatabase:
+  enabled: false
+  host: ""
+  port: "5432"
+  user: ""
+  password: ""
+  dbname: ""

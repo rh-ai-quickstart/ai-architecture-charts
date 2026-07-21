@@ -1,3 +1,4 @@
+{{- if not .Values.externalDatabase.enabled }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -91,3 +92,4 @@ spec:
         - name: initdb-volume
           configMap:
             name: {{ include "pgvector.fullname" . }}-initsql
+{{- end }}
