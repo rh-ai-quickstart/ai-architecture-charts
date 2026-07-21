@@ -6,6 +6,9 @@ metadata:
   namespace: {{ include "pgvector.namespace" . }}
   labels:
     {{- include "pgvector.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   backoffLimit: 5
   template:
