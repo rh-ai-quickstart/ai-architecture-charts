@@ -8,7 +8,7 @@ metadata:
 data:
   init-db.sh: |
     #!/bin/bash
-    set -e
+    set -eo pipefail
 
     PGHOST="${PGHOST:-127.0.0.1}"
     PGPORT="${PGPORT:-${POSTGRES_PORT}}"
