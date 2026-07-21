@@ -10,33 +10,38 @@ data:
     #!/bin/bash
     set -eo pipefail
 
-    PGHOST="${PGHOST:-127.0.0.1}"
-    PGPORT="${PGPORT:-${POSTGRES_PORT}}"
-
-    DB_EXISTS=$(psql -U "$POSTGRES_USER" -h "$PGHOST" -p "$PGPORT" -tc \
-      "SELECT 1 FROM pg_database WHERE datname = '$POSTGRES_DBNAME'" | tr -d '[:space:]')
-    if [ "$DB_EXISTS" != "1" ]; then
-      psql -U "$POSTGRES_USER" -h "$PGHOST" -p "$PGPORT" -c "CREATE DATABASE $POSTGRES_DBNAME;"
+    # When PGHOST is set (external mode via Job), use TCP with -h/-p flags.
+    # When unset (default StatefulSet mode), omit them so psql uses Unix sockets,
+    # which is required during PostgreSQL's initdb phase (listen_addresses='').
+    CONN_ARGS="-U $POSTGRES_USER"
+    if [ -n "$PGHOST" ]; then
+      CONN_ARGS="$CONN_ARGS -h $PGHOST -p $PGPORT"
     fi
 
-    EXT_EXISTS=$(psql -U "$POSTGRES_USER" -h "$PGHOST" -p "$PGPORT" -d "$POSTGRES_DBNAME" -tc \
+    DB_EXISTS=$(psql $CONN_ARGS -tc \
+      "SELECT 1 FROM pg_database WHERE datname = '$POSTGRES_DBNAME'" | tr -d '[:space:]')
+    if [ "$DB_EXISTS" != "1" ]; then
+      psql $CONN_ARGS -c "CREATE DATABASE $POSTGRES_DBNAME;"
+    fi
+
+    EXT_EXISTS=$(psql $CONN_ARGS -d "$POSTGRES_DBNAME" -tc \
       "SELECT 1 FROM pg_extension WHERE extname = 'vector'" | tr -d '[:space:]')
     if [ "$EXT_EXISTS" != "1" ]; then
-      psql -U "$POSTGRES_USER" -h "$PGHOST" -p "$PGPORT" -d "$POSTGRES_DBNAME" -c "CREATE EXTENSION VECTOR;"
+      psql $CONN_ARGS -d "$POSTGRES_DBNAME" -c "CREATE EXTENSION VECTOR;"
     fi
   {{- range .Values.extraDatabases }}
 
-    DB_EXISTS=$(psql -U "$POSTGRES_USER" -h "$PGHOST" -p "$PGPORT" -tc \
+    DB_EXISTS=$(psql $CONN_ARGS -tc \
       "SELECT 1 FROM pg_database WHERE datname = '{{ .name }}'" | tr -d '[:space:]')
     if [ "$DB_EXISTS" != "1" ]; then
-      psql -U "$POSTGRES_USER" -h "$PGHOST" -p "$PGPORT" -c "CREATE DATABASE {{ .name }};"
+      psql $CONN_ARGS -c "CREATE DATABASE {{ .name }};"
     fi
     {{- if .vectordb }}
 
-    EXT_EXISTS=$(psql -U "$POSTGRES_USER" -h "$PGHOST" -p "$PGPORT" -d "{{ .name }}" -tc \
+    EXT_EXISTS=$(psql $CONN_ARGS -d "{{ .name }}" -tc \
       "SELECT 1 FROM pg_extension WHERE extname = 'vector'" | tr -d '[:space:]')
     if [ "$EXT_EXISTS" != "1" ]; then
-      psql -U "$POSTGRES_USER" -h "$PGHOST" -p "$PGPORT" -d "{{ .name }}" -c "CREATE EXTENSION VECTOR;"
+      psql $CONN_ARGS -d "{{ .name }}" -c "CREATE EXTENSION VECTOR;"
     fi
     {{- end }}
   {{- end }}
