@@ -1,0 +1,38 @@
+{{- if and .Values.customEndpoints.enabled .Values.customEndpoints.endpoints }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gen-ai-aa-custom-model-endpoints
+  namespace: {{ .Values.customEndpoints.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "playground.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    providers:
+      inference:
+      {{- range $i, $ep := .Values.customEndpoints.endpoints }}
+      - provider_id: endpoint-{{ add $i 1 }}
+        provider_type: {{ $ep.providerType | default "remote::openai" }}
+        config:
+          base_url: {{ $ep.url }}
+          allowed_models:
+          - {{ $ep.modelId }}
+          custom_gen_ai:
+            api_key:
+              secretRef:
+                name: endpoint-api-key-{{ add $i 1 }}
+                key: api_key
+      {{- end }}
+    registered_resources:
+      models:
+      {{- range $i, $ep := .Values.customEndpoints.endpoints }}
+      - provider_id: endpoint-{{ add $i 1 }}
+        model_id: {{ $ep.modelId }}
+        model_type: {{ $ep.modelType | default "llm" }}
+        metadata:
+          display_name: {{ $ep.displayName }}
+          {{- if $ep.embeddingDimension }}
+          embedding_dimension: {{ $ep.embeddingDimension }}
+          {{- end }}
+      {{- end }}
+{{- end }}
