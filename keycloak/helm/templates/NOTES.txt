@@ -1,0 +1,29 @@
+Keycloak has been installed.
+
+{{- if and .Values.route.enabled (.Capabilities.APIVersions.Has "route.openshift.io/v1") }}
+
+Get the Keycloak URL:
+  export KC_HOST=$(oc get route {{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}')
+  echo "https://${KC_HOST}"
+
+Admin console:
+  https://${KC_HOST}/admin
+
+{{- else if .Values.ingress.enabled }}
+
+Get the Keycloak URL from your Ingress:
+  kubectl get ingress {{ include "keycloak.fullname" . }} -n {{ .Release.Namespace }}
+
+{{- else }}
+
+Access Keycloak via port-forward:
+  kubectl port-forward svc/{{ include "keycloak.fullname" . }} 8080:8080 -n {{ .Release.Namespace }}
+  echo "http://localhost:8080"
+
+{{- end }}
+
+IMPORTANT: For OIDC to work correctly, set config.hostname to the full
+external URL (including https://):
+
+  helm upgrade {{ .Release.Name }} ./keycloak/helm \
+    --set config.hostname=https://<your-keycloak-host>

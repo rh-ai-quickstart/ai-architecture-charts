@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "keycloak.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "keycloak.selectorLabels" . | nindent 6 }}
@@ -22,6 +24,10 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -37,28 +43,40 @@ spec:
           # This adds ~30s to first startup but is more reliable
         env:
         # Database configuration
-        # All database credentials and connection details come from pgvector.secret
-        # For pgvector subchart: use default pgvector.secret.host = "pgvector"
-        # For external database: set pgvector.secret.host to external database hostname
+        # All database credentials are read from the pgvector Secret.
+        # The pgvector subchart populates the Secret from either secret.*
+        # or externalDatabase.* values depending on the mode.
         - name: KC_DB
-          value: {{ .Values.database.vendor }}
+          value: {{ .Values.database.vendor | quote }}
         - name: KC_DB_URL_HOST
-          value: {{ .Values.pgvector.secret.host | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.pgvector.fullnameOverride | default "pgvector" }}
+              key: host
         - name: KC_DB_URL_PORT
-          value: {{ .Values.pgvector.secret.port | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.pgvector.fullnameOverride | default "pgvector" }}
+              key: port
         - name: KC_DB_URL_DATABASE
-          value: {{ .Values.pgvector.secret.dbname }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.pgvector.fullnameOverride | default "pgvector" }}
+              key: dbname
         - name: KC_DB_USERNAME
-          value: {{ .Values.pgvector.secret.user }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.pgvector.fullnameOverride | default "pgvector" }}
+              key: user
         - name: KC_DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: pgvector
+              name: {{ .Values.pgvector.fullnameOverride | default "pgvector" }}
               key: password
         
         # Admin credentials
         - name: KEYCLOAK_ADMIN
-          value: {{ .Values.admin.username }}
+          value: {{ .Values.admin.username | quote }}
         - name: KEYCLOAK_ADMIN_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -66,11 +84,9 @@ spec:
               key: {{ .Values.admin.existingSecretKey }}
         
         # Proxy configuration
-        - name: KC_PROXY
-          value: {{ .Values.config.proxy }}
         {{- if .Values.config.proxyHeaders }}
         - name: KC_PROXY_HEADERS
-          value: {{ .Values.config.proxyHeaders }}
+          value: {{ .Values.config.proxyHeaders | quote }}
         {{- end }}
         
         # Health and metrics
@@ -83,21 +99,21 @@ spec:
         - name: KC_HOSTNAME_STRICT
           value: {{ .Values.config.hostnameStrict | quote }}
         - name: KC_HOSTNAME_STRICT_HTTPS
-          value: "false"
+          value: {{ .Values.config.hostnameStrictHttps | quote }}
         - name: KC_HTTP_ENABLED
-          value: "true"
+          value: {{ .Values.config.httpEnabled | quote }}
         {{- if .Values.config.hostname }}
         - name: KC_HOSTNAME
-          value: {{ .Values.config.hostname }}
+          value: {{ .Values.config.hostname | quote }}
         {{- end }}
         
         # Logging
         - name: KC_LOG_LEVEL
-          value: {{ .Values.config.logLevel }}
+          value: {{ .Values.config.logLevel | quote }}
         
         {{- if .Values.config.features }}
         - name: KC_FEATURES
-          value: {{ .Values.config.features }}
+          value: {{ .Values.config.features | quote }}
         {{- end }}
         
         {{- with .Values.extraEnv }}
@@ -113,6 +129,9 @@ spec:
         - name: http
           containerPort: 8080
           protocol: TCP
+        - name: management
+          containerPort: 9000
+          protocol: TCP
         
         {{- if .Values.livenessProbe }}
         livenessProbe:
@@ -123,7 +142,12 @@ spec:
         readinessProbe:
           {{- toYaml .Values.readinessProbe | nindent 10 }}
         {{- end }}
-        
+
+        {{- if .Values.startupProbe }}
+        startupProbe:
+          {{- toYaml .Values.startupProbe | nindent 10 }}
+        {{- end }}
+
         {{- if .Values.resources }}
         resources:
           {{- toYaml .Values.resources | nindent 10 }}

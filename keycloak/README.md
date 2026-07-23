@@ -14,7 +14,7 @@ This Helm chart deploys Keycloak using the official Keycloak container images fr
 
 ## Prerequisites
 
-- Kubernetes 1.19+ or OpenShift 4.x
+- Kubernetes 1.23+ or OpenShift 4.10+
 - Helm 3.0+
 - **No external database required** - This chart includes a pgvector PostgreSQL subchart
 - For external database: PostgreSQL, MySQL, or MariaDB
@@ -41,12 +41,12 @@ helm install keycloak ./keycloak/helm \
 helm install keycloak ./keycloak/helm \
   --namespace keycloak \
   --set admin.password=changeme \
-  --set pgvector.enabled=false \
-  --set pgvector.secret.host=postgresql.default.svc.cluster.local \
-  --set pgvector.secret.port=5432 \
-  --set pgvector.secret.user=keycloak \
-  --set pgvector.secret.password=changeme \
-  --set pgvector.secret.dbname=keycloak
+  --set pgvector.externalDatabase.enabled=true \
+  --set pgvector.externalDatabase.host=postgresql.default.svc.cluster.local \
+  --set pgvector.externalDatabase.port=5432 \
+  --set pgvector.externalDatabase.user=keycloak \
+  --set pgvector.externalDatabase.password=changeme \
+  --set pgvector.externalDatabase.dbname=keycloak
 ```
 
 ### As Subchart (Used in other projects)
@@ -85,8 +85,8 @@ pgvector:
 
 # For external database:
 pgvector:
-  enabled: false
-  secret:
+  externalDatabase:
+    enabled: true
     host: "postgresql.default.svc.cluster.local"
     port: "5432"
     user: "keycloak"
@@ -112,8 +112,8 @@ pgvector:
 | `pgvector.secret.user` | Database username | `keycloak` |
 | `pgvector.secret.password` | Database password | `""` (required) |
 | `pgvector.secret.dbname` | Database name | `keycloak` |
-| `config.proxy` | Proxy mode | `edge` |
-| `config.production` | Production mode | `true` |
+| `config.hostname` | External URL (include `https://`) | `""` |
+| `config.proxyHeaders` | Proxy header mode | `xforwarded` |
 | `route.enabled` | Enable OpenShift Route | `true` |
 | `ingress.enabled` | Enable Kubernetes Ingress | `false` |
 
@@ -128,12 +128,11 @@ admin:
   existingSecret: "keycloak-admin-secret"
   existingSecretKey: "password"
 
-# Database credentials are always managed via pgvector.secret
-# For external database, set pgvector.secret.host and disable pgvector.enabled
+# For external database, use pgvector.externalDatabase
 pgvector:
-  enabled: false  # Set to false for external database
-  secret:
-    host: "postgresql.example.com"  # External database hostname
+  externalDatabase:
+    enabled: true
+    host: "postgresql.example.com"
     port: "5432"
     user: "keycloak"
     password: "your-db-password"  # Set via --set flag
@@ -147,8 +146,9 @@ kubectl create secret generic keycloak-admin-secret \
 
 # Install chart (database credentials via --set)
 helm install keycloak ./keycloak/helm \
-  --set pgvector.secret.host='postgresql.example.com' \
-  --set pgvector.secret.password='your-db-password'
+  --set pgvector.externalDatabase.enabled=true \
+  --set pgvector.externalDatabase.host='postgresql.example.com' \
+  --set pgvector.externalDatabase.password='your-db-password'
 ```
 
 ### OpenShift with Custom Route
@@ -186,6 +186,13 @@ ingress:
 
 ### High Availability Setup
 
+> **Important:** Multi-replica deployments require Infinispan cache discovery
+> configuration so that Keycloak pods can form a cluster. Without it, each
+> replica runs an isolated cache and users will experience session
+> inconsistency (e.g., authenticated on pod A but getting a 401 on pod B).
+> The example below uses DNS_PING discovery via a headless Service that you
+> must create separately.
+
 ```yaml
 replicas: 3
 
@@ -206,6 +213,13 @@ autoscaling:
 podDisruptionBudget:
   enabled: true
   minAvailable: 2
+
+# Required for clustering — configure Infinispan discovery
+extraEnv:
+  - name: KC_CACHE_STACK
+    value: "kubernetes"
+  - name: JAVA_OPTS_APPEND
+    value: "-Djgroups.dns.query=keycloak-headless"
 ```
 
 ### Custom Features
@@ -247,21 +261,21 @@ pgvector:
 
 ### External Database (Optional)
 
-If you prefer to use an external database, disable pgvector and configure all connection details via `pgvector.secret`:
+If you prefer to use an existing PostgreSQL instance, enable `externalDatabase`. The pgvector subchart will skip the StatefulSet and Service, and create only a Secret and init Job pointing to the external database.
 
 **Configuration:**
 ```yaml
 pgvector:
-  enabled: false  # Disable built-in database
-  secret:
-    host: postgresql.example.com  # External database hostname
+  externalDatabase:
+    enabled: true
+    host: postgresql.example.com
     port: "5432"
     user: keycloak
-    password: your-password  # Set via --set flag or values file
+    password: your-password  # Set via --set flag
     dbname: keycloak
 ```
 
-**Note:** All database connection details (host, port, user, password, dbname) are configured via `pgvector.secret` for consistency.
+**Note:** When `externalDatabase` is enabled, the `pgvector.secret.*` fields are ignored.
 
 **PostgreSQL Setup Example:**
 
@@ -312,25 +326,20 @@ helm uninstall keycloak --namespace keycloak
 
 **Cause:** Keycloak doesn't know its external hostname.
 
-**Solution:** Set the `KEYCLOAK_URL` in your `.env.production` file to the external URL:
+**Solution:** Set `config.hostname` to the full external URL (including `https://`):
 
 ```bash
-# For OpenShift
-KEYCLOAK_URL=https://keycloak-spending-transaction-monitor.apps.example.com
-
-# For local development
-KEYCLOAK_URL=http://localhost:8080
+helm upgrade keycloak ./keycloak/helm \
+  --set config.hostname=https://keycloak-myapp.apps.example.com
 ```
-
-The Makefile automatically extracts the hostname and sets `keycloak.config.hostname`.
 
 **Verify the fix:**
 ```bash
 # Check if KC_HOSTNAME is set in the deployment
-oc get deployment spending-monitor-keycloak -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="KC_HOSTNAME")].value}'
+oc get deployment keycloak -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="KC_HOSTNAME")].value}'
 
 # Test the OpenID configuration
-curl https://your-keycloak-url/realms/spending-monitor/.well-known/openid-configuration | jq .issuer
+curl https://your-keycloak-url/realms/your-realm/.well-known/openid-configuration | jq .issuer
 ```
 
 ### Pod Fails to Start
@@ -384,7 +393,6 @@ Keycloak provides health endpoints:
 - [ ] Use strong database password
 - [ ] Store passwords in Kubernetes Secrets
 - [ ] Enable TLS (via Route/Ingress)
-- [ ] Set `config.production: true`
 - [ ] Configure proper resource limits
 - [ ] Enable Pod Security Policies
 - [ ] Regular backups of database
@@ -424,9 +432,11 @@ helm template keycloak ./keycloak/helm \
 # Render templates (with external database)
 helm template keycloak ./keycloak/helm \
   --set admin.password=test \
-  --set pgvector.enabled=false \
-  --set pgvector.secret.host=postgresql \
-  --set pgvector.secret.password=test
+  --set pgvector.externalDatabase.enabled=true \
+  --set pgvector.externalDatabase.host=postgresql \
+  --set pgvector.externalDatabase.user=keycloak \
+  --set pgvector.externalDatabase.password=test \
+  --set pgvector.externalDatabase.dbname=keycloak
 
 # Dry run
 helm install keycloak ./keycloak/helm \
@@ -450,7 +460,7 @@ helm package ./keycloak/helm
 
 ## License
 
-This chart is provided as-is for use with the Spending Transaction Monitor application.
+This chart is provided as-is.
 
 ## Support
 

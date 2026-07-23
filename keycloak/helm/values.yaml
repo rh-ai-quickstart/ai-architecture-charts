@@ -16,6 +16,8 @@ image:
   tag: "26.0.7"  # Official Keycloak version
   pullPolicy: IfNotPresent
 
+imagePullSecrets: []
+
 # Admin user configuration
 admin:
   username: admin
@@ -36,34 +38,41 @@ database:
 pgvector:
   enabled: true  # Enable pgvector subchart
   secret:
-    host: pgvector  # Database host (for external DB, set to external hostname)
-    port: "5432"  # Database port
-    user: keycloak  # Database user for Keycloak
-    password: keycloak  # Database password (change for production!)
-    dbname: keycloak  # Database name for Keycloak
+    host: pgvector
+    port: "5432"
+    user: keycloak
+    password: ""
+    dbname: keycloak
+  # To use an existing PostgreSQL instance instead of deploying one,
+  # enable externalDatabase and provide the connection details.
+  # When enabled, the pgvector subchart skips the StatefulSet and Service,
+  # and creates only a Secret and init Job pointing to the external database.
+  # The secret.* fields above are ignored when externalDatabase is enabled.
+  # externalDatabase:
+  #   enabled: true
+  #   host: my-external-pg.example.com
+  #   port: "5432"
+  #   user: admin
+  #   password: ""
+  #   dbname: keycloak
 # Keycloak configuration options
 config:
-  # Proxy mode for reverse proxies/load balancers
-  # Options: edge, reencrypt, passthrough, none
-  proxy: edge
+  # Proxy headers for reverse proxies/load balancers
   proxyHeaders: xforwarded
-  
-  # Production mode (for future use - not currently used for --optimized flag)
-  # Note: Keycloak auto-builds configuration on startup for reliability
-  production: true
   
   # Health and metrics
   healthEnabled: true
   metricsEnabled: true
   
   # Hostname configuration
-  # hostname: The external hostname where Keycloak is accessible
+  # hostname: The external URL where Keycloak is accessible
   # - This is used in OpenID configuration URLs (issuer, token endpoints, etc.)
-  # - Should be set to the OpenShift Route hostname or external URL
-  # - Automatically populated from KEYCLOAK_URL via Makefile
-  # - Format: hostname only (no protocol), e.g., "keycloak.apps.example.com"
+  # - Must include the https:// scheme so OIDC metadata returns correct URLs
+  # - Format: full URL, e.g., "https://keycloak.apps.example.com"
   hostnameStrict: false
-  hostname: ""  # Automatically set from KEYCLOAK_URL in Makefile
+  hostnameStrictHttps: false
+  httpEnabled: true
+  hostname: ""
   
   # Logging
   logLevel: INFO  # Options: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN
@@ -120,7 +129,7 @@ livenessProbe:
   httpGet:
     path: /health/live
     port: 9000
-  initialDelaySeconds: 120
+  initialDelaySeconds: 15
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 6
@@ -130,11 +139,20 @@ readinessProbe:
   httpGet:
     path: /health/ready
     port: 9000
-  initialDelaySeconds: 60
+  initialDelaySeconds: 15
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 6
   successThreshold: 1
+
+startupProbe:
+  httpGet:
+    path: /health/started
+    port: 9000
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 30
 
 # Security context for the pod
 podSecurityContext: {}

@@ -70,14 +70,4 @@ Get the admin password secret name
 {{- end }}
 {{- end }}
 
-{{/*
-Get the database password secret name
-*/}}
-{{- define "keycloak.databaseSecretName" -}}
-{{- if .Values.database.existingSecret }}
-{{- .Values.database.existingSecret }}
-{{- else }}
-{{- include "keycloak.fullname" . }}-database
-{{- end }}
-{{- end }}
 
