@@ -2,5 +2,5 @@ apiVersion: v2
 name: playground
 description: RHOAI Gen AI Studio Playground quickstart — registers hub-deployed MCP servers and vector stores with the Playground UI.
 type: application
-version: 0.0.1
+version: 0.0.2
 appVersion: "3.4"
