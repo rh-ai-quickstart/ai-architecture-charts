@@ -1,0 +1,237 @@
+# Default values for Keycloak Helm chart
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+# Replica configuration
+replicas: 1
+
+# Image configuration - Official Keycloak image
+image:
+  registry: quay.io
+  repository: keycloak/keycloak
+  tag: "26.0.7"  # Official Keycloak version
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# Admin user configuration
+admin:
+  username: admin
+  # Password should be provided via:
+  # 1. Existing secret (recommended for production)
+  # 2. Set via --set admin.password=xxx (for development)
+  password: ""
+  existingSecret: ""  # Name of existing secret containing admin password
+  existingSecretKey: "admin-password"  # Key in the secret
+
+# Database configuration
+database:
+  vendor: postgres  # Database type: postgres, mysql, mariadb, etc.
+  secretName: ""  # Override the pgvector Secret name; leave empty to auto-detect
+
+# pgvector PostgreSQL subchart configuration
+# This deploys a dedicated PostgreSQL instance for Keycloak
+# All database connection details (host, port, user, password, dbname) are configured here
+pgvector:
+  enabled: true  # Enable pgvector subchart
+  secret:
+    host: pgvector
+    port: "5432"
+    user: keycloak
+    password: ""
+    dbname: keycloak
+  # To use an existing PostgreSQL instance instead of deploying one,
+  # enable externalDatabase and provide the connection details.
+  # When enabled, the pgvector subchart skips the StatefulSet and Service,
+  # and creates only a Secret and init Job pointing to the external database.
+  # The secret.* fields above are ignored when externalDatabase is enabled.
+  # externalDatabase:
+  #   enabled: true
+  #   host: my-external-pg.example.com
+  #   port: "5432"
+  #   user: admin
+  #   password: ""
+  #   dbname: keycloak
+# Keycloak configuration options
+config:
+  # Proxy headers for reverse proxies/load balancers
+  proxyHeaders: xforwarded
+  
+  # Health and metrics
+  healthEnabled: true
+  metricsEnabled: true
+  
+  # Hostname configuration
+  # hostname: The external URL where Keycloak is accessible
+  # - This is used in OpenID configuration URLs (issuer, token endpoints, etc.)
+  # - Must include the https:// scheme so OIDC metadata returns correct URLs
+  # - Format: full URL, e.g., "https://keycloak.apps.example.com"
+  hostnameStrict: false
+  hostnameStrictHttps: false
+  httpEnabled: true
+  hostname: ""
+  
+  # Logging
+  logLevel: INFO  # Options: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN
+  
+  # Features (comma-separated list)
+  # features: "token-exchange,admin-fine-grained-authz"
+  features: ""
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+
+# OpenShift Route configuration
+route:
+  enabled: true
+  host: ""  # Leave empty for auto-generated hostname
+  path: ""
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  annotations: {}
+
+# Kubernetes Ingress configuration (alternative to OpenShift Route)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: keycloak.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: keycloak-tls
+  #    hosts:
+  #      - keycloak.example.com
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Health probes
+# Note: Keycloak 26.x exposes health endpoints on management port 9000
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 9000
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 9000
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+
+startupProbe:
+  httpGet:
+    path: /health/started
+    port: 9000
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 30
+
+# Security context for the pod
+podSecurityContext: {}
+  # fsGroup: 1000
+  # runAsUser: 1000
+  # runAsNonRoot: true
+
+# Security context for the container
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+# Service account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Extra environment variables
+extraEnv: []
+  # - name: KC_FEATURES
+  #   value: "token-exchange"
+  # - name: CUSTOM_VAR
+  #   value: "custom-value"
+
+# Extra environment variables from secrets/configmaps
+extraEnvFrom: []
+  # - secretRef:
+  #     name: keycloak-extra-secrets
+  # - configMapRef:
+  #     name: keycloak-extra-config
+
+# Extra volumes
+extraVolumes: []
+  # - name: custom-theme
+  #   configMap:
+  #     name: keycloak-theme
+
+# Extra volume mounts
+extraVolumeMounts: []
+  # - name: custom-theme
+  #   mountPath: /opt/keycloak/themes/custom
+  #   readOnly: true
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Priority class
+priorityClassName: ""
+

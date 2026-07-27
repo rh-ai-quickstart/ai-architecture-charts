@@ -1,0 +1,189 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "keycloak.fullname" . }}
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "keycloak.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "keycloak.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "keycloak.serviceAccountName" . }}
+      containers:
+      - name: keycloak
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+          - start
+          # Note: Not using --optimized flag to allow auto-build on startup
+          # This adds ~30s to first startup but is more reliable
+        env:
+        # Database configuration
+        # All database credentials are read from the pgvector Secret.
+        # The pgvector subchart populates the Secret from either secret.*
+        # or externalDatabase.* values depending on the mode.
+        - name: KC_DB
+          value: {{ .Values.database.vendor | quote }}
+        - name: KC_DB_URL_HOST
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.dbSecretName" . }}
+              key: host
+        - name: KC_DB_URL_PORT
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.dbSecretName" . }}
+              key: port
+        - name: KC_DB_URL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.dbSecretName" . }}
+              key: dbname
+        - name: KC_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.dbSecretName" . }}
+              key: user
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.dbSecretName" . }}
+              key: password
+        
+        # Admin credentials
+        - name: KEYCLOAK_ADMIN
+          value: {{ .Values.admin.username | quote }}
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "keycloak.adminSecretName" . }}
+              key: {{ .Values.admin.existingSecretKey }}
+        
+        # Proxy configuration
+        {{- if .Values.config.proxyHeaders }}
+        - name: KC_PROXY_HEADERS
+          value: {{ .Values.config.proxyHeaders | quote }}
+        {{- end }}
+        
+        # Health and metrics
+        - name: KC_HEALTH_ENABLED
+          value: {{ .Values.config.healthEnabled | quote }}
+        - name: KC_METRICS_ENABLED
+          value: {{ .Values.config.metricsEnabled | quote }}
+        
+        # Hostname configuration
+        - name: KC_HOSTNAME_STRICT
+          value: {{ .Values.config.hostnameStrict | quote }}
+        - name: KC_HOSTNAME_STRICT_HTTPS
+          value: {{ .Values.config.hostnameStrictHttps | quote }}
+        - name: KC_HTTP_ENABLED
+          value: {{ .Values.config.httpEnabled | quote }}
+        {{- if .Values.config.hostname }}
+        - name: KC_HOSTNAME
+          value: {{ .Values.config.hostname | quote }}
+        {{- end }}
+        
+        # Logging
+        - name: KC_LOG_LEVEL
+          value: {{ .Values.config.logLevel | quote }}
+        
+        {{- if .Values.config.features }}
+        - name: KC_FEATURES
+          value: {{ .Values.config.features | quote }}
+        {{- end }}
+        
+        {{- with .Values.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        
+        {{- with .Values.extraEnvFrom }}
+        envFrom:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: management
+          containerPort: 9000
+          protocol: TCP
+        
+        {{- if .Values.livenessProbe }}
+        livenessProbe:
+          {{- toYaml .Values.livenessProbe | nindent 10 }}
+        {{- end }}
+        
+        {{- if .Values.readinessProbe }}
+        readinessProbe:
+          {{- toYaml .Values.readinessProbe | nindent 10 }}
+        {{- end }}
+
+        {{- if .Values.startupProbe }}
+        startupProbe:
+          {{- toYaml .Values.startupProbe | nindent 10 }}
+        {{- end }}
+
+        {{- if .Values.resources }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        {{- end }}
+        
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        
+        {{- with .Values.extraVolumeMounts }}
+        volumeMounts:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      
+      {{- with .Values.extraVolumes }}
+      volumes:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+
