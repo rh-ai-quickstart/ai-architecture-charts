@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: gen-ai-aa-mcp-servers
+  name: gen-ai-aa-mcp-servers-{{ .Release.Namespace }}
   namespace: {{ .Values.mcpServers.namespace | default "redhat-ods-applications" }}
   labels:
     {{- include "playground.labels" . | nindent 4 }}
