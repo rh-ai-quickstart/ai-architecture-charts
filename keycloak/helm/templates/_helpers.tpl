@@ -60,6 +60,25 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
+Get the pgvector database Secret name.
+Mirrors the pgvector subchart's fullname logic so the two always agree.
+*/}}
+{{- define "keycloak.dbSecretName" -}}
+{{- if .Values.database.secretName -}}
+  {{- .Values.database.secretName -}}
+{{- else if .Values.pgvector.fullnameOverride -}}
+  {{- .Values.pgvector.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+  {{- $name := default "pgvector" .Values.pgvector.nameOverride -}}
+  {{- if contains $name .Release.Name -}}
+    {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+  {{- else -}}
+    {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
+  {{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Get the admin password secret name
 */}}
 {{- define "keycloak.adminSecretName" -}}

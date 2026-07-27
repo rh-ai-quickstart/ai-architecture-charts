@@ -31,6 +31,7 @@ admin:
 # Database configuration
 database:
   vendor: postgres  # Database type: postgres, mysql, mariadb, etc.
+  secretName: ""  # Override the pgvector Secret name; leave empty to auto-detect
 
 # pgvector PostgreSQL subchart configuration
 # This deploys a dedicated PostgreSQL instance for Keycloak

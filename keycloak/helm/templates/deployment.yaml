@@ -51,27 +51,27 @@ spec:
         - name: KC_DB_URL_HOST
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.pgvector.fullnameOverride | default "pgvector" }}
+              name: {{ include "keycloak.dbSecretName" . }}
               key: host
         - name: KC_DB_URL_PORT
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.pgvector.fullnameOverride | default "pgvector" }}
+              name: {{ include "keycloak.dbSecretName" . }}
               key: port
         - name: KC_DB_URL_DATABASE
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.pgvector.fullnameOverride | default "pgvector" }}
+              name: {{ include "keycloak.dbSecretName" . }}
               key: dbname
         - name: KC_DB_USERNAME
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.pgvector.fullnameOverride | default "pgvector" }}
+              name: {{ include "keycloak.dbSecretName" . }}
               key: user
         - name: KC_DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.pgvector.fullnameOverride | default "pgvector" }}
+              name: {{ include "keycloak.dbSecretName" . }}
               key: password
         
         # Admin credentials
