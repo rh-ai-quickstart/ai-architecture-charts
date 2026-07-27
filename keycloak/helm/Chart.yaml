@@ -3,8 +3,8 @@ name: keycloak
 description: Official Keycloak Helm chart for identity and access management
 type: application
 kubeVersion: ">=1.23.0-0"
-version: 1.0.0
-appVersion: "26.0.7"
+version: 1.0.1
+appVersion: "1.0.1"
 dependencies:
   - name: pgvector
     version: 0.5.8
