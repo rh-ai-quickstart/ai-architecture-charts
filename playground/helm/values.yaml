@@ -33,7 +33,7 @@ notebookController:
   enabled: false
 
 # ── MCP Server Registration ──────────────────────────────────────
-# Creates a ConfigMap (gen-ai-aa-mcp-servers) in redhat-ods-applications
+# Creates a ConfigMap (gen-ai-aa-mcp-servers-<namespace>) in redhat-ods-applications
 # that registers existing MCP server endpoints with the Playground UI.
 # Each entry becomes a data key in the ConfigMap (name → JSON value).
 # No new deployments are created — this points to already-deployed services.
