@@ -117,8 +117,7 @@ def store_documents(
     import os
     import time
     from pathlib import Path
-
-    from ingestion_pipeline.lib.client import get_client
+    from ingestion_pipeline.client import get_client
 
     vector_store_name = os.getenv("VECTOR_STORE_NAME")
 
