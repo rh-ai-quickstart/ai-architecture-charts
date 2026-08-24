@@ -58,7 +58,62 @@ def fetch_from_s3(output_dir: Output[Dataset]):
 
 @dsl.component(base_image=BASE_IMAGE)
 def fetch_from_urls(output_dir: Output[Dataset]):
-    print(f"Storing documents will fetch from URLS env var")
+    import ast
+    import os
+    from pathlib import Path
+    from urllib.parse import urlparse
+
+    import requests
+
+    # Create output directory
+    os.makedirs(output_dir.path, exist_ok=True)
+
+    # Get URLs from environment variable
+    urls_str = os.getenv("URLS", "[]")
+    urls = ast.literal_eval(urls_str)
+
+    if not urls:
+        raise RuntimeError("No URLs provided in URLS environment variable")
+
+    print(f"Downloading {len(urls)} files from URLs")
+    downloaded_files = []
+
+    for url in urls:
+        # Extract filename from URL
+        parsed_url = urlparse(url)
+        filename = os.path.basename(parsed_url.path)
+        if not filename:
+            filename = "downloaded_file"
+
+        file_path = os.path.join(output_dir.path, filename)
+
+        print(f"Downloading: {url} -> {file_path}")
+        try:
+            # Add browser-like headers to avoid 403 Forbidden errors
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+            }
+            response = requests.get(url, stream=True, timeout=60, headers=headers)
+            response.raise_for_status()
+
+            with open(file_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+
+            downloaded_files.append(file_path)
+            print(f"Successfully downloaded: {filename} ({os.path.getsize(file_path)} bytes)")
+        except Exception as e:
+            print(f"Error downloading {url}: {e}")
+            raise RuntimeError(f"Failed to download {url}: {e}")
+
+    print(f"Successfully downloaded {len(downloaded_files)} files to {output_dir.path}")
+    print(f"Files: {[os.path.basename(f) for f in downloaded_files]}")
 
 
 @dsl.component(base_image=BASE_IMAGE)
@@ -121,14 +176,11 @@ def store_documents(
 
     vector_store_name = os.getenv("VECTOR_STORE_NAME")
 
-    # Collect input files
-    input_files = []
-    if os.getenv("URLS"):
-        input_files = ast.literal_eval(os.getenv("URLS", "[]"))
-    else:
-        input_files = [str(p) for p in Path(input_dir.path).iterdir() if p.is_file()]
+    # Collect input files from the input directory
+    # Files are downloaded/fetched by the fetch task (fetch_from_urls, fetch_from_s3, or fetch_from_github)
+    input_files = [str(p) for p in Path(input_dir.path).iterdir() if p.is_file()]
     if not input_files:
-        raise RuntimeError("No input files found")
+        raise RuntimeError("No input files found in input directory")
     print(f"Input files: {input_files}")
 
     # Set up LlamaStack client
