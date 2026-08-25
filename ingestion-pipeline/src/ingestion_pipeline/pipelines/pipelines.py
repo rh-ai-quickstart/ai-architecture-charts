@@ -83,6 +83,12 @@ def url_pipeline(pipeline_name: str, llamastack_base_url: str, auth_user: str, s
         _set_client_dependency_env(store_task)
         store_task.set_caching_options(False)
 
+        # Inject URLS env var into both fetch and store tasks
+        kubernetes.use_secret_as_env(
+            task=fetch_task,
+            secret_name=pipeline_name,
+            secret_key_to_env=secret_key_to_env
+        )
         kubernetes.use_secret_as_env(
             task=store_task,
             secret_name=pipeline_name,
