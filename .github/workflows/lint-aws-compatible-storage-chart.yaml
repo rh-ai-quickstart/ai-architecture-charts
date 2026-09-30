@@ -1,0 +1,35 @@
+name: Lint and Test AWS Compatible Storage Helm Chart
+
+on:
+  pull_request:
+    paths:
+      - 'aws-compatible-storage/helm/**'
+      - '.github/workflows/lint-aws-compatible-storage-chart.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'aws-compatible-storage/helm/**'
+      - '.github/workflows/lint-aws-compatible-storage-chart.yaml'
+
+jobs:
+  lint-and-test-helm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          # Pin Helm 3: azure/setup-helm@v4 defaults to latest (Helm 4), which
+          # requires plugin provenance verification unsupported by GitHub installs.
+          version: v3.14.0
+
+      - name: Lint Helm Chart
+        run: helm lint aws-compatible-storage/helm
+
+      - name: Install helm-unittest plugin
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.0.3
+
+      - name: Run helm unittest
+        run: helm unittest aws-compatible-storage/helm

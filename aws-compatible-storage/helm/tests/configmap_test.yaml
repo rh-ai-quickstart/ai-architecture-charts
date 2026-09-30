@@ -1,0 +1,29 @@
+suite: aws-compatible-storage configmap
+values:
+  - values/auth.yaml
+templates:
+  - templates/configmap.yaml
+tests:
+  - it: sets internal S3 endpoint and region
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.AWS_S3_ENDPOINT
+          value: http://localhost:7480
+      - equal:
+          path: data.AWS_DEFAULT_REGION
+          value: us-east-1
+      - equal:
+          path: data.PORT
+          value: "5000"
+
+  - it: names ConfigMap with fullnameOverride for parent wiring
+    set:
+      fullnameOverride: aws-compatible-storage
+    asserts:
+      - equal:
+          path: metadata.name
+          value: aws-compatible-storage-config

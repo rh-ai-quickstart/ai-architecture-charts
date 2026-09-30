@@ -1,0 +1,41 @@
+{{- if .Values.ingress.s3Api.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "aws-compatible-storage.fullname" . }}-api
+  labels:
+    {{- include "aws-compatible-storage.labels" . | nindent 4 }}
+  {{- with .Values.ingress.s3Api.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.s3Api.className }}
+  ingressClassName: {{ .Values.ingress.s3Api.className }}
+  {{- end }}
+  {{- if .Values.ingress.s3Api.tls }}
+  tls:
+    {{- range .Values.ingress.s3Api.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.s3Api.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "aws-compatible-storage.fullname" $ }}
+                port:
+                  number: {{ $.Values.service.s3Port }}
+          {{- end }}
+    {{- end }}
+{{- end }}
