@@ -2,9 +2,9 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: {{ include "object-storage.fullname" . }}
+  name: {{ include "aws-compatible-storage.fullname" . }}
   labels:
-    {{- include "object-storage.labels" . | nindent 4 }}
+    {{- include "aws-compatible-storage.labels" . | nindent 4 }}
   {{- with .Values.route.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -20,7 +20,7 @@ spec:
     targetPort: web-ui
   to:
     kind: Service
-    name: {{ include "object-storage.fullname" . }}
+    name: {{ include "aws-compatible-storage.fullname" . }}
     weight: 100
   wildcardPolicy: None
   tls:

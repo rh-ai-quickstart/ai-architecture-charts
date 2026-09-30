@@ -1,4 +1,4 @@
-suite: object-storage ingress
+suite: aws-compatible-storage ingress
 values:
   - values/auth.yaml
 tests:
@@ -15,7 +15,7 @@ tests:
     set:
       ingress.enabled: true
       ingress.hosts:
-        - host: object-storage.example.com
+        - host: aws-compatible-storage.example.com
           paths:
             - path: /
               pathType: Prefix
@@ -26,7 +26,7 @@ tests:
           of: Ingress
       - equal:
           path: spec.rules[0].host
-          value: object-storage.example.com
+          value: aws-compatible-storage.example.com
 
   - it: does not create S3 API Ingress by default
     templates:
@@ -41,7 +41,7 @@ tests:
     set:
       ingress.s3Api.enabled: true
       ingress.s3Api.hosts:
-        - host: s3.object-storage.example.com
+        - host: s3.aws-compatible-storage.example.com
           paths:
             - path: /
               pathType: Prefix
@@ -50,4 +50,4 @@ tests:
           count: 1
       - equal:
           path: spec.rules[0].host
-          value: s3.object-storage.example.com
+          value: s3.aws-compatible-storage.example.com

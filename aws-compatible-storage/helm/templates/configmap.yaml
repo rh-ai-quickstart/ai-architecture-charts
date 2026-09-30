@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "object-storage.configMapName" . }}
+  name: {{ include "aws-compatible-storage.configMapName" . }}
   labels:
-    {{- include "object-storage.labels" . | nindent 4 }}
-  {{- with (include "object-storage.annotations" .) }}
+    {{- include "aws-compatible-storage.labels" . | nindent 4 }}
+  {{- with (include "aws-compatible-storage.annotations" .) }}
   annotations:
     {{- . | nindent 4 }}
   {{- end }}

@@ -311,7 +311,7 @@ The chart `version` field determines the Helm package version, while `appVersion
 | llm-service | No | 0.1.0 | N/A |
 | pgvector | No | 0.1.0 | PostgreSQL/pgvector |
 | minio | No | 0.1.0 | MinIO server |
-| object-storage | No | 0.1.0 | S4 upstream image (`appVersion`) |
+| aws-compatible-storage | No | 0.1.0 | S4 upstream image (`appVersion`) |
 | oracle-db | Yes (via build.yaml) | 0.1.0 | Oracle Database |
 | configure-pipeline | No | 0.1.0 | Jupyter |
 

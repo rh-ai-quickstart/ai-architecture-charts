@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "object-storage.name" -}}
+{{- define "aws-compatible-storage.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "object-storage.fullname" -}}
+{{- define "aws-compatible-storage.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "object-storage.chart" -}}
+{{- define "aws-compatible-storage.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "object-storage.labels" -}}
-helm.sh/chart: {{ include "object-storage.chart" . }}
-{{ include "object-storage.selectorLabels" . }}
+{{- define "aws-compatible-storage.labels" -}}
+helm.sh/chart: {{ include "aws-compatible-storage.chart" . }}
+{{ include "aws-compatible-storage.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -49,18 +49,18 @@ app.kubernetes.io/component: storage
 {{/*
 Selector labels
 */}}
-{{- define "object-storage.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "object-storage.name" . }}
+{{- define "aws-compatible-storage.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "aws-compatible-storage.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-app: {{ include "object-storage.fullname" . }}
+app: {{ include "aws-compatible-storage.fullname" . }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "object-storage.serviceAccountName" -}}
+{{- define "aws-compatible-storage.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "object-storage.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "aws-compatible-storage.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -69,47 +69,47 @@ Create the name of the service account to use
 {{/*
 Create the name of the secret to use for S3 credentials
 */}}
-{{- define "object-storage.secretName" -}}
+{{- define "aws-compatible-storage.secretName" -}}
 {{- if .Values.s3.existingSecret }}
 {{- .Values.s3.existingSecret }}
 {{- else }}
-{{- include "object-storage.fullname" . }}-credentials
+{{- include "aws-compatible-storage.fullname" . }}-credentials
 {{- end }}
 {{- end }}
 
 {{/*
 Create the name of the configmap
 */}}
-{{- define "object-storage.configMapName" -}}
-{{- include "object-storage.fullname" . }}-config
+{{- define "aws-compatible-storage.configMapName" -}}
+{{- include "aws-compatible-storage.fullname" . }}-config
 {{- end }}
 
 {{/*
 Create the name of the data PVC
 */}}
-{{- define "object-storage.dataPvcName" -}}
+{{- define "aws-compatible-storage.dataPvcName" -}}
 {{- if .Values.storage.data.existingClaim }}
 {{- .Values.storage.data.existingClaim }}
 {{- else }}
-{{- include "object-storage.fullname" . }}-data
+{{- include "aws-compatible-storage.fullname" . }}-data
 {{- end }}
 {{- end }}
 
 {{/*
 Create the name of the local storage PVC
 */}}
-{{- define "object-storage.localStoragePvcName" -}}
+{{- define "aws-compatible-storage.localStoragePvcName" -}}
 {{- if .Values.storage.localStorage.existingClaim }}
 {{- .Values.storage.localStorage.existingClaim }}
 {{- else }}
-{{- include "object-storage.fullname" . }}-local-storage
+{{- include "aws-compatible-storage.fullname" . }}-local-storage
 {{- end }}
 {{- end }}
 
 {{/*
 Common annotations
 */}}
-{{- define "object-storage.annotations" -}}
+{{- define "aws-compatible-storage.annotations" -}}
 {{- with .Values.commonAnnotations }}
 {{ toYaml . }}
 {{- end }}

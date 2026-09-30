@@ -1,8 +1,8 @@
-# Object Storage Helm Chart
+# AWS Compatible Storage Helm Chart
 
 Generic S3-compatible object storage for AI/ML pipelines on OpenShift or Kubernetes. Currently backed by [S4 (Super Simple Storage Service)](https://github.com/rh-aiservices-bu/s4). Use it as an alternative to the MinIO chart; MinIO remains available unchanged.
 
-Layout matches other ai-architecture-charts components (`object-storage/helm/`).
+Layout matches other ai-architecture-charts components (`aws-compatible-storage/helm/`).
 
 ## Overview
 
@@ -26,7 +26,7 @@ The chart creates:
 ### Standalone
 
 ```bash
-helm install object-storage ./object-storage/helm --namespace object-storage --create-namespace \
+helm install aws-compatible-storage ./aws-compatible-storage/helm --namespace aws-compatible-storage --create-namespace \
   --set auth.username=admin \
   --set auth.password=your-secure-password
 ```
@@ -34,13 +34,13 @@ helm install object-storage ./object-storage/helm --namespace object-storage --c
 ### Custom values
 
 ```bash
-helm install object-storage ./object-storage/helm --namespace object-storage --create-namespace -f my-values.yaml
+helm install aws-compatible-storage ./aws-compatible-storage/helm --namespace aws-compatible-storage --create-namespace -f my-values.yaml
 ```
 
 ### Without UI authentication
 
 ```bash
-helm install object-storage ./object-storage/helm --namespace object-storage --create-namespace \
+helm install aws-compatible-storage ./aws-compatible-storage/helm --namespace aws-compatible-storage --create-namespace \
   --set auth.enabled=false
 ```
 
@@ -52,19 +52,19 @@ Parents can pull from the published chart repo or a local path. Gate install wit
 
 ```yaml
 dependencies:
-  - name: object-storage
+  - name: aws-compatible-storage
     version: 0.1.0
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-    # or: repository: "file://../ai-architecture-charts/object-storage/helm"
-    condition: object-storage.enabled
+    # or: repository: "file://../ai-architecture-charts/aws-compatible-storage/helm"
+    condition: aws-compatible-storage.enabled
 ```
 
 ### values.yaml (stable short in-cluster DNS)
 
 ```yaml
-object-storage:
+aws-compatible-storage:
   enabled: true
-  fullnameOverride: object-storage   # or "s4" for a short DNS name
+  fullnameOverride: aws-compatible-storage   # or "s4" for a short DNS name
   image:
     repository: quay.io/rh-aiservices-bu/s4
     tag: "0.3.2"
@@ -95,25 +95,25 @@ object-storage:
 | Secret keys | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
 | Region | `s3.region` (default `us-east-1`) |
 
-Example env wiring from a parent Deployment (with `fullnameOverride: object-storage`):
+Example env wiring from a parent Deployment (with `fullnameOverride: aws-compatible-storage`):
 
 ```yaml
 env:
   - name: AWS_ACCESS_KEY_ID
     valueFrom:
       secretKeyRef:
-        name: object-storage-credentials
+        name: aws-compatible-storage-credentials
         key: AWS_ACCESS_KEY_ID
   - name: AWS_SECRET_ACCESS_KEY
     valueFrom:
       secretKeyRef:
-        name: object-storage-credentials
+        name: aws-compatible-storage-credentials
         key: AWS_SECRET_ACCESS_KEY
   - name: AWS_S3_ENDPOINT
-    value: http://object-storage:7480
+    value: http://aws-compatible-storage:7480
 ```
 
-For DSPA / operators that probe from outside the release namespace, use an FQDN host such as `object-storage.<namespace>.svc.cluster.local` and port `7480`.
+For DSPA / operators that probe from outside the release namespace, use an FQDN host such as `aws-compatible-storage.<namespace>.svc.cluster.local` and port `7480`.
 
 Bucket bootstrap, lakeFS blockstore wiring, and OpenShift AI data-connection Secrets belong in the **parent** chart (not this subchart).
 
@@ -201,21 +201,21 @@ Bucket bootstrap, lakeFS blockstore wiring, and OpenShift AI data-connection Sec
 ### OpenShift Route hostname
 
 ```bash
-helm install object-storage ./object-storage/helm --namespace object-storage --create-namespace \
+helm install aws-compatible-storage ./aws-compatible-storage/helm --namespace aws-compatible-storage --create-namespace \
   --set auth.username=admin \
   --set auth.password=your-secure-password \
-  --set route.host=object-storage.apps.example.com
+  --set route.host=aws-compatible-storage.apps.example.com
 ```
 
 ### Kubernetes Ingress instead of Route
 
 ```bash
-helm install object-storage ./object-storage/helm --namespace object-storage --create-namespace \
+helm install aws-compatible-storage ./aws-compatible-storage/helm --namespace aws-compatible-storage --create-namespace \
   --set auth.username=admin \
   --set auth.password=your-secure-password \
   --set route.enabled=false \
   --set ingress.enabled=true \
-  --set "ingress.hosts[0].host=object-storage.example.com" \
+  --set "ingress.hosts[0].host=aws-compatible-storage.example.com" \
   --set "ingress.hosts[0].paths[0].path=/" \
   --set "ingress.hosts[0].paths[0].pathType=Prefix"
 ```
@@ -223,17 +223,17 @@ helm install object-storage ./object-storage/helm --namespace object-storage --c
 ### Expose S3 API externally (OpenShift)
 
 ```bash
-helm install object-storage ./object-storage/helm --namespace object-storage --create-namespace \
+helm install aws-compatible-storage ./aws-compatible-storage/helm --namespace aws-compatible-storage --create-namespace \
   --set auth.username=admin \
   --set auth.password=your-secure-password \
   --set route.s3Api.enabled=true \
-  --set route.s3Api.host=s3.object-storage.apps.example.com
+  --set route.s3Api.host=s3.aws-compatible-storage.apps.example.com
 ```
 
 ### Custom storage
 
 ```bash
-helm install object-storage ./object-storage/helm --namespace object-storage --create-namespace \
+helm install aws-compatible-storage ./aws-compatible-storage/helm --namespace aws-compatible-storage --create-namespace \
   --set auth.username=admin \
   --set auth.password=your-secure-password \
   --set storage.data.size=100Gi \
@@ -243,23 +243,23 @@ helm install object-storage ./object-storage/helm --namespace object-storage --c
 ### Existing Secret
 
 ```bash
-oc create secret generic my-object-storage-credentials \
+oc create secret generic my-aws-compatible-storage-credentials \
   --from-literal=AWS_ACCESS_KEY_ID=mykey \
   --from-literal=AWS_SECRET_ACCESS_KEY=mysecret \
-  -n object-storage
+  -n aws-compatible-storage
 
-helm install object-storage ./object-storage/helm --namespace object-storage \
+helm install aws-compatible-storage ./aws-compatible-storage/helm --namespace aws-compatible-storage \
   --set auth.username=admin \
   --set auth.password=your-secure-password \
-  --set s3.existingSecret=my-object-storage-credentials
+  --set s3.existingSecret=my-aws-compatible-storage-credentials
 ```
 
-### Short DNS name (Fraud Detection–style)
+### Short DNS name
 
-Parents that already expect `http://s4:7480` can keep that hostname:
+Parents that already expect a short Service DNS name can set `fullnameOverride`:
 
 ```yaml
-object-storage:
+aws-compatible-storage:
   enabled: true
   fullnameOverride: s4
 ```
@@ -274,7 +274,7 @@ object-storage:
 ### Port-forward
 
 ```bash
-oc port-forward svc/object-storage 5000:5000 7480:7480 -n object-storage
+oc port-forward svc/aws-compatible-storage 5000:5000 7480:7480 -n aws-compatible-storage
 ```
 
 - Web UI: http://localhost:5000
@@ -287,7 +287,7 @@ import boto3
 
 s3 = boto3.client(
     "s3",
-    endpoint_url="http://object-storage:7480",
+    endpoint_url="http://aws-compatible-storage:7480",
     aws_access_key_id="s4admin",
     aws_secret_access_key="s4secret",
     region_name="us-east-1",
@@ -298,17 +298,17 @@ s3.list_buckets()
 ## Uninstallation
 
 ```bash
-helm uninstall object-storage --namespace object-storage
+helm uninstall aws-compatible-storage --namespace aws-compatible-storage
 # PVCs are retained; delete when you intend to wipe data:
-oc delete pvc -l app.kubernetes.io/instance=object-storage -n object-storage
+oc delete pvc -l app.kubernetes.io/instance=aws-compatible-storage -n aws-compatible-storage
 ```
 
 ## Troubleshooting
 
 ```bash
-oc get pods -n object-storage -l app.kubernetes.io/name=object-storage
-oc logs -n object-storage -l app.kubernetes.io/name=object-storage --tail=100
-oc get configmap,secret,pvc,route -n object-storage -l app.kubernetes.io/name=object-storage
+oc get pods -n aws-compatible-storage -l app.kubernetes.io/name=aws-compatible-storage
+oc logs -n aws-compatible-storage -l app.kubernetes.io/name=aws-compatible-storage --tail=100
+oc get configmap,secret,pvc,route -n aws-compatible-storage -l app.kubernetes.io/name=aws-compatible-storage
 ```
 
 ## Testing
@@ -317,11 +317,11 @@ Requires the [helm-unittest](https://github.com/helm-unittest/helm-unittest) plu
 
 ```bash
 helm plugin install https://github.com/helm-unittest/helm-unittest
-helm lint ./object-storage/helm
-helm unittest ./object-storage/helm
+helm lint ./aws-compatible-storage/helm
+helm unittest ./aws-compatible-storage/helm
 ```
 
-Suites under `object-storage/helm/tests/` cover Deployment/Service/Secret/Route/Ingress/PVC behavior and a Fraud Detection–style consumer contract (`fullnameOverride: s4`, port `7480`).
+Suites under `aws-compatible-storage/helm/tests/` cover Deployment/Service/Secret/Route/Ingress/PVC behavior.
 
 ## Upstream
 

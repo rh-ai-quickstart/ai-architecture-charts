@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "object-storage.fullname" . }}
+  name: {{ include "aws-compatible-storage.fullname" . }}
   labels:
-    {{- include "object-storage.labels" . | nindent 4 }}
+    {{- include "aws-compatible-storage.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -33,7 +33,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "object-storage.fullname" $ }}
+                name: {{ include "aws-compatible-storage.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}

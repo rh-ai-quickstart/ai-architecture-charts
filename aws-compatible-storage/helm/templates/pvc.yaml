@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "object-storage.dataPvcName" . }}
+  name: {{ include "aws-compatible-storage.dataPvcName" . }}
   labels:
-    {{- include "object-storage.labels" . | nindent 4 }}
-  {{- with (include "object-storage.annotations" .) }}
+    {{- include "aws-compatible-storage.labels" . | nindent 4 }}
+  {{- with (include "aws-compatible-storage.annotations" .) }}
   annotations:
     {{- . | nindent 4 }}
   {{- end }}
@@ -24,10 +24,10 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "object-storage.localStoragePvcName" . }}
+  name: {{ include "aws-compatible-storage.localStoragePvcName" . }}
   labels:
-    {{- include "object-storage.labels" . | nindent 4 }}
-  {{- with (include "object-storage.annotations" .) }}
+    {{- include "aws-compatible-storage.labels" . | nindent 4 }}
+  {{- with (include "aws-compatible-storage.annotations" .) }}
   annotations:
     {{- . | nindent 4 }}
   {{- end }}

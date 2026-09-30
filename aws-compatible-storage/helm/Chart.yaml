@@ -1,5 +1,5 @@
 apiVersion: v2
-name: object-storage
+name: aws-compatible-storage
 description: Generic S3-compatible object storage (backed by Red Hat S4)
 type: application
 # Chart version for ai-architecture-charts publishing (semver of this package)
@@ -9,12 +9,12 @@ appVersion: "0.3.2"
 keywords:
   - s3
   - storage
-  - object-storage
+  - aws-compatible-storage
   - ceph
   - rgw
 home: https://github.com/rh-aiservices-bu/s4
 sources:
-  # Vendored from rh-aiservices-bu/s4 charts/s4 @ 797911c (validated via Fraud Detection quickstart)
+  # Vendored from rh-aiservices-bu/s4 charts/s4 @ 797911c
   - https://github.com/rh-aiservices-bu/s4
 maintainers:
   - name: Red Hat AI Services BU

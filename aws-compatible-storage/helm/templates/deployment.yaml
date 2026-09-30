@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "object-storage.fullname" . }}
+  name: {{ include "aws-compatible-storage.fullname" . }}
   labels:
-    {{- include "object-storage.labels" . | nindent 4 }}
-  {{- with (include "object-storage.annotations" .) }}
+    {{- include "aws-compatible-storage.labels" . | nindent 4 }}
+  {{- with (include "aws-compatible-storage.annotations" .) }}
   annotations:
     {{- . | nindent 4 }}
   {{- end }}
@@ -12,13 +12,13 @@ spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "object-storage.selectorLabels" . | nindent 6 }}
+      {{- include "aws-compatible-storage.selectorLabels" . | nindent 6 }}
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        {{- include "object-storage.selectorLabels" . | nindent 8 }}
+        {{- include "aws-compatible-storage.selectorLabels" . | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
@@ -30,7 +30,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "object-storage.serviceAccountName" . }}
+      serviceAccountName: {{ include "aws-compatible-storage.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -46,9 +46,9 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: {{ include "object-storage.configMapName" . }}
+                name: {{ include "aws-compatible-storage.configMapName" . }}
             - secretRef:
-                name: {{ include "object-storage.secretName" . }}
+                name: {{ include "aws-compatible-storage.secretName" . }}
           {{- with .Values.extraEnv }}
           env:
             {{- toYaml . | nindent 12 }}
@@ -86,11 +86,11 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: {{ include "object-storage.dataPvcName" . }}
+            claimName: {{ include "aws-compatible-storage.dataPvcName" . }}
         {{- if .Values.storage.localStorage.enabled }}
         - name: local-storage
           persistentVolumeClaim:
-            claimName: {{ include "object-storage.localStoragePvcName" . }}
+            claimName: {{ include "aws-compatible-storage.localStoragePvcName" . }}
         {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}

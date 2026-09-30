@@ -1,4 +1,4 @@
-# Object Storage Helm Chart Values
+# AWS Compatible Storage Helm Chart Values
 # Backed by S4 (Super Simple Storage Service)
 
 # -- Number of replicas (only 1 supported due to SQLite backend)

@@ -6,7 +6,7 @@ Access the Web UI via OpenShift Route:
 {{- if .Values.route.host }}
   https://{{ .Values.route.host }}
 {{- else }}
-  kubectl get route {{ include "object-storage.fullname" . }} -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}'
+  kubectl get route {{ include "aws-compatible-storage.fullname" . }} -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}'
 {{- end }}
 
 {{- else if .Values.ingress.enabled }}
@@ -19,7 +19,7 @@ Access the Web UI via Ingress:
 {{- else }}
 
 Access the Web UI using port-forward:
-  kubectl port-forward svc/{{ include "object-storage.fullname" . }} 5000:{{ .Values.service.port }} 7480:{{ .Values.service.s3Port }} -n {{ .Release.Namespace }}
+  kubectl port-forward svc/{{ include "aws-compatible-storage.fullname" . }} 5000:{{ .Values.service.port }} 7480:{{ .Values.service.s3Port }} -n {{ .Release.Namespace }}
 
 Then open:
   - Web UI: http://localhost:5000
@@ -34,7 +34,7 @@ S3 API is exposed externally:
 {{- if .Values.route.s3Api.host }}
   https://{{ .Values.route.s3Api.host }}
 {{- else }}
-  kubectl get route {{ include "object-storage.fullname" . }}-s3 -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}'
+  kubectl get route {{ include "aws-compatible-storage.fullname" . }}-s3 -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}'
 {{- end }}
 {{- end }}
 {{- if .Values.ingress.s3Api.enabled }}
@@ -65,7 +65,7 @@ S3 Credentials:
   Using existing secret: {{ .Values.s3.existingSecret }}
 {{- else }}
   Access Key: {{ .Values.s3.accessKeyId }}
-  Secret Key: (stored in secret {{ include "object-storage.secretName" . }})
+  Secret Key: (stored in secret {{ include "aws-compatible-storage.secretName" . }})
 {{- end }}
 
 For more information, see:

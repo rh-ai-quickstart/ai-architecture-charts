@@ -1,15 +1,15 @@
-name: Lint and Test Object Storage Helm Chart
+name: Lint and Test AWS Compatible Storage Helm Chart
 
 on:
   pull_request:
     paths:
-      - 'object-storage/helm/**'
-      - '.github/workflows/lint-object-storage-chart.yaml'
+      - 'aws-compatible-storage/helm/**'
+      - '.github/workflows/lint-aws-compatible-storage-chart.yaml'
   push:
     branches: [main]
     paths:
-      - 'object-storage/helm/**'
-      - '.github/workflows/lint-object-storage-chart.yaml'
+      - 'aws-compatible-storage/helm/**'
+      - '.github/workflows/lint-aws-compatible-storage-chart.yaml'
 
 jobs:
   lint-and-test-helm:
@@ -22,10 +22,10 @@ jobs:
         uses: azure/setup-helm@v4
 
       - name: Lint Helm Chart
-        run: helm lint object-storage/helm
+        run: helm lint aws-compatible-storage/helm
 
       - name: Install helm-unittest plugin
         run: helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.0.3
 
       - name: Run helm unittest
-        run: helm unittest object-storage/helm
+        run: helm unittest aws-compatible-storage/helm

@@ -48,14 +48,14 @@ S3-compatible object storage server for documents, models, and data in AI/ML pip
 - Bucket policies and lifecycle management
 - Sample file upload functionality
 
-#### [Object Storage](./object-storage/README.md)
+#### [AWS Compatible Storage](./aws-compatible-storage/README.md)
 Generic S3-compatible object storage (backed by [S4](https://github.com/rh-aiservices-bu/s4)) as an alternative to MinIO. Tuned for OpenShift demos and parent-chart embedding (lakeFS, DSPA, notebooks).
 
 **Key Features:**
 - S3 API on port `7480` and Web UI on port `5000`
 - AWS-style credentials secret (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`)
 - Optional OpenShift Routes and Kubernetes Ingress (UI and/or S3 API)
-- Flexible naming, existing Secret/PVC support, and parent `condition: object-storage.enabled`
+- Flexible naming, existing Secret/PVC support, and parent `condition: aws-compatible-storage.enabled`
 
 #### [Oracle 23ai](./oracle-db/README.md)
 Oracle Database Free 23ai with AI Vector features, providing enterprise-grade database capabilities with built-in vector operations for AI applications.
@@ -308,11 +308,11 @@ dependencies:
     version: "0.1.0"
     repository: "file://../ai-architecture-charts/minio/helm"
 
-  # Optional alternative to MinIO (use condition: object-storage.enabled)
-  - name: object-storage
+  # Optional alternative to MinIO (use condition: aws-compatible-storage.enabled)
+  - name: aws-compatible-storage
     version: "0.1.0"
-    repository: "file://../ai-architecture-charts/object-storage/helm"
-    condition: object-storage.enabled
+    repository: "file://../ai-architecture-charts/aws-compatible-storage/helm"
+    condition: aws-compatible-storage.enabled
   
   - name: llm-service
     version: "0.1.0"
@@ -348,10 +348,10 @@ minio:
     enabled: true
     bucket: "ai-documents"
 
-# Or use object-storage instead of MinIO (disable MinIO dependency separately in your chart)
-object-storage:
+# Or use aws-compatible-storage instead of MinIO (disable MinIO dependency separately in your chart)
+aws-compatible-storage:
   enabled: true
-  fullnameOverride: object-storage
+  fullnameOverride: aws-compatible-storage
   s3:
     accessKeyId: s4admin
     secretAccessKey: s4secret

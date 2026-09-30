@@ -1,4 +1,4 @@
-suite: object-storage routes
+suite: aws-compatible-storage routes
 values:
   - values/auth.yaml
 tests:
@@ -41,7 +41,7 @@ tests:
       - templates/route-s3.yaml
     set:
       route.s3Api.enabled: true
-      route.s3Api.host: s3.object-storage.apps.example.com
+      route.s3Api.host: s3.aws-compatible-storage.apps.example.com
     asserts:
       - hasDocuments:
           count: 1
@@ -49,7 +49,7 @@ tests:
           of: Route
       - equal:
           path: spec.host
-          value: s3.object-storage.apps.example.com
+          value: s3.aws-compatible-storage.apps.example.com
       - equal:
           path: spec.port.targetPort
           value: s3-api
@@ -58,15 +58,15 @@ tests:
     templates:
       - templates/route.yaml
     set:
-      fullnameOverride: object-storage
-      route.host: object-storage.apps.example.com
+      fullnameOverride: aws-compatible-storage
+      route.host: aws-compatible-storage.apps.example.com
     asserts:
       - equal:
           path: metadata.name
-          value: object-storage
+          value: aws-compatible-storage
       - equal:
           path: spec.host
-          value: object-storage.apps.example.com
+          value: aws-compatible-storage.apps.example.com
       - equal:
           path: spec.to.name
-          value: object-storage
+          value: aws-compatible-storage
