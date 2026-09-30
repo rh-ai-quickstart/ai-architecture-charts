@@ -1,0 +1,43 @@
+{{- if not .Values.storage.data.existingClaim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "object-storage.dataPvcName" . }}
+  labels:
+    {{- include "object-storage.labels" . | nindent 4 }}
+  {{- with (include "object-storage.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.storage.data.accessMode }}
+  {{- if .Values.storage.data.storageClass }}
+  storageClassName: {{ .Values.storage.data.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.data.size }}
+{{- end }}
+---
+{{- if and .Values.storage.localStorage.enabled (not .Values.storage.localStorage.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "object-storage.localStoragePvcName" . }}
+  labels:
+    {{- include "object-storage.labels" . | nindent 4 }}
+  {{- with (include "object-storage.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.storage.localStorage.accessMode }}
+  {{- if .Values.storage.localStorage.storageClass }}
+  storageClassName: {{ .Values.storage.localStorage.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.localStorage.size }}
+{{- end }}

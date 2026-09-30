@@ -1,0 +1,267 @@
+# Object Storage Helm Chart Values
+# Backed by S4 (Super Simple Storage Service)
+
+# -- Number of replicas (only 1 supported due to SQLite backend)
+replicaCount: 1
+
+# Image configuration
+image:
+  # -- Container image repository
+  repository: quay.io/rh-aiservices-bu/s4
+  # -- Container image tag (pin to Chart.yaml appVersion for reproducible deploys)
+  tag: "0.3.2"
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+
+# -- Override the chart name
+nameOverride: ''
+
+# -- Override the full name
+fullnameOverride: ''
+
+# S3 backend configuration
+s3:
+  # -- S3 endpoint URL (use localhost:7480 for internal RGW)
+  endpoint: 'http://localhost:7480'
+  # -- S3 region
+  region: 'us-east-1'
+  # -- S3 access key ID (stored in secret)
+  accessKeyId: 's4admin'
+  # -- S3 secret access key (stored in secret)
+  secretAccessKey: 's4secret'
+  # -- Use existing secret for S3 credentials
+  # If set, s3.accessKeyId and s3.secretAccessKey are ignored
+  # Secret must contain AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY keys
+  existingSecret: ''
+
+# Authentication configuration (optional)
+auth:
+  # -- Enable UI authentication
+  enabled: true
+  # -- Username for UI login (stored in secret)
+  username: ''
+  # -- Password for UI login (stored in secret)
+  password: ''
+  # -- JWT secret key (auto-generated if empty)
+  jwtSecret: ''
+  # -- JWT token expiration in hours
+  jwtExpirationHours: 8
+  # -- Require HTTPS for cookies (disable for local development)
+  cookieRequireHttps: true
+
+# Storage configuration
+storage:
+  # -- Local storage paths (comma-separated, empty to disable local file browser)
+  localPaths: ''
+  # -- Maximum file size in GB
+  maxFileSizeGB: 20
+  # -- Maximum concurrent transfers
+  maxConcurrentTransfers: 2
+
+  # RGW data volume (Ceph/SQLite storage)
+  data:
+    # -- Storage size for RGW data
+    size: 10Gi
+    # -- Storage class (empty for default)
+    storageClass: ''
+    # -- Use existing PVC instead of creating one
+    existingClaim: ''
+    # -- Access mode
+    accessMode: ReadWriteOnce
+
+  # Local storage volume (user uploads)
+  localStorage:
+    # -- Enable local storage volume (set to true if using local file browser)
+    enabled: false
+    # -- Storage size for local storage
+    size: 50Gi
+    # -- Storage class (empty for default)
+    storageClass: ''
+    # -- Use existing PVC instead of creating one
+    existingClaim: ''
+    # -- Access mode
+    accessMode: ReadWriteOnce
+
+# Server configuration
+server:
+  # -- Server port
+  port: 5000
+  # -- Server bind address
+  ip: '0.0.0.0'
+
+# Resource limits and requests
+resources:
+  requests:
+    # -- CPU request
+    cpu: 250m
+    # -- Memory request
+    memory: 512Mi
+  limits:
+    # -- CPU limit
+    cpu: 2000m
+    # -- Memory limit
+    memory: 2Gi
+
+# Service configuration
+service:
+  # -- Service type (ClusterIP, NodePort, LoadBalancer)
+  type: ClusterIP
+  # -- Web UI port
+  port: 5000
+  # -- S3 API port
+  s3Port: 7480
+
+  # NodePort configuration (only used when type is NodePort)
+  nodePort:
+    # -- Enable NodePort service
+    enabled: false
+    # -- NodePort for web UI (optional, auto-assigned if empty)
+    webPort: ''
+    # -- NodePort for S3 API (optional, auto-assigned if empty)
+    s3Port: ''
+
+# Ingress configuration
+ingress:
+  # -- Enable ingress
+  enabled: false
+  # -- Ingress class name
+  className: ''
+  # -- Ingress annotations
+  annotations: {}
+  # -- Ingress hosts configuration
+  hosts: []
+  #   - host: s4.example.com
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+  # -- Ingress TLS configuration
+  tls: []
+  #   - secretName: s4-tls
+  #     hosts:
+  #       - s4.example.com
+
+  # S3 API Ingress configuration (optional)
+  # WARNING: Enabling this exposes the S3 API outside the cluster.
+  # Ensure proper authentication and network policies are in place.
+  s3Api:
+    enabled: false
+    className: ''
+    annotations: {}
+    hosts: []
+    #   - host: s3.s4.example.com
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+    tls: []
+    #   - secretName: s4-api-tls
+    #     hosts:
+    #       - s3.s4.example.com
+
+# OpenShift Route configuration
+route:
+  # -- Enable OpenShift Route
+  enabled: true
+  # -- Route hostname (auto-generated if empty)
+  host: ''
+  # -- Route path
+  path: ''
+  # -- Route annotations
+  annotations: {}
+  # TLS configuration
+  tls:
+    # -- TLS termination type (edge, passthrough, reencrypt)
+    termination: edge
+    # -- Insecure edge termination policy (Allow, Redirect, None)
+    insecureEdgeTerminationPolicy: Redirect
+
+  # S3 API Route configuration (optional)
+  # WARNING: Enabling this exposes the S3 API outside the cluster.
+  # Ensure proper authentication and network policies are in place.
+  s3Api:
+    enabled: false
+    host: ''
+    path: ''
+    annotations: {}
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+
+# Service account configuration
+serviceAccount:
+  # -- Create service account
+  create: true
+  # -- Service account annotations
+  annotations: {}
+  # -- Service account name (auto-generated if empty)
+  name: ''
+
+# Pod security context
+podSecurityContext:
+  # -- Run as non-root user
+  runAsNonRoot: true
+
+# Container security context
+securityContext:
+  # -- Disallow privilege escalation
+  allowPrivilegeEscalation: false
+  # -- Run as non-root user
+  runAsNonRoot: true
+  # -- Drop all capabilities
+  capabilities:
+    drop:
+      - ALL
+  # -- Seccomp profile
+  seccompProfile:
+    type: RuntimeDefault
+
+# Probes configuration
+probes:
+  # Readiness probe
+  readiness:
+    # -- Initial delay before probe starts
+    initialDelaySeconds: 15
+    # -- Probe interval
+    periodSeconds: 10
+    # -- Probe timeout
+    timeoutSeconds: 5
+    # -- Failure threshold
+    failureThreshold: 3
+  # Liveness probe
+  liveness:
+    # -- Initial delay before probe starts
+    initialDelaySeconds: 60
+    # -- Probe interval
+    periodSeconds: 30
+    # -- Probe timeout
+    timeoutSeconds: 10
+    # -- Failure threshold
+    failureThreshold: 3
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Tolerations
+tolerations: []
+
+# -- Affinity rules
+affinity: {}
+
+# -- Additional labels to add to all resources
+commonLabels: {}
+
+# -- Additional annotations to add to all resources
+commonAnnotations: {}
+
+# -- Additional environment variables
+extraEnv: []
+#   - name: MY_VAR
+#     value: "my-value"
+
+# -- Additional volume mounts
+extraVolumeMounts: []
+
+# -- Additional volumes
+extraVolumes: []

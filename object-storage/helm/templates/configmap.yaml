@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "object-storage.configMapName" . }}
+  labels:
+    {{- include "object-storage.labels" . | nindent 4 }}
+  {{- with (include "object-storage.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+data:
+  # S3 Configuration
+  AWS_S3_ENDPOINT: {{ .Values.s3.endpoint | quote }}
+  AWS_DEFAULT_REGION: {{ .Values.s3.region | quote }}
+  # Storage Settings
+  LOCAL_STORAGE_PATHS: {{ .Values.storage.localPaths | quote }}
+  MAX_CONCURRENT_TRANSFERS: {{ .Values.storage.maxConcurrentTransfers | quote }}
+  MAX_FILE_SIZE_GB: {{ .Values.storage.maxFileSizeGB | quote }}
+  # Server Settings
+  PORT: {{ .Values.server.port | quote }}
+  IP: {{ .Values.server.ip | quote }}
+  {{- if .Values.auth.enabled }}
+  # Authentication Settings
+  JWT_EXPIRATION_HOURS: {{ .Values.auth.jwtExpirationHours | quote }}
+  {{- if not .Values.auth.cookieRequireHttps }}
+  COOKIE_REQUIRE_HTTPS: "false"
+  {{- end }}
+  {{- end }}

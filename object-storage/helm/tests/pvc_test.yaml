@@ -1,0 +1,55 @@
+suite: object-storage pvc
+values:
+  - values/auth.yaml
+templates:
+  - templates/pvc.yaml
+tests:
+  - it: creates data PVC with default size
+    documentIndex: 0
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: spec.resources.requests.storage
+          value: 10Gi
+      - contains:
+          path: spec.accessModes
+          content: ReadWriteOnce
+
+  - it: skips data PVC when existingClaim is set
+    set:
+      storage.data.existingClaim: my-existing-data-pvc
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: creates two PVCs when local storage is enabled
+    set:
+      storage.localStorage.enabled: true
+      storage.localStorage.size: 50Gi
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  - it: local storage PVC uses configured size
+    set:
+      storage.localStorage.enabled: true
+      storage.localStorage.size: 50Gi
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: spec.resources.requests.storage
+          value: 50Gi
+
+  - it: uses custom data size and storageClass
+    set:
+      storage.data.size: 100Gi
+      storage.data.storageClass: fast-storage
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.resources.requests.storage
+          value: 100Gi
+      - equal:
+          path: spec.storageClassName
+          value: fast-storage

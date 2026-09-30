@@ -1,0 +1,72 @@
+Object storage (S4) has been deployed!
+
+{{- if .Values.route.enabled }}
+
+Access the Web UI via OpenShift Route:
+{{- if .Values.route.host }}
+  https://{{ .Values.route.host }}
+{{- else }}
+  kubectl get route {{ include "object-storage.fullname" . }} -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}'
+{{- end }}
+
+{{- else if .Values.ingress.enabled }}
+
+Access the Web UI via Ingress:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+
+{{- else }}
+
+Access the Web UI using port-forward:
+  kubectl port-forward svc/{{ include "object-storage.fullname" . }} 5000:{{ .Values.service.port }} 7480:{{ .Values.service.s3Port }} -n {{ .Release.Namespace }}
+
+Then open:
+  - Web UI: http://localhost:5000
+  - S3 API: http://localhost:7480
+
+{{- end }}
+
+{{- if or .Values.route.s3Api.enabled .Values.ingress.s3Api.enabled }}
+
+S3 API is exposed externally:
+{{- if .Values.route.s3Api.enabled }}
+{{- if .Values.route.s3Api.host }}
+  https://{{ .Values.route.s3Api.host }}
+{{- else }}
+  kubectl get route {{ include "object-storage.fullname" . }}-s3 -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}'
+{{- end }}
+{{- end }}
+{{- if .Values.ingress.s3Api.enabled }}
+{{- range .Values.ingress.s3Api.hosts }}
+  http{{ if $.Values.ingress.s3Api.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- end }}
+
+  WARNING: The S3 API is accessible from outside the cluster.
+  Ensure proper authentication and network policies are in place.
+
+{{- end }}
+
+{{- if .Values.auth.enabled }}
+
+Authentication is enabled. Use the configured credentials to log in.
+{{- else }}
+
+Authentication is disabled. Anyone with access can use the Web UI.
+To enable authentication, set:
+  auth.enabled=true
+  auth.username=<username>
+  auth.password=<password>
+{{- end }}
+
+S3 Credentials:
+{{- if .Values.s3.existingSecret }}
+  Using existing secret: {{ .Values.s3.existingSecret }}
+{{- else }}
+  Access Key: {{ .Values.s3.accessKeyId }}
+  Secret Key: (stored in secret {{ include "object-storage.secretName" . }})
+{{- end }}
+
+For more information, see:
+  https://github.com/rh-aiservices-bu/s4

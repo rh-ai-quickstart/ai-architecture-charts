@@ -1,0 +1,5 @@
+# Shared values for helm-unittest (auth required when auth.enabled=true)
+auth:
+  enabled: true
+  username: admin
+  password: changeme

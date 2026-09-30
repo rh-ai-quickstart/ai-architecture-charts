@@ -1,0 +1,29 @@
+{{- if .Values.route.s3Api.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "object-storage.fullname" . }}-api
+  labels:
+    {{- include "object-storage.labels" . | nindent 4 }}
+  {{- with .Values.route.s3Api.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.route.s3Api.host }}
+  host: {{ .Values.route.s3Api.host | quote }}
+  {{- end }}
+  {{- if .Values.route.s3Api.path }}
+  path: {{ .Values.route.s3Api.path | quote }}
+  {{- end }}
+  port:
+    targetPort: s3-api
+  to:
+    kind: Service
+    name: {{ include "object-storage.fullname" . }}
+    weight: 100
+  wildcardPolicy: None
+  tls:
+    termination: {{ .Values.route.s3Api.tls.termination }}
+    insecureEdgeTerminationPolicy: {{ .Values.route.s3Api.tls.insecureEdgeTerminationPolicy }}
+{{- end }}

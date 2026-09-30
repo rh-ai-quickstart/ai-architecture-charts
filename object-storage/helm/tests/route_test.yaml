@@ -1,0 +1,72 @@
+suite: object-storage routes
+values:
+  - values/auth.yaml
+tests:
+  - it: creates UI Route by default targeting web-ui
+    templates:
+      - templates/route.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Route
+      - equal:
+          path: spec.port.targetPort
+          value: web-ui
+      - equal:
+          path: spec.tls.termination
+          value: edge
+      - equal:
+          path: spec.tls.insecureEdgeTerminationPolicy
+          value: Redirect
+
+  - it: does not create UI Route when disabled
+    templates:
+      - templates/route.yaml
+    set:
+      route.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: does not create S3 API Route by default
+    templates:
+      - templates/route-s3.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: creates S3 API Route when enabled
+    templates:
+      - templates/route-s3.yaml
+    set:
+      route.s3Api.enabled: true
+      route.s3Api.host: s3.object-storage.apps.example.com
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Route
+      - equal:
+          path: spec.host
+          value: s3.object-storage.apps.example.com
+      - equal:
+          path: spec.port.targetPort
+          value: s3-api
+
+  - it: sets UI Route host and Service name with fullnameOverride
+    templates:
+      - templates/route.yaml
+    set:
+      fullnameOverride: object-storage
+      route.host: object-storage.apps.example.com
+    asserts:
+      - equal:
+          path: metadata.name
+          value: object-storage
+      - equal:
+          path: spec.host
+          value: object-storage.apps.example.com
+      - equal:
+          path: spec.to.name
+          value: object-storage
