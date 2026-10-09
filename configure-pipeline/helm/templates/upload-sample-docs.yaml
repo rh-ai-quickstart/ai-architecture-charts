@@ -88,16 +88,16 @@ spec:
             - name: HOME
               value: /tmp
             - name: S3_ENDPOINT
-              value: {{ ternary "http://s4:7480" (printf "%s://%s:%s" .Values.pipelineStorage.externalStorage.scheme .Values.pipelineStorage.externalStorage.host .Values.pipelineStorage.externalStorage.port) .Values.pipelineStorage.deployAwsCompatibleStorage | quote }}
+              value: {{ ternary "http://aws-compatible-storage:7480" (printf "%s://%s:%s" .Values.pipelineStorage.externalStorage.scheme .Values.pipelineStorage.externalStorage.host .Values.pipelineStorage.externalStorage.port) .Values.pipelineStorage.deployAwsCompatibleStorage | quote }}
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ ternary "s4-credentials" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.secretName .Values.pipelineStorage.deployAwsCompatibleStorage }}
+                  name: {{ ternary "aws-compatible-storage-credentials" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.secretName .Values.pipelineStorage.deployAwsCompatibleStorage }}
                   key: {{ ternary "AWS_ACCESS_KEY_ID" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.accessKey .Values.pipelineStorage.deployAwsCompatibleStorage }}
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ ternary "s4-credentials" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.secretName .Values.pipelineStorage.deployAwsCompatibleStorage }}
+                  name: {{ ternary "aws-compatible-storage-credentials" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.secretName .Values.pipelineStorage.deployAwsCompatibleStorage }}
                   key: {{ ternary "AWS_SECRET_ACCESS_KEY" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.secretKey .Values.pipelineStorage.deployAwsCompatibleStorage }}
             - name: SAMPLE_BUCKET
               value: {{ .Values.sampleFileUpload.bucket | quote }}
