@@ -51,12 +51,12 @@ spec:
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ ternary "s4-credentials" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.secretName .Values.pipelineStorage.deployAwsCompatibleStorage }}
+                  name: {{ ternary "aws-compatible-storage-credentials" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.secretName .Values.pipelineStorage.deployAwsCompatibleStorage }}
                   key: {{ ternary "AWS_ACCESS_KEY_ID" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.accessKey .Values.pipelineStorage.deployAwsCompatibleStorage }}
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ ternary "s4-credentials" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.secretName .Values.pipelineStorage.deployAwsCompatibleStorage }}
+                  name: {{ ternary "aws-compatible-storage-credentials" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.secretName .Values.pipelineStorage.deployAwsCompatibleStorage }}
                   key: {{ ternary "AWS_SECRET_ACCESS_KEY" .Values.pipelineStorage.externalStorage.s3CredentialsSecret.secretKey .Values.pipelineStorage.deployAwsCompatibleStorage }}
             - name: LLAMASTACK_BASE_URL
               valueFrom:

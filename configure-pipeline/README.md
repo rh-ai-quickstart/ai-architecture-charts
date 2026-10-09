@@ -6,7 +6,7 @@ This Helm chart deploys a Data Science Pipelines Application (DSPA) along with a
 
 The configure-pipeline chart creates:
 - A DataSciencePipelinesApplication (DSPA) for running data science workflows
-- S4-backed AWS-compatible storage by default, or external S3-compatible storage
+- Bundled AWS-compatible storage by default, or external S3-compatible storage
 - Optional Jupyter notebook deployment for pipeline configuration
 - Persistent volume claims for data storage
 - Secrets for storage credentials and pipeline configuration
@@ -17,11 +17,11 @@ The configure-pipeline chart creates:
 - OpenShift cluster with OpenDataHub or RHOAI installed
 - Helm 3.x
 - Access to required container registries
-- S3-compatible object storage (the bundled S4 service or an external endpoint)
+- S3-compatible object storage (the bundled service or an external endpoint)
 
 ## Installation
 
-### Basic Installation (with S4)
+### Basic Installation (with bundled storage)
 
 ```bash
 helm install configure-pipeline ./helm
@@ -73,6 +73,7 @@ helm install configure-pipeline ./helm \
 | `notebook.s3.accessKeyId` | External S3 access key for notebook data connection | `""` |
 | `notebook.s3.secretAccessKey` | External S3 secret key for notebook data connection | `""` |
 
+
 #### Sample Document Upload Configuration
 
 | Parameter | Description | Default |
@@ -86,7 +87,7 @@ helm install configure-pipeline ./helm \
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `pipelineStorage.deployAwsCompatibleStorage` | Deploy bundled S4-backed AWS-compatible storage | `true` |
+| `pipelineStorage.deployAwsCompatibleStorage` | Deploy bundled AWS-compatible storage | `true` |
 | `pipelineStorage.externalStorage.host` | External storage host | `minio` |
 | `pipelineStorage.externalStorage.port` | External storage port | `9000` |
 | `pipelineStorage.externalStorage.bucket` | Storage bucket for pipelines | `mlpipeline` |
@@ -97,20 +98,22 @@ helm install configure-pipeline ./helm \
 
 ### Example values.yaml
 
-#### Example 1: Deploy with S4
+#### Example 1: Deploy with bundled AWS-compatible storage (default)
+
+Bundled AWS-compatible storage is enabled by default, so no `pipelineStorage` settings are needed. Customize the notebook settings as needed:
 
 ```yaml
-pipelineStorage:
-  deployAwsCompatibleStorage: true
-  externalStorage:
-    host: s4
-    port: "7480"
-    bucket: mlpipeline
-    scheme: http
-    s3CredentialsSecret:
-      secretName: s4-credentials
-      accessKey: AWS_ACCESS_KEY_ID
-      secretKey: AWS_SECRET_ACCESS_KEY
+notebook:
+  create: true
+  image: "quay.io/your-org/custom-notebook:latest"
+  repo: "https://github.com/your-org/custom-rag-repo.git"
+  pvcName: "custom-pipeline-vol"
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  name: custom-rag-db
+  version: 2.0
+  s3:
+    region: us-west-2
+    bucket_name: custom-bucket
 ```
 
 #### Example 2: Use External S3-Compatible Storage
@@ -138,7 +141,7 @@ pipelineStorage:
 After installation, the chart will create:
 
 1. **DataSciencePipelinesApplication (DSPA)**: A complete data science pipeline environment for running workflows
-2. **Object Storage**: Deployed S4 or configured external S3-compatible storage
+2. **Object Storage**: Deployed AWS-compatible storage or configured external S3-compatible storage
 3. **Jupyter Notebook** (optional): Access your notebook environment for pipeline configuration
 4. **Storage**: Persistent volumes for data persistence
 5. **Secrets**: Storage credentials and pipeline configuration secrets
@@ -148,9 +151,9 @@ After installation, the chart will create:
 
 The chart supports two storage modes.
 
-#### 1. Deployed S4
+#### 1. Bundled AWS-compatible storage
 
-When `pipelineStorage.deployAwsCompatibleStorage: true`, the chart deploys the `aws-compatible-storage` dependency with the service name `s4`. The DSPA and notebook use its S3 endpoint on port `7480` and the `s4-credentials` Secret. The S4 UI Route is disabled because this chart uses the in-cluster S3 API only.
+When `pipelineStorage.deployAwsCompatibleStorage: true`, the chart deploys the `aws-compatible-storage` dependency with the stable Service name `aws-compatible-storage` and credentials Secret `aws-compatible-storage-credentials`. The DSPA and notebook use its S3 endpoint on port `7480`.
 
 #### 2. External Storage
 
@@ -190,9 +193,9 @@ oc expose service configure-pipeline-notebook
 
 ### Storage Configuration
 
-#### When using deployed S4
+#### When using bundled AWS-compatible storage
 
-The chart deploys S4, creates its `s4-credentials` Secret, and configures the DSPA and notebook secrets to use `s4.<namespace>.svc.cluster.local:7480`.
+The chart deploys the bundled AWS-compatible storage service and configures the DSPA and notebook to use its in-cluster S3 endpoint.
 
 To create a sample documents bucket and upload files, enable `sampleFileUpload` and provide its bucket and URLs. `configure-pipeline` runs an upload Job against the configured S3 endpoint.
 
@@ -202,7 +205,7 @@ sampleFileUpload:
   bucket: documents
   urls:
     - https://example.com/sample.pdf
-
+    
 #### When using external storage
 
 Ensure you:
@@ -241,7 +244,7 @@ oc logs -l app.kubernetes.io/name=configure-pipeline -f
    - Check resource limits
 
 2. **Storage connection issues**:
-   - If using bundled S4: Verify the `s4` pod is running
+   - If using bundled storage: Verify the `aws-compatible-storage` pod is running
    - If using external storage: Check credentials secret exists and contains correct keys
    - Verify DSPA can reach the storage endpoint (check DSPA pod logs)
    - Validate bucket exists and credentials have appropriate permissions
@@ -292,7 +295,7 @@ oc delete pvc -l app.kubernetes.io/name=configure-pipeline
 ## Dependencies
 
 - **OpenDataHub or RHOAI**: Required for DataSciencePipelinesApplication CRD
-- **Object storage**: Deploy S4 (default) or provide external S3-compatible storage
+- **Object storage**: Deploy bundled AWS-compatible storage (default) or provide external S3-compatible storage
 - **Git repository access**: For notebook code and templates (if notebook.create is enabled)
 - **Sufficient cluster resources**: CPU, memory, and storage
 - **Container registry access**: For pulling notebook and storage images

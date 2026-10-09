@@ -26,13 +26,13 @@ spec:
   objectStorage:
     disableHealthCheck: false
     enableExternalRoute: false
-    externalStorage:  # points to the bundled S4 service or caller-provided storage
+    externalStorage:  # points to bundled AWS-compatible or caller-provided storage
 {{- $storage := .Values.pipelineStorage.externalStorage | deepCopy }}
 {{- if .Values.pipelineStorage.deployAwsCompatibleStorage }}
-{{- $_ := set $storage "host" (printf "s4.%s.svc.cluster.local" .Release.Namespace) }}
+{{- $_ := set $storage "host" (printf "aws-compatible-storage.%s.svc.cluster.local" .Release.Namespace) }}
 {{- $_ := set $storage "port" "7480" }}
 {{- $_ := set $storage "scheme" "http" }}
-{{- $_ := set $storage "s3CredentialsSecret" (dict "secretName" "s4-credentials" "accessKey" "AWS_ACCESS_KEY_ID" "secretKey" "AWS_SECRET_ACCESS_KEY") }}
+{{- $_ := set $storage "s3CredentialsSecret" (dict "secretName" "aws-compatible-storage-credentials" "accessKey" "AWS_ACCESS_KEY_ID" "secretKey" "AWS_SECRET_ACCESS_KEY") }}
 {{- end }}
 {{ toYaml $storage | indent 6 }}
   persistenceAgent:

@@ -1,9 +1,9 @@
-# S4-backed AWS-compatible storage subchart configuration
+# Bundled AWS-compatible storage subchart configuration
 aws-compatible-storage:
-  fullnameOverride: s4
+  fullnameOverride: aws-compatible-storage
   s3:
-    accessKeyId: s4admin
-    secretAccessKey: s4secret
+    accessKeyId: storageadmin
+    secretAccessKey: storagesecret
   auth:
     enabled: false
   route:
@@ -36,7 +36,7 @@ secret:
 
 # Pipeline storage configuration for DataSciencePipelinesApplication
 pipelineStorage:
-  # Deploy S4 by default. Set false to use external S3-compatible storage.
+  # Deploy bundled AWS-compatible storage by default. Set false to use external storage.
   deployAwsCompatibleStorage: true
   # External storage configuration
   externalStorage:
