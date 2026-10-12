@@ -74,15 +74,6 @@ helm install configure-pipeline ./helm \
 | `notebook.s3.secretAccessKey` | External S3 secret key for notebook data connection | `""` |
 
 
-#### Sample Document Upload Configuration
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `sampleFileUpload.enabled` | Create a bucket and upload configured URLs | `false` |
-| `sampleFileUpload.bucket` | Bucket for sample document uploads | `documents` |
-| `sampleFileUpload.region` | S3 region used for upload | `us-east-1` |
-| `sampleFileUpload.urls` | URLs of sample documents to download and upload | `[]` |
-
 #### Pipeline Storage Configuration
 
 | Parameter | Description | Default |
@@ -197,15 +188,6 @@ oc expose service configure-pipeline-notebook
 
 The chart deploys the bundled AWS-compatible storage service and configures the DSPA and notebook to use its in-cluster S3 endpoint.
 
-To create a sample documents bucket and upload files, enable `sampleFileUpload` and provide its bucket and URLs. `configure-pipeline` runs an upload Job against the configured S3 endpoint.
-
-```yaml
-sampleFileUpload:
-  enabled: true
-  bucket: documents
-  urls:
-    - https://example.com/sample.pdf
-    
 #### When using external storage
 
 Ensure you:
