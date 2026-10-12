@@ -37,6 +37,15 @@ s3:
   # Secret must contain AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY keys
   existingSecret: ''
 
+# Optional one-time job that creates a bucket and uploads sample documents.
+sampleFileUpload:
+  # -- Create the document upload Job
+  enabled: false
+  # -- Bucket to create/use
+  bucket: documents
+  # -- Documents to download and upload (object names use each URL's filename)
+  urls: []
+
 # Authentication configuration (optional)
 auth:
   # -- Enable UI authentication

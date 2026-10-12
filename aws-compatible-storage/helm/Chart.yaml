@@ -3,7 +3,7 @@ name: aws-compatible-storage
 description: Generic S3-compatible object storage (backed by Red Hat S4)
 type: application
 # Chart version for ai-architecture-charts publishing (semver of this package)
-version: 0.1.0
+version: 0.2.0
 # Upstream S4 application / container version
 appVersion: "0.3.2"
 keywords:

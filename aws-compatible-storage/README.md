@@ -14,6 +14,7 @@ The chart creates:
 - ConfigMap for non-secret runtime settings
 - Optional OpenShift Routes and/or Kubernetes Ingress (UI and/or S3 API)
 - Restricted-friendly security contexts (no SCC objects)
+- Optional Job that creates a bucket and uploads configured sample documents
 
 ## Prerequisites
 
@@ -137,6 +138,20 @@ Bucket bootstrap, lakeFS blockstore wiring, and OpenShift AI data-connection Sec
 | `s3.accessKeyId` | Access key (ignored if `existingSecret` set) | `s4admin` |
 | `s3.secretAccessKey` | Secret key (ignored if `existingSecret` set) | `s4secret` |
 | `s3.existingSecret` | Existing secret with `AWS_*` keys | `""` |
+
+### Sample document upload
+
+Enable `sampleFileUpload` to create a one-time Job that waits for the S3 API, creates the configured bucket if needed, downloads each URL, and uploads the document using its filename as the object key. The Job uses the credentials Secret managed by this chart (or `s3.existingSecret`).
+
+```yaml
+sampleFileUpload:
+  enabled: true
+  bucket: documents
+  urls:
+    - https://example.com/sample.pdf
+```
+
+The Job uses `s3.region` and connects to this chart's Service on `service.s3Port`.
 
 ### Authentication (Web UI)
 

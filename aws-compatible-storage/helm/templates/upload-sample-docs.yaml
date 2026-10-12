@@ -1,0 +1,114 @@
+{{- if .Values.sampleFileUpload.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "aws-compatible-storage.fullname" . }}-upload-sample-docs
+  labels:
+    {{- include "aws-compatible-storage.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sample-doc-upload
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 1800
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        {{- include "aws-compatible-storage.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: sample-doc-upload
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: upload-sample-docs
+          image: registry.access.redhat.com/ubi9/python-311:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -ec
+          args:
+            - |
+              python3 -m pip install --disable-pip-version-check boto3 requests
+              python3 <<'PY'
+              import json
+              import os
+              import tempfile
+              import time
+              from pathlib import PurePosixPath
+              from urllib.parse import urlparse
+
+              import boto3
+              import requests
+              from botocore.config import Config
+              from botocore.exceptions import BotoCoreError, ClientError
+
+              bucket = os.environ["SAMPLE_BUCKET"]
+              urls = json.loads(os.environ["SAMPLE_URLS"])
+              s3 = boto3.client(
+                  "s3",
+                  endpoint_url=os.environ["S3_ENDPOINT"],
+                  aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+                  aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+                  region_name=os.environ["AWS_DEFAULT_REGION"],
+                  config=Config(s3={"addressing_style": "path"}),
+              )
+
+              for attempt in range(60):
+                  try:
+                      s3.list_buckets()
+                      break
+                  except (BotoCoreError, ClientError):
+                      if attempt == 59:
+                          raise
+                      time.sleep(5)
+
+              try:
+                  s3.head_bucket(Bucket=bucket)
+                  print(f"Bucket {bucket} already exists")
+              except ClientError as error:
+                  code = error.response.get("Error", {}).get("Code")
+                  if code not in {"404", "NoSuchBucket", "NotFound"}:
+                      raise
+                  s3.create_bucket(Bucket=bucket)
+                  print(f"Created bucket {bucket}")
+
+              for url in urls:
+                  object_name = PurePosixPath(urlparse(url).path).name
+                  if not object_name:
+                      raise ValueError(f"URL has no filename: {url}")
+                  with requests.get(url, stream=True, timeout=(15, 120)) as response:
+                      response.raise_for_status()
+                      with tempfile.NamedTemporaryFile() as file:
+                          for chunk in response.iter_content(chunk_size=1024 * 1024):
+                              if chunk:
+                                  file.write(chunk)
+                          file.flush()
+                          s3.upload_file(file.name, bucket, object_name)
+                  print(f"Uploaded {object_name} to {bucket}")
+              PY
+          env:
+            - name: HOME
+              value: /tmp
+            - name: S3_ENDPOINT
+              value: {{ printf "http://%s:%v" (include "aws-compatible-storage.fullname" .) .Values.service.s3Port | quote }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aws-compatible-storage.secretName" . }}
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aws-compatible-storage.secretName" . }}
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: SAMPLE_BUCKET
+              value: {{ .Values.sampleFileUpload.bucket | quote }}
+            - name: AWS_DEFAULT_REGION
+              value: {{ .Values.s3.region | quote }}
+            - name: SAMPLE_URLS
+              value: {{ .Values.sampleFileUpload.urls | toJson | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+{{- end }}
