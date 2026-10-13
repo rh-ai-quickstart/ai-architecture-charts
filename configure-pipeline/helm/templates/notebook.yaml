@@ -4,9 +4,8 @@ kind: Notebook
 metadata:
   name: rag-pipeline-notebook
   annotations:
-    notebooks.opendatahub.io/inject-oauth: "true"
+    notebooks.opendatahub.io/inject-auth: "true"
     opendatahub.io/image-display-name: Standard Data Science
-    notebooks.opendatahub.io/oauth-logout-url: ""
     openshift.io/display-name: rag-pipeline-notebook
 spec:
   template:
