@@ -1,9 +1,12 @@
 # Bundled AWS-compatible storage subchart configuration
 aws-compatible-storage:
+  # Disable to use pipelineStorage.externalStorage instead.
+  enabled: true
   fullnameOverride: aws-compatible-storage
-  s3:
-    accessKeyId: storageadmin
-    secretAccessKey: storagesecret
+  sampleFileUpload:
+    # Keep aligned with notebook.s3.bucketName; pipeline artifacts use mlpipeline.
+    bucket: llama
+  # Only the in-cluster S3 API is needed, so disable UI auth and its public route.
   auth:
     enabled: false
   route:
@@ -20,7 +23,7 @@ notebook:
   # Notebook-specific S3 configuration
   s3:
     region: us-east-1
-    bucket_name: llama
+    bucketName: llama
     accessKeyId: ""
     secretAccessKey: ""
 
@@ -30,15 +33,14 @@ secret:
 
 # Pipeline storage configuration for DataSciencePipelinesApplication
 pipelineStorage:
-  # Deploy bundled AWS-compatible storage by default. Set false to use external storage.
-  deployAwsCompatibleStorage: true
-  # External storage configuration
+  # Endpoint and Secret name are required when aws-compatible-storage.enabled is false.
   externalStorage:
-    host: "minio"
-    port: "9000"
+    host: ""
+    port: "443"
     bucket: "mlpipeline"
-    scheme: "http"
+    scheme: "https"
     s3CredentialsSecret:
-      secretName: "minio"
-      accessKey: "user"
-      secretKey: "password"
+      secretName: ""
+      # DSPA fields below name Secret entries, not credential values.
+      accessKey: "AWS_ACCESS_KEY_ID"
+      secretKey: "AWS_SECRET_ACCESS_KEY"

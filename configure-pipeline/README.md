@@ -39,7 +39,7 @@ helm install configure-pipeline ./helm \
 
 ```bash
 helm install configure-pipeline ./helm \
-  --set pipelineStorage.deployAwsCompatibleStorage=false \
+  --set aws-compatible-storage.enabled=false \
   --set pipelineStorage.externalStorage.host="s3.amazonaws.com" \
   --set pipelineStorage.externalStorage.bucket="my-bucket" \
   --set pipelineStorage.externalStorage.s3CredentialsSecret.secretName="aws-credentials"
@@ -69,23 +69,37 @@ helm install configure-pipeline ./helm \
 | `notebook.name` | RAG vector database name | `rag-vector-db` |
 | `notebook.version` | Version identifier | `1.0` |
 | `notebook.s3.region` | S3 region for notebook | `us-east-1` |
-| `notebook.s3.bucket_name` | S3 bucket name for notebook | `llama` |
+| `notebook.s3.bucketName` | S3 bucket name for notebook documents | `llama` |
 | `notebook.s3.accessKeyId` | External S3 access key for notebook data connection | `""` |
 | `notebook.s3.secretAccessKey` | External S3 secret key for notebook data connection | `""` |
 
+
+#### Bundled Storage Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `aws-compatible-storage.enabled` | Deploy bundled AWS-compatible storage | `true` |
+| `aws-compatible-storage.fullnameOverride` | Service name; generated credentials Secret adds `-credentials` | `aws-compatible-storage` |
+| `aws-compatible-storage.service.s3Port` | S3 Service port used by DSPA and notebook | `7480` |
+| `aws-compatible-storage.s3.accessKeyId` | Credential value, inherited from storage chart | `s4admin` |
+| `aws-compatible-storage.s3.secretAccessKey` | Credential value, inherited from storage chart | `s4secret` |
+| `aws-compatible-storage.s3.existingSecret` | Existing credentials Secret; requires `notebook.create=false` or `secret.create=false` | `""` |
+| `aws-compatible-storage.sampleFileUpload.enabled` | Upload sample documents | `false` |
+| `aws-compatible-storage.sampleFileUpload.bucket` | Upload destination; keep aligned with `notebook.s3.bucketName` | `llama` |
+
+UI authentication and its public route are disabled because the pipeline only needs the in-cluster S3 API.
 
 #### Pipeline Storage Configuration
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `pipelineStorage.deployAwsCompatibleStorage` | Deploy bundled AWS-compatible storage | `true` |
-| `pipelineStorage.externalStorage.host` | External storage host | `minio` |
-| `pipelineStorage.externalStorage.port` | External storage port | `9000` |
+| `pipelineStorage.externalStorage.host` | External storage host; required when bundled storage is disabled | `""` |
+| `pipelineStorage.externalStorage.port` | External storage port | `443` |
 | `pipelineStorage.externalStorage.bucket` | Storage bucket for pipelines | `mlpipeline` |
-| `pipelineStorage.externalStorage.scheme` | Connection scheme (http/https) | `http` |
-| `pipelineStorage.externalStorage.s3CredentialsSecret.secretName` | Secret name for S3 credentials | `minio` |
-| `pipelineStorage.externalStorage.s3CredentialsSecret.accessKey` | Access key field in secret | `user` |
-| `pipelineStorage.externalStorage.s3CredentialsSecret.secretKey` | Secret key field in secret | `password` |
+| `pipelineStorage.externalStorage.scheme` | Connection scheme (http/https) | `https` |
+| `pipelineStorage.externalStorage.s3CredentialsSecret.secretName` | Existing Secret name; required when bundled storage is disabled | `""` |
+| `pipelineStorage.externalStorage.s3CredentialsSecret.accessKey` | Name of the access key entry in the Secret, not the credential value | `AWS_ACCESS_KEY_ID` |
+| `pipelineStorage.externalStorage.s3CredentialsSecret.secretKey` | Name of the secret key entry in the Secret, not the credential value | `AWS_SECRET_ACCESS_KEY` |
 
 ### Example values.yaml
 
@@ -94,6 +108,10 @@ helm install configure-pipeline ./helm \
 Bundled AWS-compatible storage is enabled by default, so no `pipelineStorage` settings are needed. Customize the notebook settings as needed:
 
 ```yaml
+aws-compatible-storage:
+  sampleFileUpload:
+    bucket: custom-bucket
+
 notebook:
   create: true
   image: "quay.io/your-org/custom-notebook:latest"
@@ -104,7 +122,7 @@ notebook:
   version: 2.0
   s3:
     region: us-west-2
-    bucket_name: custom-bucket
+    bucketName: custom-bucket
 ```
 
 #### Example 2: Use External S3-Compatible Storage
@@ -113,9 +131,11 @@ notebook:
 notebook:
   create: false  # Disable notebook if not needed
 
+aws-compatible-storage:
+  enabled: false
+
 # Pipeline storage - use external storage
 pipelineStorage:
-  deployAwsCompatibleStorage: false
   externalStorage:
     host: "s3.us-west-2.amazonaws.com"
     port: "443"
@@ -144,11 +164,27 @@ The chart supports two storage modes.
 
 #### 1. Bundled AWS-compatible storage
 
-When `pipelineStorage.deployAwsCompatibleStorage: true`, the chart deploys the `aws-compatible-storage` dependency with the stable Service name `aws-compatible-storage` and credentials Secret `aws-compatible-storage-credentials`. The DSPA and notebook use its S3 endpoint on port `7480`.
+Bundled S3-compatible storage is enabled by default. DSPA and notebook connections follow its configured Service name and S3 port (see the configuration table above).
+
+Default credentials are `s4admin` / `s4secret`. Set custom credentials under `aws-compatible-storage.s3.accessKeyId` and `secretAccessKey`.
+
+Notebook documents and sample uploads use `llama`; DSPA stores pipeline artifacts in `mlpipeline`. Sample upload is disabled by default. To enable it:
+
+```yaml
+aws-compatible-storage:
+  sampleFileUpload:
+    enabled: true
+    urls:
+      - https://example.com/sample.pdf
+```
+
+For a custom document bucket, set `notebook.s3.bucketName` and `aws-compatible-storage.sampleFileUpload.bucket` to the same name.
+
+To use `aws-compatible-storage.s3.existingSecret`, disable the notebook or set `secret.create: false` and supply `rag-pipeline-secrets` and `rag-ingestion-pipeline-secret` yourself. The chart cannot copy existing credentials into the dashboard Secret during rendering.
 
 #### 2. External Storage
 
-Set `pipelineStorage.deployAwsCompatibleStorage: false` to use an external S3-compatible service. The existing `pipelineStorage.externalStorage` defaults are retained; override the endpoint and point `s3CredentialsSecret` to an existing Secret as needed. When the notebook is enabled, also set `notebook.s3.accessKeyId` and `notebook.s3.secretAccessKey` so the dashboard data connection Secret can be generated.
+Set `aws-compatible-storage.enabled: false` to use an external S3-compatible service. Set `pipelineStorage.externalStorage.host` and `s3CredentialsSecret.secretName`; rendering fails if either is empty. The endpoint defaults to HTTPS on port 443, and Secret entry names default to `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`. Override those settings to match your service and Secret. When the notebook and generated Secrets are enabled, also set `notebook.s3.accessKeyId` and `notebook.s3.secretAccessKey` to the same credentials as the external Secret so the dashboard data connection can be generated.
 
 ### Accessing the Data Science Pipeline
 
@@ -193,7 +229,7 @@ The chart deploys the bundled AWS-compatible storage service and configures the 
 Ensure you:
 - Create a secret with your S3 credentials before installing the chart
 - Configure `pipelineStorage.externalStorage` to point to your external storage endpoint
-- Set `pipelineStorage.deployAwsCompatibleStorage: false`
+- Set `aws-compatible-storage.enabled: false`
 - The secret should contain the keys specified in `s3CredentialsSecret.accessKey` and `s3CredentialsSecret.secretKey`
 
 ### Pipeline Configuration
@@ -287,7 +323,7 @@ oc delete pvc -l app.kubernetes.io/name=configure-pipeline
 
 This chart has the following subchart dependency:
 
-- **aws-compatible-storage** (version 0.1.0): Deployed by default when `pipelineStorage.deployAwsCompatibleStorage: true`
+- **aws-compatible-storage** (version 0.2.0): Deployed by default when `aws-compatible-storage.enabled: true`
 
 ## Integration
 
