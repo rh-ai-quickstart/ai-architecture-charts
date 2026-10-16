@@ -1,17 +1,16 @@
 {{- if .Values.notebook.create }}
+{{- $storage := include "configure-pipeline.storage" . | fromYaml }}
 apiVersion: kubeflow.org/v1
 kind: Notebook
 metadata:
   name: rag-pipeline-notebook
   annotations:
-    notebooks.opendatahub.io/inject-oauth: "true"
+    notebooks.opendatahub.io/inject-auth: "true"
     opendatahub.io/image-display-name: Standard Data Science
-    notebooks.opendatahub.io/oauth-logout-url: ""
     openshift.io/display-name: rag-pipeline-notebook
 spec:
   template:
     spec:
-      serviceAccountName: rag-pipeline-notebook
       initContainers:
         - name: clone-notebook-repo
           image: alpine/git
@@ -43,21 +42,21 @@ spec:
               name: notebook-port
               protocol: TCP
           env:
-            - name: MINIO_ENDPOINT
+            - name: AWS_S3_ENDPOINT
               valueFrom:
                 secretKeyRef:
                   name: rag-pipeline-secrets
-                  key: MINIO_ENDPOINT
-            - name: MINIO_ACCESS_KEY
+                  key: AWS_S3_ENDPOINT
+            - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: rag-pipeline-secrets
-                  key: MINIO_ACCESS_KEY
-            - name: MINIO_SECRET_KEY
+                  name: {{ $storage.s3CredentialsSecret.secretName | quote }}
+                  key: {{ $storage.s3CredentialsSecret.accessKey | quote }}
+            - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: rag-pipeline-secrets
-                  key: MINIO_SECRET_KEY
+                  name: {{ $storage.s3CredentialsSecret.secretName | quote }}
+                  key: {{ $storage.s3CredentialsSecret.secretKey | quote }}
             - name: LLAMASTACK_BASE_URL
               valueFrom:
                 secretKeyRef:

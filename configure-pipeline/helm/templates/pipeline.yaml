@@ -26,12 +26,8 @@ spec:
   objectStorage:
     disableHealthCheck: false
     enableExternalRoute: false
-    externalStorage:  # mutually exclusive with minio
-{{- $storage := .Values.pipelineStorage.externalStorage | deepCopy }}
-{{- if and .Values.pipelineStorage.deployMinio (eq $storage.host "minio") }}
-{{- $_ := set $storage "host" (printf "%s.%s" $storage.host .Release.Namespace) }}
-{{- end }}
-{{ toYaml $storage | indent 6 }}
+    externalStorage:  # points to bundled AWS-compatible or caller-provided storage
+{{ include "configure-pipeline.storage" . | indent 6 }}
   persistenceAgent:
     deploy: true
     numWorkers: 2

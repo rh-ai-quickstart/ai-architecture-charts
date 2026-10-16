@@ -1,10 +1,16 @@
-# Minio subchart configuration (credentials used by both minio chart and notebook)
-minio:
-  secret:
-    user: minio_rag_user
-    password: minio_rag_password
-    host: minio
-    port: "9000"
+# Bundled AWS-compatible storage subchart configuration
+aws-compatible-storage:
+  # Disable to use pipelineStorage.externalStorage instead.
+  enabled: true
+  fullnameOverride: aws-compatible-storage
+  sampleFileUpload:
+    # Keep aligned with notebook.s3.bucketName; pipeline artifacts use mlpipeline.
+    bucket: llama
+  # Only the in-cluster S3 API is needed, so disable UI auth and its public route.
+  auth:
+    enabled: false
+  route:
+    enabled: false
 
 notebook:
   create: true
@@ -14,10 +20,12 @@ notebook:
   embedding_model: all-MiniLM-L6-v2
   name: rag-vector-db
   version: 1.0
-  # Notebook-specific minio configuration
-  minio:
+  # Notebook-specific S3 configuration
+  s3:
     region: us-east-1
-    bucket_name: llama
+    bucketName: llama
+    accessKeyId: ""
+    secretAccessKey: ""
 
 # Secret configuration for rag-pipeline-secrets
 secret:
@@ -25,15 +33,14 @@ secret:
 
 # Pipeline storage configuration for DataSciencePipelinesApplication
 pipelineStorage:
-  # Deploy minio as a dependency
-  deployMinio: true
-  # External storage configuration
+  # Endpoint and Secret name are required when aws-compatible-storage.enabled is false.
   externalStorage:
-    host: "minio"
-    port: "9000"
+    host: ""
+    port: "443"
     bucket: "mlpipeline"
-    scheme: "http"
+    scheme: "https"
     s3CredentialsSecret:
-      secretName: "minio"
-      accessKey: "user"
-      secretKey: "password"
+      secretName: ""
+      # DSPA fields below name Secret entries, not credential values.
+      accessKey: "AWS_ACCESS_KEY_ID"
+      secretKey: "AWS_SECRET_ACCESS_KEY"
